@@ -15,13 +15,11 @@ export function activate(context: ExtensionContext) {
   const serverOptions: ServerOptions = {
     run: {
       command: "journalint",
-      args: ["--stdio"],
-      transport: TransportKind.stdio,
+      transport: TransportKind.stdio, // --stdio will be appended by specifying this.
     },
     debug: {
       command: "journalint",
-      args: ["--stdio"],
-      transport: TransportKind.stdio,
+      transport: TransportKind.stdio, // --stdio will be appended by specifying this.
     },
   };
 

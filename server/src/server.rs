@@ -5,7 +5,7 @@ use crate::errors::JournalintError;
 
 pub fn main_loop(conn: &Connection, init_params: &InitializeParams) -> Result<(), JournalintError> {
     for msg in &conn.receiver {
-        println!("# msg: {:?}", msg);
+        eprintln!("# msg: {:?}", msg);
     }
     Ok(())
 }

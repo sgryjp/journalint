@@ -2,7 +2,7 @@ use clap::Parser;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about)]
-pub struct Args {
+pub struct Arguments {
     /// File to lint.
     pub filename: Option<String>,
 

@@ -39,7 +39,7 @@ pub fn parse_file<P: AsRef<Path>>(path: P) -> Result<(), JournalintError> {
         let Some(captures) = RE.captures(line.as_str()) else {
             return Err(JournalintError::ParseError { pos: Position{line: i, column: 0}, path: path.into(), msg: format!("a") });
         };
-        println!("{:?}", captures);
+        eprintln!("{:?}", captures);
     }
 
     Ok(())
