@@ -4,7 +4,6 @@ use std::io::{BufRead, BufReader};
 use std::path::Path;
 
 use crate::errors::JournalintError;
-use chrono::NaiveTime;
 use lazy_static::lazy_static;
 use regex::Regex;
 
@@ -12,13 +11,6 @@ use regex::Regex;
 pub struct Position {
     pub line: usize,
     pub column: usize,
-}
-
-pub struct JournalEntry {
-    pub position: Position,
-    pub start_time: NaiveTime,
-    pub end_time: NaiveTime,
-    pub activity: String,
 }
 
 pub fn parse_file<P: AsRef<Path>>(path: P) -> Result<(), JournalintError> {
