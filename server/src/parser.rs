@@ -5,15 +5,37 @@ use std::path::Path;
 
 use crate::errors::JournalintError;
 use lazy_static::lazy_static;
+use lsp_types::Position;
+use lsp_types::Diagnostic;
 use regex::Regex;
 
-#[derive(Debug)]
-pub struct Position {
-    pub line: usize,
-    pub column: usize,
+pub struct Journalint {
+    diagnostics: Vec<Diagnostic>,
 }
 
-pub fn parse_file<P: AsRef<Path>>(path: P) -> Result<(), JournalintError> {
+impl Journalint {
+    pub fn new() -> Self {
+        Self {
+            diagnostics: Vec::new(),
+        }
+    }
+
+    pub fn diagnostics(&self) -> &[Diagnostic] {
+        self.diagnostics.as_ref()
+    }
+
+    /// Parse a journal file content.
+    pub fn parse(&self, _doc: &str) -> Result<(), JournalintError> {
+        // Roughly extract document structure
+
+        // Parse journal entries
+
+        // Lint
+        Ok(())
+    }
+}
+
+pub fn _parse_file<P: AsRef<Path>>(path: P) -> Result<(), JournalintError> {
     lazy_static! {
         static ref RE: Regex = Regex::new(
             r"(?x)
@@ -29,7 +51,14 @@ pub fn parse_file<P: AsRef<Path>>(path: P) -> Result<(), JournalintError> {
     for (i, line) in reader.lines().enumerate() {
         let line = line?; // TODO: Put line number to the error
         let Some(captures) = RE.captures(line.as_str()) else {
-            return Err(JournalintError::ParseError { pos: Position{line: i, column: 0}, path: path.into(), msg: format!("a") });
+            return Err(JournalintError::FatalParseError {
+                pos: Some(Position {
+                    line: i as u32,
+                    character: 0,
+                }),
+                path: path.into(),
+                msg: format!("a"),
+            });
         };
         eprintln!("{:?}", captures);
     }

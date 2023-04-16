@@ -1,13 +1,13 @@
-use crate::parser::Position;
 use std::path::PathBuf;
 
+use lsp_types::Position;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum JournalintError {
     #[error("Parse error")]
-    ParseError {
-        pos: Position,
+    FatalParseError {
+        pos: Option<Position>,
         path: PathBuf,
         msg: String,
     },

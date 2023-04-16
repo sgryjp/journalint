@@ -4,6 +4,7 @@ mod parser;
 mod server;
 
 use std::env;
+use std::fs::read_to_string;
 use std::path::PathBuf;
 
 use clap::Parser;
@@ -13,7 +14,7 @@ use lsp_types::{
 };
 
 use crate::errors::JournalintError;
-use crate::parser::parse_file;
+use crate::parser::Journalint;
 use crate::{arg::Arguments, server::main_loop};
 
 fn main() -> Result<(), JournalintError> {
@@ -21,21 +22,35 @@ fn main() -> Result<(), JournalintError> {
     if args.stdio {
         language_server_main()
     } else {
-        command_main(args)
+        let rc = command_main(args);
+        std::process::exit(rc);
     }
 }
 
-fn command_main(args: Arguments) -> Result<(), JournalintError> {
+fn command_main(args: Arguments) -> exitcode::ExitCode {
     let Some(filename) = args.filename else {
-        return Err(
-        JournalintError::ArgumentError("FILENAME must be supplied".to_owned()));
+        return exitcode::USAGE;
     };
-    eprintln!("# Specified lint target is: {:?}", filename);
+
     let path = PathBuf::from(&filename);
-    if let Err(e) = parse_file(path) {
-        eprintln!("{:?}", e);
+    let doc = match read_to_string(path) {
+        Ok(doc) => doc,
+        Err(e) => {
+            eprintln!("Failed to read {}: {}", filename, e);
+            return exitcode::IOERR;
+        }
+    };
+
+    let parser = Journalint::new();
+    if let Err(e) = parser.parse(&doc) {
+        eprintln!("Journalint parser failed: {:?}", e);
+        return exitcode::DATAERR;
     }
-    Ok(())
+
+    for diag in parser.diagnostics() {
+        eprintln!("{:?}", diag);
+    }
+    exitcode::OK
 }
 
 fn language_server_main() -> Result<(), JournalintError> {
