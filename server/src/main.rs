@@ -1,6 +1,8 @@
 mod arg;
 mod errors;
-mod parser;
+mod journalint;
+mod linemap;
+mod parsing;
 mod server;
 
 use std::env;
@@ -13,9 +15,10 @@ use lsp_types::{
     InitializeParams, ServerCapabilities, TextDocumentSyncCapability, TextDocumentSyncKind,
 };
 
+use crate::arg::Arguments;
 use crate::errors::JournalintError;
-use crate::parser::Journalint;
-use crate::{arg::Arguments, server::main_loop};
+use crate::journalint::Journalint;
+use crate::server::main_loop;
 
 fn main() -> Result<(), JournalintError> {
     let args = Arguments::parse_from(env::args());
@@ -33,7 +36,7 @@ fn command_main(args: Arguments) -> exitcode::ExitCode {
     };
 
     let path = PathBuf::from(&filename);
-    let doc = match read_to_string(path) {
+    let content = match read_to_string(path) {
         Ok(doc) => doc,
         Err(e) => {
             eprintln!("Failed to read {}: {}", filename, e);
@@ -41,15 +44,7 @@ fn command_main(args: Arguments) -> exitcode::ExitCode {
         }
     };
 
-    let parser = Journalint::new();
-    if let Err(e) = parser.parse(&doc) {
-        eprintln!("Journalint parser failed: {:?}", e);
-        return exitcode::DATAERR;
-    }
-
-    for diag in parser.diagnostics() {
-        eprintln!("{:?}", diag);
-    }
+    Journalint::new(Some(filename), &content).report();
     exitcode::OK
 }
 
