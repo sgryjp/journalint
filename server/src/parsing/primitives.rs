@@ -13,6 +13,17 @@ pub struct LooseDate {
     pub span: Range<usize>,
 }
 
+impl LooseDate {
+    pub fn new_ymd(year: i32, month: u32, day: u32, span: Range<usize>) -> Self {
+        LooseDate {
+            year,
+            month,
+            day,
+            span,
+        }
+    }
+}
+
 impl TryFrom<LooseDate> for chrono::NaiveDate {
     type Error = JournalintError;
 
@@ -30,6 +41,12 @@ pub struct LooseTime {
     pub hour: u32,
     pub minute: u32,
     pub span: Range<usize>,
+}
+
+impl LooseTime {
+    pub fn new_hm(hour: u32, minute: u32, span: Range<usize>) -> Self {
+        LooseTime { hour, minute, span }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -58,6 +75,15 @@ pub struct Duration {
     pub span: Range<usize>,
 }
 
+impl Duration {
+    pub fn new(total_seconds: u32, span: Range<usize>) -> Self {
+        Duration {
+            total_seconds,
+            span,
+        }
+    }
+}
+
 fn _fixed_length_digits(len: usize) -> impl Parser<char, String, Error = Simple<char>> {
     one_of::<char, &str, Simple<char>>("0123456789")
         .repeated()
@@ -73,11 +99,13 @@ pub(super) fn date() -> impl Parser<char, LooseDate, Error = Simple<char>> {
         .then(_fixed_length_digits(2))
         .then_ignore(just('-'))
         .then(_fixed_length_digits(2))
-        .map_with_span(|((y, m), d), span| LooseDate {
-            year: str::parse::<i32>(&y).unwrap(),
-            month: str::parse::<u32>(&m).unwrap(),
-            day: str::parse::<u32>(&d).unwrap(),
-            span,
+        .map_with_span(|((y, m), d), span| {
+            LooseDate::new_ymd(
+                str::parse::<i32>(&y).unwrap(),
+                str::parse::<u32>(&m).unwrap(),
+                str::parse::<u32>(&d).unwrap(),
+                span,
+            )
         })
 }
 
@@ -85,10 +113,12 @@ pub fn time() -> impl Parser<char, LooseTime, Error = Simple<char>> {
     _fixed_length_digits(2)
         .then_ignore(just(':'))
         .then(_fixed_length_digits(2))
-        .map_with_span(|(h, s), span| LooseTime {
-            hour: str::parse::<u32>(&h).unwrap(),
-            minute: str::parse::<u32>(&s).unwrap(),
-            span,
+        .map_with_span(|(h, s), span| {
+            LooseTime::new_hm(
+                str::parse::<u32>(&h).unwrap(),
+                str::parse::<u32>(&s).unwrap(),
+                span,
+            )
         })
 }
 
@@ -111,10 +141,7 @@ pub fn duration() -> impl Parser<char, Duration, Error = Simple<char>> {
         .try_map(|s, span| {
             str::parse::<f64>(&s).map_err(|e| Simple::custom(span, format!("{}", e)))
         })
-        .map_with_span(|n, span| Duration {
-            total_seconds: (n * 3600.0) as u32,
-            span,
-        })
+        .map_with_span(|n, span| Duration::new((n * 3600.0) as u32, span))
 }
 
 #[cfg(test)]
@@ -126,34 +153,15 @@ mod tests {
         let p = super::date();
         assert_eq!(
             p.parse("2006-01-02").unwrap(),
-            LooseDate {
-                year: 2006,
-                month: 1,
-                day: 2,
-                span: 0..10
-            },
+            LooseDate::new_ymd(2006, 1, 2, 0..10),
         );
     }
 
     #[test]
     fn time() {
         let p = super::time();
-        assert_eq!(
-            p.parse("01:02").unwrap(),
-            LooseTime {
-                hour: 1,
-                minute: 2,
-                span: 0..5
-            }
-        );
-        assert_eq!(
-            p.parse("24:60").unwrap(),
-            LooseTime {
-                hour: 24,
-                minute: 60,
-                span: 0..5
-            }
-        );
+        assert_eq!(p.parse("01:02").unwrap(), LooseTime::new_hm(1, 2, 0..5));
+        assert_eq!(p.parse("24:60").unwrap(), LooseTime::new_hm(24, 60, 0..5));
         assert!(p.parse("24 :60").is_err());
         assert!(p.parse("24: 60").is_err());
     }
@@ -164,16 +172,8 @@ mod tests {
         assert_eq!(
             p.parse("01:02-03:04"),
             Ok(LooseTimeRange {
-                start: LooseTime {
-                    hour: 1,
-                    minute: 2,
-                    span: 0..5
-                },
-                end: LooseTime {
-                    hour: 3,
-                    minute: 4,
-                    span: 6..11
-                },
+                start: LooseTime::new_hm(1, 2, 0..5),
+                end: LooseTime::new_hm(3, 4, 6..11),
                 span: Range { start: 0, end: 11 },
             })
         );

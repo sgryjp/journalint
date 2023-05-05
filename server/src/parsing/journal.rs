@@ -13,6 +13,7 @@ pub struct Journal {
     pub entries: Vec<JournalEntry>,
 }
 
+#[derive(Debug, PartialEq)]
 enum Line {
     Entry(JournalEntry),
     Misc,
@@ -69,23 +70,32 @@ fn journal_entry() -> impl Parser<char, JournalEntry, Error = Simple<char>> {
         )
 }
 
-fn _entry_line() -> impl Parser<char, Line, Error = Simple<char>> {
+fn _journal_entry_line() -> impl Parser<char, Line, Error = Simple<char>> {
     journal_entry().then_ignore(newline()).map(Line::Entry)
 }
 
 fn _misc_line() -> impl Parser<char, Line, Error = Simple<char>> {
-    newline().not().repeated().map(|_| Line::Misc)
+    newline()
+        .not()
+        .repeated()
+        .collect::<String>()
+        .then_ignore(newline())
+        .map(|_| Line::Misc)
+}
+
+fn _line() -> impl Parser<char, Line, Error = Simple<char>> {
+    _journal_entry_line().or(_misc_line())
 }
 
 pub(crate) fn journal() -> impl Parser<char, Journal, Error = Simple<char>> {
     front_matter()
-        .then(_entry_line().or(_misc_line()).repeated())
+        .then(_line().repeated().then_ignore(end()))
         .map(|(front_matter, lines)| Journal {
             front_matter,
             entries: lines
-                .into_iter()
+                .iter()
                 .filter_map(|line| match line {
-                    Line::Entry(entry) => Some(entry),
+                    Line::Entry(entry) => Some(entry.clone()), // TODO: Inefficient...
                     Line::Misc => None,
                 })
                 .collect::<Vec<JournalEntry>>(),
@@ -96,27 +106,20 @@ pub(crate) fn journal() -> impl Parser<char, Journal, Error = Simple<char>> {
 mod tests {
     use super::*;
 
-    use crate::parsing::primitives::LooseTime;
+    use crate::parsing::primitives::{LooseDate, LooseTime};
+
+    const EXAMPLE_ENTRY: &str = "- 09:00-10:15 ABCDEFG8 AB3 1.00 foo: bar: baz";
 
     #[test]
-    fn journal_entry_basic() {
-        let input = "- 09:00-10:15 ABCDEFG8 AB3 1.00 foo: bar: baz";
+    fn journal_entry() {
         let parser = super::journal_entry();
-        let entry = parser.parse(input).unwrap();
+        let entry = parser.parse(EXAMPLE_ENTRY).unwrap();
 
         assert_eq!(
             entry.time_range,
             LooseTimeRange {
-                start: LooseTime {
-                    hour: 9,
-                    minute: 0,
-                    span: 2..7
-                },
-                end: LooseTime {
-                    hour: 10,
-                    minute: 15,
-                    span: 8..13
-                },
+                start: LooseTime::new_hm(9, 0, 2..7),
+                end: LooseTime::new_hm(10, 15, 8..13),
                 span: 2..13
             }
         );
@@ -135,13 +138,7 @@ mod tests {
             ],
         );
 
-        assert_eq!(
-            entry.duration,
-            Duration {
-                total_seconds: 3600,
-                span: 27..31
-            }
-        );
+        assert_eq!(entry.duration, Duration::new(3600, 27..31));
 
         assert_eq!(
             entry.description,
@@ -152,5 +149,61 @@ mod tests {
         );
 
         assert_eq!(entry.span, 0..45);
+    }
+
+    #[test]
+    fn _misc_line() {
+        let (result, errors) = super::_misc_line().parse_recovery_verbose("\n");
+        errors.iter().for_each(|e| println!("!! {:?}", e));
+        assert_eq!(result, Some(Line::Misc));
+
+        let (result, errors) = super::_misc_line().parse_recovery_verbose("- 09:00-10:15\n");
+        errors.iter().for_each(|e| println!("!! {:?}", e));
+        assert_eq!(result, Some(Line::Misc));
+    }
+
+    #[test]
+    fn _line() {
+        let (result, errors) = super::_line().parse_recovery_verbose("");
+        errors.iter().for_each(|e| println!("{:?}", e));
+        assert_eq!(result, None);
+
+        let (result, errors) = super::_line().parse_recovery_verbose("\n");
+        errors.iter().for_each(|e| println!("{:?}", e));
+        assert_eq!(result, Some(Line::Misc));
+
+        let (result, errors) = super::_line().parse_recovery_verbose("- 09:00-10:15\n");
+        errors.iter().for_each(|e| println!("!! {:?}", e));
+        assert_eq!(result, Some(Line::Misc));
+
+        let (result, errors) =
+            super::_line().parse_recovery_verbose(format!("{}\n", EXAMPLE_ENTRY));
+        errors.iter().for_each(|e| println!("!! {:?}", e));
+        assert!(matches!(result, Some(Line::Entry(_))));
+    }
+
+    #[test]
+    fn journal() {
+        let input = format!(
+            "---
+date: 2006-01-02
+start: 15:04
+---
+
+{}
+",
+            EXAMPLE_ENTRY
+        );
+        let (journal, errors) = super::journal().parse_recovery_verbose(input);
+        errors.iter().for_each(|e| println!("!! {:?}", e));
+        assert!(matches!(journal, Some(_)));
+        assert_eq!(
+            journal.map(|j| j.front_matter),
+            Some(FrontMatter {
+                date: LooseDate::new_ymd(2006, 1, 2, 10..20),
+                start_time: Some(LooseTime::new_hm(15, 4, 28..33)),
+                end_time: None,
+            })
+        );
     }
 }
