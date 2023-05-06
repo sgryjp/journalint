@@ -200,7 +200,7 @@ start: 15:04
         assert_eq!(
             journal.map(|j| j.front_matter),
             Some(FrontMatter {
-                date: LooseDate::new_ymd(2006, 1, 2, 10..20),
+                date: LooseDate::from_ymd(2006, 1, 2, 10..20),
                 start_time: Some(LooseTime::new_hm(15, 4, 28..33)),
                 end_time: None,
             })

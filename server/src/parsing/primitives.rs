@@ -14,7 +14,7 @@ pub struct LooseDate {
 }
 
 impl LooseDate {
-    pub fn new_ymd(year: i32, month: u32, day: u32, span: Range<usize>) -> Self {
+    pub fn from_ymd(year: i32, month: u32, day: u32, span: Range<usize>) -> Self {
         LooseDate {
             year,
             month,
@@ -100,7 +100,7 @@ pub(super) fn date() -> impl Parser<char, LooseDate, Error = Simple<char>> {
         .then_ignore(just('-'))
         .then(_fixed_length_digits(2))
         .map_with_span(|((y, m), d), span| {
-            LooseDate::new_ymd(
+            LooseDate::from_ymd(
                 str::parse::<i32>(&y).unwrap(),
                 str::parse::<u32>(&m).unwrap(),
                 str::parse::<u32>(&d).unwrap(),
@@ -153,7 +153,7 @@ mod tests {
         let p = super::date();
         assert_eq!(
             p.parse("2006-01-02").unwrap(),
-            LooseDate::new_ymd(2006, 1, 2, 0..10),
+            LooseDate::from_ymd(2006, 1, 2, 0..10),
         );
     }
 
