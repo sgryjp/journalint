@@ -1,38 +1,20 @@
 use core::ops::Range;
 use core::result::Result;
 
+use chrono::NaiveDate;
 use chumsky::prelude::*;
 
 use crate::errors::JournalintError;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LooseDate {
-    pub year: i32,
-    pub month: u32,
-    pub day: u32,
+    pub value: NaiveDate,
     pub span: Range<usize>,
 }
 
 impl LooseDate {
-    pub fn from_ymd(year: i32, month: u32, day: u32, span: Range<usize>) -> Self {
-        LooseDate {
-            year,
-            month,
-            day,
-            span,
-        }
-    }
-}
-
-impl TryFrom<LooseDate> for chrono::NaiveDate {
-    type Error = JournalintError;
-
-    fn try_from(value: LooseDate) -> Result<Self, Self::Error> {
-        let (year, month, day) = (value.year, value.month, value.day);
-        match chrono::NaiveDate::from_ymd_opt(year, month, day) {
-            Some(t) => Ok(t),
-            None => Err(JournalintError::OutOfRangeDate { year, month, day }),
-        }
+    pub fn new(value: NaiveDate, span: Range<usize>) -> Self {
+        LooseDate { value, span }
     }
 }
 
@@ -100,12 +82,13 @@ pub(super) fn date() -> impl Parser<char, LooseDate, Error = Simple<char>> {
         .then_ignore(just('-'))
         .then(_fixed_length_digits(2))
         .map_with_span(|((y, m), d), span| {
-            LooseDate::from_ymd(
+            let value = NaiveDate::from_ymd_opt(
                 str::parse::<i32>(&y).unwrap(),
                 str::parse::<u32>(&m).unwrap(),
                 str::parse::<u32>(&d).unwrap(),
-                span,
             )
+            .unwrap(); // TODO: handle this error case
+            LooseDate::new(value, span)
         })
 }
 
@@ -153,7 +136,7 @@ mod tests {
         let p = super::date();
         assert_eq!(
             p.parse("2006-01-02").unwrap(),
-            LooseDate::from_ymd(2006, 1, 2, 0..10),
+            LooseDate::new(NaiveDate::from_ymd_opt(2006, 1, 2).unwrap(), 0..10),
         );
     }
 

@@ -81,6 +81,8 @@ pub(super) fn front_matter() -> impl Parser<char, FrontMatter, Error = Simple<ch
 
 #[cfg(test)]
 mod tests {
+    use chrono::NaiveDate;
+
     use super::*;
 
     #[test]
@@ -89,9 +91,7 @@ mod tests {
         assert_eq!(
             p.parse("date: 2006-01-02").unwrap(),
             FrontMatterItem::Date(LooseDate {
-                year: 2006,
-                month: 1,
-                day: 2,
+                value: NaiveDate::from_ymd_opt(2006, 1, 2).unwrap(),
                 span: 6..16
             }),
         );
@@ -140,9 +140,7 @@ mod tests {
             .unwrap(),
             FrontMatter {
                 date: LooseDate {
-                    year: 2006,
-                    month: 1,
-                    day: 2,
+                    value: NaiveDate::from_ymd_opt(2006, 1, 2).unwrap(),
                     span: 10..20
                 },
                 start_time: Some(LooseTime {

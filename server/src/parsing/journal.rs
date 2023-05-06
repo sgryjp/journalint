@@ -104,9 +104,10 @@ pub(crate) fn journal() -> impl Parser<char, Journal, Error = Simple<char>> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use chrono::NaiveDate;
 
-    use crate::parsing::primitives::{LooseDate, LooseTime};
+    use super::super::primitives::{LooseDate, LooseTime};
+    use super::*;
 
     const EXAMPLE_ENTRY: &str = "- 09:00-10:15 ABCDEFG8 AB3 1.00 foo: bar: baz";
 
@@ -185,13 +186,13 @@ mod tests {
     #[test]
     fn journal() {
         let input = format!(
-            "---
-date: 2006-01-02
-start: 15:04
----
-
-{}
-",
+            "---\n\
+            date: 2006-01-02\n\
+            start: 15:04\n\
+            ---\n\
+            \n\
+            {}\n\
+            ",
             EXAMPLE_ENTRY
         );
         let (journal, errors) = super::journal().parse_recovery_verbose(input);
@@ -200,7 +201,7 @@ start: 15:04
         assert_eq!(
             journal.map(|j| j.front_matter),
             Some(FrontMatter {
-                date: LooseDate::from_ymd(2006, 1, 2, 10..20),
+                date: LooseDate::new(NaiveDate::from_ymd_opt(2006, 1, 2).unwrap(), 10..20),
                 start_time: Some(LooseTime::new_hm(15, 4, 28..33)),
                 end_time: None,
             })
