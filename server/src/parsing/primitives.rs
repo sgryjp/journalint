@@ -81,14 +81,17 @@ pub(super) fn date() -> impl Parser<char, LooseDate, Error = Simple<char>> {
         .then(_fixed_length_digits(2))
         .then_ignore(just('-'))
         .then(_fixed_length_digits(2))
-        .map_with_span(|((y, m), d), span| {
-            let value = NaiveDate::from_ymd_opt(
+        .try_map(|((y, m), d), span| {
+            NaiveDate::from_ymd_opt(
                 str::parse::<i32>(&y).unwrap(),
                 str::parse::<u32>(&m).unwrap(),
                 str::parse::<u32>(&d).unwrap(),
             )
-            .unwrap(); // TODO: handle this error case
-            LooseDate::new(value, span)
+            .map(|d| LooseDate::new(d, span.clone()))
+            .ok_or(Simple::custom(
+                span,
+                format!("invalid date: {:4}-{}-{}", y, m, d),
+            ))
         })
 }
 
@@ -138,6 +141,8 @@ mod tests {
             p.parse("2006-01-02").unwrap(),
             LooseDate::new(NaiveDate::from_ymd_opt(2006, 1, 2).unwrap(), 0..10),
         );
+
+        assert!(p.parse("2006-01-00").is_err());
     }
 
     #[test]
