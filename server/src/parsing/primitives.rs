@@ -1,41 +1,84 @@
 use core::ops::Range;
 use core::result::Result;
 
-use chrono::NaiveDate;
+use chrono::{Days, NaiveDate, NaiveDateTime, NaiveTime};
 use chumsky::prelude::*;
 
 use crate::errors::JournalintError;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LooseDate {
-    pub value: NaiveDate,
-    pub span: Range<usize>,
+    value: NaiveDate,
+    span: Range<usize>,
 }
 
 impl LooseDate {
     pub fn new(value: NaiveDate, span: Range<usize>) -> Self {
         LooseDate { value, span }
     }
+
+    pub fn value(&self) -> NaiveDate {
+        self.value
+    }
+
+    pub fn span(&self) -> &Range<usize> {
+        &self.span
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LooseTime {
-    pub hour: u32,
-    pub minute: u32,
-    pub span: Range<usize>,
+    hour: u32,
+    minute: u32,
+    span: Range<usize>,
 }
 
 impl LooseTime {
-    pub fn new_hm(hour: u32, minute: u32, span: Range<usize>) -> Self {
+    pub fn new(hour: u32, minute: u32, span: Range<usize>) -> Self {
         LooseTime { hour, minute, span }
+    }
+
+    pub fn hour(&self) -> u32 {
+        self.hour
+    }
+
+    pub fn minute(&self) -> u32 {
+        self.minute
+    }
+
+    pub fn span(&self) -> &Range<usize> {
+        &self.span
+    }
+
+    pub fn into_datetime(&self, date: &LooseDate) -> Option<NaiveDateTime> {
+        let day = self.hour / 24;
+        let hour = self.hour - day * 24;
+        let min = self.minute;
+        dbg!(day, hour, min);
+        NaiveDateTime::new(date.value, NaiveTime::from_hms_opt(hour, min, 0).unwrap())
+            .checked_add_days(Days::new(day as u64))
     }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LooseTimeRange {
-    pub start: LooseTime,
-    pub end: LooseTime,
-    pub span: Range<usize>,
+    start: LooseTime,
+    end: LooseTime,
+    span: Range<usize>,
+}
+
+impl LooseTimeRange {
+    pub fn new(start: LooseTime, end: LooseTime, span: Range<usize>) -> Self {
+        Self { start, end, span }
+    }
+
+    pub fn end(&self) -> &LooseTime {
+        &self.end
+    }
+
+    pub fn start(&self) -> &LooseTime {
+        &self.start
+    }
 }
 
 impl TryFrom<LooseTime> for chrono::NaiveTime {
@@ -53,8 +96,8 @@ impl TryFrom<LooseTime> for chrono::NaiveTime {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Duration {
-    pub total_seconds: u32,
-    pub span: Range<usize>,
+    total_seconds: u32,
+    span: Range<usize>,
 }
 
 impl Duration {
@@ -63,6 +106,14 @@ impl Duration {
             total_seconds,
             span,
         }
+    }
+
+    pub fn total_seconds(&self) -> u32 {
+        self.total_seconds
+    }
+
+    pub fn span(&self) -> &Range<usize> {
+        &self.span
     }
 }
 
@@ -100,7 +151,7 @@ pub fn time() -> impl Parser<char, LooseTime, Error = Simple<char>> {
         .then_ignore(just(':'))
         .then(_fixed_length_digits(2))
         .map_with_span(|(h, s), span| {
-            LooseTime::new_hm(
+            LooseTime::new(
                 str::parse::<u32>(&h).unwrap(),
                 str::parse::<u32>(&s).unwrap(),
                 span,
@@ -148,8 +199,8 @@ mod tests {
     #[test]
     fn time() {
         let p = super::time();
-        assert_eq!(p.parse("01:02").unwrap(), LooseTime::new_hm(1, 2, 0..5));
-        assert_eq!(p.parse("24:60").unwrap(), LooseTime::new_hm(24, 60, 0..5));
+        assert_eq!(p.parse("01:02").unwrap(), LooseTime::new(1, 2, 0..5));
+        assert_eq!(p.parse("24:60").unwrap(), LooseTime::new(24, 60, 0..5));
         assert!(p.parse("24 :60").is_err());
         assert!(p.parse("24: 60").is_err());
     }
@@ -160,8 +211,8 @@ mod tests {
         assert_eq!(
             p.parse("01:02-03:04"),
             Ok(LooseTimeRange {
-                start: LooseTime::new_hm(1, 2, 0..5),
-                end: LooseTime::new_hm(3, 4, 6..11),
+                start: LooseTime::new(1, 2, 0..5),
+                end: LooseTime::new(3, 4, 6..11),
                 span: Range { start: 0, end: 11 },
             })
         );

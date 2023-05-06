@@ -21,11 +21,49 @@ enum Line {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct JournalEntry {
-    pub time_range: LooseTimeRange,
-    pub codes: Vec<Code>,
-    pub duration: Duration,
-    pub description: Description,
-    pub span: Range<usize>,
+    time_range: LooseTimeRange,
+    codes: Vec<Code>,
+    duration: Duration,
+    description: Description,
+    span: Range<usize>,
+}
+
+impl JournalEntry {
+    pub fn new(
+        time_range: LooseTimeRange,
+        codes: Vec<Code>,
+        duration: Duration,
+        description: Description,
+        span: Range<usize>,
+    ) -> Self {
+        Self {
+            time_range,
+            codes,
+            duration,
+            description,
+            span,
+        }
+    }
+
+    pub fn time_range(&self) -> &LooseTimeRange {
+        &self.time_range
+    }
+
+    pub fn codes(&self) -> &[Code] {
+        self.codes.as_ref()
+    }
+
+    pub fn duration(&self) -> &Duration {
+        &self.duration
+    }
+
+    pub fn description(&self) -> &Description {
+        &self.description
+    }
+
+    pub fn span(&self) -> &Range<usize> {
+        &self.span
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -118,11 +156,11 @@ mod tests {
 
         assert_eq!(
             entry.time_range,
-            LooseTimeRange {
-                start: LooseTime::new_hm(9, 0, 2..7),
-                end: LooseTime::new_hm(10, 15, 8..13),
-                span: 2..13
-            }
+            LooseTimeRange::new(
+                LooseTime::new(9, 0, 2..7),
+                LooseTime::new(10, 15, 8..13),
+                2..13
+            )
         );
 
         assert_eq!(
@@ -200,11 +238,11 @@ mod tests {
         assert!(matches!(journal, Some(_)));
         assert_eq!(
             journal.map(|j| j.front_matter),
-            Some(FrontMatter {
-                date: LooseDate::new(NaiveDate::from_ymd_opt(2006, 1, 2).unwrap(), 10..20),
-                start_time: Some(LooseTime::new_hm(15, 4, 28..33)),
-                end_time: None,
-            })
+            Some(FrontMatter::new(
+                LooseDate::new(NaiveDate::from_ymd_opt(2006, 1, 2).unwrap(), 10..20),
+                Some(LooseTime::new(15, 4, 28..33)),
+                None,
+            ))
         );
     }
 }

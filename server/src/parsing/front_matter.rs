@@ -9,9 +9,35 @@ use super::primitives::LooseTime;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FrontMatter {
-    pub date: LooseDate,
-    pub start_time: Option<LooseTime>,
-    pub end_time: Option<LooseTime>,
+    date: LooseDate,
+    start: Option<LooseTime>,
+    end: Option<LooseTime>,
+}
+
+impl FrontMatter {
+    pub fn new(
+        date: LooseDate,
+        start_time: Option<LooseTime>,
+        end_time: Option<LooseTime>,
+    ) -> Self {
+        Self {
+            date,
+            start: start_time,
+            end: end_time,
+        }
+    }
+
+    pub fn date(&self) -> &LooseDate {
+        &self.date
+    }
+
+    pub fn start(&self) -> Option<&LooseTime> {
+        self.start.as_ref()
+    }
+
+    pub fn end(&self) -> Option<&LooseTime> {
+        self.end.as_ref()
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -73,8 +99,8 @@ pub(super) fn front_matter() -> impl Parser<char, FrontMatter, Error = Simple<ch
             };
             Ok(FrontMatter {
                 date,
-                start_time,
-                end_time,
+                start: start_time,
+                end: end_time,
             })
         })
 }
@@ -90,10 +116,10 @@ mod tests {
         let p = super::_front_matter_date();
         assert_eq!(
             p.parse("date: 2006-01-02").unwrap(),
-            FrontMatterItem::Date(LooseDate {
-                value: NaiveDate::from_ymd_opt(2006, 1, 2).unwrap(),
-                span: 6..16
-            }),
+            FrontMatterItem::Date(LooseDate::new(
+                NaiveDate::from_ymd_opt(2006, 1, 2).unwrap(),
+                6..16
+            )),
         );
         assert!(p.parse("date :2006-012-02").is_err());
     }
@@ -103,11 +129,7 @@ mod tests {
         let p = super::_front_matter_start_time();
         assert_eq!(
             p.parse("start: 24:56").unwrap(),
-            FrontMatterItem::StartTime(LooseTime {
-                hour: 24,
-                minute: 56,
-                span: 7..12
-            })
+            FrontMatterItem::StartTime(LooseTime::new(24, 56, 7..12))
         );
         assert!(p.parse("date :2006-12-32").is_err());
     }
@@ -117,11 +139,7 @@ mod tests {
         let p = super::_front_matter_end_time();
         assert_eq!(
             p.parse("end: 24:56").unwrap(),
-            FrontMatterItem::EndTime(LooseTime {
-                hour: 24,
-                minute: 56,
-                span: 5..10
-            })
+            FrontMatterItem::EndTime(LooseTime::new(24, 56, 5..10))
         );
         assert!(p.parse("date :2006-12-32").is_err());
     }
@@ -139,20 +157,9 @@ mod tests {
             ))
             .unwrap(),
             FrontMatter {
-                date: LooseDate {
-                    value: NaiveDate::from_ymd_opt(2006, 1, 2).unwrap(),
-                    span: 10..20
-                },
-                start_time: Some(LooseTime {
-                    hour: 15,
-                    minute: 4,
-                    span: 28..33
-                }),
-                end_time: Some(LooseTime {
-                    hour: 24,
-                    minute: 56,
-                    span: 39..44
-                })
+                date: LooseDate::new(NaiveDate::from_ymd_opt(2006, 1, 2).unwrap(), 10..20),
+                start: Some(LooseTime::new(15, 4, 28..33)),
+                end: Some(LooseTime::new(24, 56, 39..44))
             }
         );
         assert!(p.parse("date :2006-12-32").is_err());
