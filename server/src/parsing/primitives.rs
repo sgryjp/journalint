@@ -96,20 +96,17 @@ impl TryFrom<LooseTime> for chrono::NaiveTime {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Duration {
-    total_seconds: u32,
+    value: std::time::Duration,
     span: Range<usize>,
 }
 
 impl Duration {
-    pub fn new(total_seconds: u32, span: Range<usize>) -> Self {
-        Duration {
-            total_seconds,
-            span,
-        }
+    pub fn new(value: std::time::Duration, span: Range<usize>) -> Self {
+        Duration { value, span }
     }
 
-    pub fn total_seconds(&self) -> u32 {
-        self.total_seconds
+    pub fn value(&self) -> &std::time::Duration {
+        &self.value
     }
 
     pub fn span(&self) -> &Range<usize> {

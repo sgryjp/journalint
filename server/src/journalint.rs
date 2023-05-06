@@ -24,6 +24,10 @@ impl<'a> Journalint<'a> {
         journalint
     }
 
+    pub fn journal(&self) -> Option<&Journal> {
+        self.journal.as_ref()
+    }
+
     pub fn diagnostics(&self) -> &[Diagnostic] {
         self.diagnostics.as_ref()
     }

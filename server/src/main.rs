@@ -2,6 +2,7 @@ mod arg;
 mod errors;
 mod journalint;
 mod linemap;
+mod linting;
 mod parsing;
 mod server;
 
