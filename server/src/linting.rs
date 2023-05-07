@@ -1,29 +1,34 @@
-use lsp_types::Diagnostic;
+use lsp_types::DiagnosticSeverity;
 
-use crate::journalint::Journalint;
+use crate::{diagnostic::Diagnostic, linemap::LineMap, parsing::journal::Journal};
 
-pub fn duration_mismatch(journalint: &Journalint) -> Vec<Diagnostic> {
+pub fn duration_mismatch(
+    source: Option<&String>,
+    linemap: &LineMap,
+    journal: &Journal,
+) -> Vec<Diagnostic> {
     let mut diagnostics = Vec::new();
-
-    let Some(journal) = journalint.journal() else {
-        return diagnostics;
-    };
 
     for entry in journal.entries() {
         let Some(start) = entry.time_range().start().into_datetime(journal.front_matter().date()) else {
-            return diagnostics;
+            return diagnostics;// TODO: Make this case a warning
         };
         let Some(end) = entry.time_range().end().into_datetime(journal.front_matter().date()) else {
-            return diagnostics;
+            return diagnostics;// TODO: Make this case a warning
+        };
+        let Ok(calculated_duration) = (end - start).to_std() else {
+            return diagnostics; // TODO: Make this case a warning, using the Err variant
         };
 
-        // if entry.duration().value() != (end - start).into() {
-        //     れんじがめんどくさい
-        //     diagnostics.push(Diagnostic::new(
-        //         lsp_types::Range::new(Position::new(entry.duration().span()), Position::new()),
-        //         format!("Duration mistmatch: {}"),
-        //     ));
-        // }
+        if &calculated_duration != entry.duration().value() {
+            let written_duration = entry.duration().value().as_secs_f64() / 3600.0;
+            diagnostics.push(Diagnostic::new(
+                entry.duration().span().clone(),
+                DiagnosticSeverity::WARNING,
+                source.cloned(),
+                format!("Duration mistmatch: {}", written_duration),
+            ));
+        }
     }
 
     diagnostics

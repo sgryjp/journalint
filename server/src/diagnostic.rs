@@ -16,7 +16,7 @@ pub struct Diagnostic {
 }
 
 impl Diagnostic {
-    pub fn new(
+    pub fn new( // TODO: defining new_error and new_warning is good enough?
         span: Range<usize>,
         severity: DiagnosticSeverity,
         source: Option<String>,
