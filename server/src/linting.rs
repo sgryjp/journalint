@@ -2,7 +2,7 @@ use lsp_types::Diagnostic;
 
 use crate::journalint::Journalint;
 
-pub(crate) fn duration_mismatch(journalint: &Journalint) -> Vec<Diagnostic> {
+pub fn duration_mismatch(journalint: &Journalint) -> Vec<Diagnostic> {
     let mut diagnostics = Vec::new();
 
     let Some(journal) = journalint.journal() else {

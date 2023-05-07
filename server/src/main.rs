@@ -1,4 +1,5 @@
 mod arg;
+mod diagnostic;
 mod errors;
 mod journalint;
 mod linemap;

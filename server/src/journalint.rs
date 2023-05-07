@@ -1,7 +1,7 @@
 use ariadne::{Color, Label, Report, ReportKind, Source};
 use chumsky::Parser;
-use lsp_types::{Diagnostic, DiagnosticSeverity, NumberOrString, Range};
 
+use crate::diagnostic::{Diagnostic, DiagnosticSeverity};
 use crate::linemap::LineMap;
 use crate::parsing::journal::Journal;
 
@@ -37,16 +37,11 @@ impl<'a> Journalint<'a> {
         let (journal, errors) = crate::parsing::journal::journal().parse_recovery_verbose(content);
         self.journal = journal;
         for e in errors {
-            let start = self.linemap.position_from_offset(e.span().start);
-            let end = self.linemap.position_from_offset(e.span().end);
             let diagnostic = Diagnostic::new(
-                Range { start, end },
-                Some(DiagnosticSeverity::ERROR),
-                Some(NumberOrString::Number(900)),
+                e.span(),
+                DiagnosticSeverity::ERROR,
                 filename.clone(),
                 e.to_string(),
-                None,
-                None,
             );
             self.diagnostics.push(diagnostic);
         }
@@ -60,10 +55,11 @@ impl<'a> Journalint<'a> {
 }
 
 fn _report_diagnostic(content: &str, linemap: &LineMap, diag: &Diagnostic) {
-    let filename = diag.source.as_deref().unwrap_or("<STDIN>");
-    let start = linemap.offset_from_position(&diag.range.start);
-    let end = linemap.offset_from_position(&diag.range.end);
-    let message = &diag.message;
+    let stdin_source_name = "<STDIN>".to_string();
+    let filename = diag.source().unwrap_or(&stdin_source_name);
+    let start = diag.span().start;
+    let end = diag.span().end;
+    let message = diag.message();
 
     Report::build(ReportKind::Error, filename, start)
         .with_message(message)
