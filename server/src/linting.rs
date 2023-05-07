@@ -1,4 +1,4 @@
-use lsp_types::{Diagnostic, Position};
+use lsp_types::Diagnostic;
 
 use crate::journalint::Journalint;
 
@@ -9,11 +9,11 @@ pub(crate) fn duration_mismatch(journalint: &Journalint) -> Vec<Diagnostic> {
         return diagnostics;
     };
 
-    for entry in journal.entries {
-        let Some(start) = entry.time_range().start().into_datetime(journal.front_matter.date()) else {
+    for entry in journal.entries() {
+        let Some(start) = entry.time_range().start().into_datetime(journal.front_matter().date()) else {
             return diagnostics;
         };
-        let Some(end) = entry.time_range().end().into_datetime(journal.front_matter.date()) else {
+        let Some(end) = entry.time_range().end().into_datetime(journal.front_matter().date()) else {
             return diagnostics;
         };
 
@@ -31,8 +31,7 @@ pub(crate) fn duration_mismatch(journalint: &Journalint) -> Vec<Diagnostic> {
 
 #[cfg(test)]
 mod tests {
-    use chumsky::Parser;
-    use lsp_types::Diagnostic;
+    use crate::journalint::Journalint;
 
     #[test]
     fn duration_mismatch() {
@@ -46,10 +45,7 @@ mod tests {
         - 09:00-10:15 ABCDEFG8 AB3 1.00 foo: bar: baz\n\
         ";
 
-        let (journal, errors) =
-            crate::parsing::journal::journal().parse_recovery_verbose(TEST_DATA);
-        errors.iter().for_each(|e| eprintln!("!! {:?}", e));
-        let journal = journal.unwrap();
-        assert_eq!(super::duration_mismatch(&journal), Vec::new());
+        let _journalint = Journalint::new(None, TEST_DATA);
+        todo!();
     }
 }

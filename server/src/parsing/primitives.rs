@@ -101,15 +101,16 @@ pub struct Duration {
 }
 
 impl Duration {
-    pub fn new(value: std::time::Duration, span: Range<usize>) -> Self {
+    pub const fn from_secs(secs: u64, span: Range<usize>) -> Duration {
+        let value = std::time::Duration::from_secs(secs);
         Duration { value, span }
     }
 
-    pub fn value(&self) -> &std::time::Duration {
+    pub const fn value(&self) -> &std::time::Duration {
         &self.value
     }
 
-    pub fn span(&self) -> &Range<usize> {
+    pub const fn span(&self) -> &Range<usize> {
         &self.span
     }
 }
@@ -175,7 +176,7 @@ pub fn duration() -> impl Parser<char, Duration, Error = Simple<char>> {
         .try_map(|s, span| {
             str::parse::<f64>(&s).map_err(|e| Simple::custom(span, format!("{}", e)))
         })
-        .map_with_span(|n, span| Duration::new((n * 3600.0) as u32, span))
+        .map_with_span(|n, span| Duration::from_secs((n * 3600.0) as u64, span))
 }
 
 #[cfg(test)]
@@ -225,29 +226,11 @@ mod tests {
     fn duration() {
         let p = super::duration();
         assert!(p.parse(".12").is_err());
-        assert_eq!(
-            p.parse("1.23").unwrap(),
-            Duration {
-                total_seconds: 4428,
-                span: 0..4
-            }
-        );
+        assert_eq!(p.parse("1.23").unwrap(), Duration::from_secs(4428, 0..4));
         assert!(p.parse("12.34").is_err());
         assert!(p.parse("1.2").is_err());
-        assert_eq!(
-            p.parse("1.23").unwrap(),
-            Duration {
-                total_seconds: 4428,
-                span: 0..4
-            }
-        );
-        assert_eq!(
-            p.parse("1.234").unwrap(),
-            Duration {
-                total_seconds: 4428,
-                span: 0..4
-            }
-        );
+        assert_eq!(p.parse("1.23").unwrap(), Duration::from_secs(4428, 0..4));
+        assert_eq!(p.parse("1.234").unwrap(), Duration::from_secs(4428, 0..4));
 
         assert!(p.parse("1.2").is_err());
         assert!(p.parse(".123").is_err());

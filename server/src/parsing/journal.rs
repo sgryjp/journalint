@@ -9,8 +9,25 @@ use super::primitives::{duration, timerange, Duration, LooseTimeRange};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Journal {
-    pub front_matter: FrontMatter,
-    pub entries: Vec<JournalEntry>,
+    front_matter: FrontMatter,
+    entries: Vec<JournalEntry>,
+}
+
+impl Journal {
+    pub fn new(front_matter: FrontMatter, entries: Vec<JournalEntry>) -> Self {
+        Self {
+            front_matter,
+            entries,
+        }
+    }
+
+    pub fn front_matter(&self) -> &FrontMatter {
+        &self.front_matter
+    }
+
+    pub fn entries(&self) -> &[JournalEntry] {
+        self.entries.as_ref()
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -177,7 +194,7 @@ mod tests {
             ],
         );
 
-        assert_eq!(entry.duration, Duration::new(3600, 27..31));
+        assert_eq!(entry.duration, Duration::from_secs(3600, 27..31));
 
         assert_eq!(
             entry.description,
