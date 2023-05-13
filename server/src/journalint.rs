@@ -3,9 +3,11 @@ use chumsky::Parser;
 
 use crate::diagnostic::{Diagnostic, DiagnosticSeverity};
 use crate::linemap::LineMap;
+use crate::linting;
 use crate::parsing::journal::Journal;
 
 pub struct Journalint<'a> {
+    source: Option<String>,
     content: &'a str,
     diagnostics: Vec<Diagnostic>,
     linemap: LineMap,
@@ -15,12 +17,14 @@ pub struct Journalint<'a> {
 impl<'a> Journalint<'a> {
     pub fn new(filename: Option<String>, content: &'a str) -> Self {
         let mut journalint = Self {
+            source: filename.clone(),
             content,
             diagnostics: Vec::new(),
             linemap: LineMap::new(content),
             journal: None,
         };
         journalint._parse(filename, content);
+        journalint._lint();
         journalint
     }
 
@@ -47,14 +51,21 @@ impl<'a> Journalint<'a> {
         }
     }
 
+    fn _lint(&mut self) {
+        let journal = self.journal().unwrap();
+        for diagnostic in linting::duration_mismatch(self.source.as_deref(), journal) {
+            self.diagnostics.push(diagnostic);
+        }
+    }
+
     pub fn report(&self) {
         self.diagnostics
             .iter()
-            .for_each(|d| _report_diagnostic(self.content, &self.linemap, d))
+            .for_each(|d| _report_diagnostic(self.content, d))
     }
 }
 
-fn _report_diagnostic(content: &str, linemap: &LineMap, diag: &Diagnostic) {
+fn _report_diagnostic(content: &str, diag: &Diagnostic) {
     let stdin_source_name = "<STDIN>".to_string();
     let filename = diag.source().unwrap_or(&stdin_source_name);
     let start = diag.span().start;

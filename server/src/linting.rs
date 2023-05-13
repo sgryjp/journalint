@@ -1,12 +1,8 @@
 use lsp_types::DiagnosticSeverity;
 
-use crate::{diagnostic::Diagnostic, linemap::LineMap, parsing::journal::Journal};
+use crate::{diagnostic::Diagnostic, parsing::journal::Journal};
 
-pub fn duration_mismatch(
-    source: Option<&String>,
-    linemap: &LineMap,
-    journal: &Journal,
-) -> Vec<Diagnostic> {
+pub fn duration_mismatch(source: Option<&str>, journal: &Journal) -> Vec<Diagnostic> {
     let mut diagnostics = Vec::new();
 
     for entry in journal.entries() {
@@ -25,7 +21,7 @@ pub fn duration_mismatch(
             diagnostics.push(Diagnostic::new(
                 entry.duration().span().clone(),
                 DiagnosticSeverity::WARNING,
-                source.cloned(),
+                source.map(|s| s.to_owned()),
                 format!("Duration mistmatch: {}", written_duration),
             ));
         }

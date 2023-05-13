@@ -54,7 +54,6 @@ impl LooseTime {
         let day = self.hour / 24;
         let hour = self.hour - day * 24;
         let min = self.minute;
-        dbg!(day, hour, min);
         NaiveDateTime::new(date.value, NaiveTime::from_hms_opt(hour, min, 0).unwrap())
             .checked_add_days(Days::new(day as u64))
     }
