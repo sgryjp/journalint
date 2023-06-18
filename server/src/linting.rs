@@ -7,10 +7,10 @@ pub fn incorrect_duration(source: Option<&str>, journal: &Journal) -> Vec<Diagno
 
     for entry in journal.entries() {
         let Some(start) = entry.time_range().start().into_datetime(journal.front_matter().date()) else {
-            return diagnostics;// TODO: Make this case a warning
+            return diagnostics; // TODO: Make this case a warning
         };
         let Some(end) = entry.time_range().end().into_datetime(journal.front_matter().date()) else {
-            return diagnostics;// TODO: Make this case a warning
+            return diagnostics; // TODO: Make this case a warning
         };
         let Ok(calculated_duration) = (end - start).to_std() else {
             return diagnostics; // TODO: Make this case a warning, using the Err variant
@@ -55,6 +55,9 @@ mod tests {
         assert_eq!(diagnostics.len(), 1);
         let diagnostic = &diagnostics[0];
         assert_eq!(*diagnostic.span(), 77..81);
-        assert_eq!(diagnostic.message(), "Incorrect duration: found 1.00, expected 1.25");
+        assert_eq!(
+            diagnostic.message(),
+            "Incorrect duration: found 1.00, expected 1.25"
+        );
     }
 }
