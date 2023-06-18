@@ -2,7 +2,7 @@ use lsp_types::DiagnosticSeverity;
 
 use crate::{diagnostic::Diagnostic, parsing::journal::Journal};
 
-pub fn duration_mismatch(source: Option<&str>, journal: &Journal) -> Vec<Diagnostic> {
+pub fn incorrect_duration(source: Option<&str>, journal: &Journal) -> Vec<Diagnostic> {
     let mut diagnostics = Vec::new();
 
     for entry in journal.entries() {
@@ -39,7 +39,7 @@ mod tests {
     use crate::journalint::Journalint;
 
     #[test]
-    fn duration_mismatch() {
+    fn incorrect_duration() {
         const TEST_DATA: &str = "\
         ---\n\
         date: 2006-01-02\n\

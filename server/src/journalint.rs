@@ -53,7 +53,7 @@ impl<'a> Journalint<'a> {
 
     fn _lint(&mut self) {
         let journal = self.journal().unwrap();
-        for diagnostic in linting::duration_mismatch(self.source.as_deref(), journal) {
+        for diagnostic in linting::incorrect_duration(self.source.as_deref(), journal) {
             self.diagnostics.push(diagnostic);
         }
     }
