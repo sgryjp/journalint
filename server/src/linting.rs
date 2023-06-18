@@ -18,11 +18,15 @@ pub fn duration_mismatch(source: Option<&str>, journal: &Journal) -> Vec<Diagnos
 
         if &calculated_duration != entry.duration().value() {
             let written_duration = entry.duration().value().as_secs_f64() / 3600.0;
+            let expected = calculated_duration.as_secs_f64() / 3600.0;
             diagnostics.push(Diagnostic::new(
                 entry.duration().span().clone(),
                 DiagnosticSeverity::WARNING,
                 source.map(|s| s.to_owned()),
-                format!("Duration mistmatch: {}", written_duration),
+                format!(
+                    "Incorrect duration: found {:1.2}, expected {:1.2}",
+                    written_duration, expected
+                ),
             ));
         }
     }
@@ -46,7 +50,11 @@ mod tests {
         - 09:00-10:15 ABCDEFG8 AB3 1.00 foo: bar: baz\n\
         ";
 
-        let _journalint = Journalint::new(None, TEST_DATA);
-        todo!();
+        let journalint = Journalint::new(None, TEST_DATA);
+        let diagnostics = journalint.diagnostics();
+        assert_eq!(diagnostics.len(), 1);
+        let diagnostic = &diagnostics[0];
+        assert_eq!(*diagnostic.span(), 77..81);
+        assert_eq!(diagnostic.message(), "Incorrect duration: found 1.00, expected 1.25");
     }
 }
