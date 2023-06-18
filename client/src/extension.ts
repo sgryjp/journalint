@@ -1,5 +1,6 @@
 import path = require("path");
-import { workspace, ExtensionContext } from "vscode";
+import process = require("process");
+import { ExtensionContext, ExtensionMode } from "vscode";
 
 import {
   LanguageClient,
@@ -11,7 +12,16 @@ import {
 let client: LanguageClient;
 
 export function activate(context: ExtensionContext) {
-  console.log("# activating...");
+  console.log("Activating journalint extension...");
+
+  // Add PATH to debug build of journalint
+  if (context.extensionMode !== ExtensionMode.Production) {
+    const srcRoot = path.dirname(path.dirname(__dirname));
+    const executablePath = path.join(srcRoot, "server", "target", "debug");
+    process.env.PATH = executablePath + path.delimiter;
+  }
+
+  // Configure LSP client
   const serverOptions: ServerOptions = {
     run: {
       command: "journalint",
@@ -22,7 +32,6 @@ export function activate(context: ExtensionContext) {
       transport: TransportKind.stdio, // --stdio will be appended by specifying this.
     },
   };
-
   const clientOptions: LanguageClientOptions = {
     documentSelector: [{ scheme: "file", language: "markdown" }],
     // synchronize: {
@@ -31,17 +40,18 @@ export function activate(context: ExtensionContext) {
     // },
   };
 
+  // Start LSP client
   client = new LanguageClient(
     "journalint",
     "journalint",
     serverOptions,
     clientOptions
   );
-
   client.start();
 }
 
 export function deactivate(): Thenable<void> | undefined {
+  console.log(`Deactivating journalint extension...`);
   if (!client) {
     return undefined;
   }
