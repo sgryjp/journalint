@@ -24,6 +24,7 @@ fn on_text_document_did_open(
     conn: &Connection,
     params: &DidOpenTextDocumentParams,
 ) -> Result<(), JournalintError> {
+    // Extract filename in the given URL
     let doc = &params.text_document;
     let Some(segments) = doc.uri.path_segments() else {
         let msg = format!("failed to split into segments: [{}]", doc.uri);
@@ -34,18 +35,24 @@ fn on_text_document_did_open(
         return Err(JournalintError::Unexpected(msg.into()))
     };
     let filename = String::from(filename);
-    let journalint = Journalint::new(Some(filename), &doc.text.as_str());
 
+    // Parse the content then convert diagnostics into the corresponding LSP type
+    let journalint = Journalint::new(Some(filename), &doc.text.as_str());
     let diagnostics = journalint
         .diagnostics()
         .into_iter()
         .map(|d| d.into_lsp_types(journalint.linemap()))
         .collect();
+
+    // Publish them to the client
     let params = PublishDiagnosticsParams::new(params.text_document.uri.clone(), diagnostics, None);
     let params = serde_json::to_value(params)?;
-    let result = conn.sender.send(Notification(lsp_server::Notification {
-        method: "textDocument/publishDiagnostics".to_string(),
-        params,
-    }));
+    conn.sender
+        .send(Notification(lsp_server::Notification {
+            method: "textDocument/publishDiagnostics".to_string(),
+            params,
+        }))
+        .map_err(|e| JournalintError::LspCommunicationError(e.to_string()))?;
+
     Ok(())
 }

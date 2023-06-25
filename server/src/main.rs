@@ -59,7 +59,9 @@ fn language_server_main() -> Result<(), JournalintError> {
         ..Default::default()
     })
     .unwrap();
-    let init_params = conn.initialize(server_capabilities)?;
+    let init_params = conn
+        .initialize(server_capabilities)
+        .map_err(|e| JournalintError::LspCommunicationError(e.to_string()))?;
     let init_params: InitializeParams = serde_json::from_value(init_params).unwrap();
 
     main_loop(&conn, &init_params)?;

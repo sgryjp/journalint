@@ -6,6 +6,12 @@ pub enum JournalintError {
     #[error("Unexpected error: {0}")]
     Unexpected(String),
 
+    #[error("Out of range date: year={year}, month={month}, day={day}")]
+    OutOfRangeDate { year: i32, month: u32, day: u32 },
+
+    #[error("Out of range time: hour={hour}, minute={minute}")]
+    OutOfRangeTime { hour: u32, minute: u32 },
+
     #[error("Parse error")]
     FatalParseError {
         position: Option<Position>,
@@ -16,16 +22,13 @@ pub enum JournalintError {
     #[error("Invalid argument: {0}")]
     ArgumentError(String),
 
+    #[error("LSP communication error: {0}")]
+    LspCommunicationError(String),
+
     #[error("I/O Error: {}", .source)]
     Io {
         #[from]
         source: std::io::Error,
-    },
-
-    #[error("Command line argument error: {}", .source)]
-    ClapError {
-        #[from]
-        source: clap::error::Error,
     },
 
     #[error("Serialization error: {}", .source)]
@@ -33,18 +36,6 @@ pub enum JournalintError {
         #[from]
         source: serde_json::error::Error,
     },
-
-    #[error("Protocol error: {}", .source)]
-    ProtocolError {
-        #[from]
-        source: lsp_server::ProtocolError,
-    },
-
-    #[error("Out of range date: year={year}, month={month}, day={day}")]
-    OutOfRangeDate { year: i32, month: u32, day: u32 },
-
-    #[error("Out of range time: hour={hour}, minute={minute}")]
-    OutOfRangeTime { hour: u32, minute: u32 },
 }
 
 impl JournalintError {
