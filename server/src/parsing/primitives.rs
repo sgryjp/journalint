@@ -50,7 +50,7 @@ impl LooseTime {
         &self.span
     }
 
-    pub fn into_datetime(&self, date: &LooseDate) -> Option<NaiveDateTime> {
+    pub fn to_datetime(&self, date: &LooseDate) -> Option<NaiveDateTime> {
         let day = self.hour / 24;
         let hour = self.hour - day * 24;
         let min = self.minute;

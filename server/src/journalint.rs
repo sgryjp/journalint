@@ -3,7 +3,7 @@ use chumsky::Parser;
 
 use crate::diagnostic::{Diagnostic, DiagnosticSeverity};
 use crate::linemap::LineMap;
-use crate::linting;
+use crate::linting::lint_incorrect_duration;
 use crate::parsing::journal::Journal;
 
 pub struct Journalint<'a> {
@@ -32,6 +32,10 @@ impl<'a> Journalint<'a> {
         self.journal.as_ref()
     }
 
+    pub fn source(&self) -> Option<&str> {
+        self.source.as_deref()
+    }
+
     pub fn diagnostics(&self) -> &[Diagnostic] {
         &self.diagnostics
     }
@@ -57,8 +61,47 @@ impl<'a> Journalint<'a> {
 
     fn _lint(&mut self) {
         let journal = self.journal().unwrap();
-        for diagnostic in linting::incorrect_duration(self.source.as_deref(), journal) {
-            self.diagnostics.push(diagnostic);
+
+        // Scan entries
+        for entry in journal.entries() {
+            let start_time = entry.time_range().start();
+            let Some(start) = start_time.to_datetime(journal.front_matter().date()) else {
+               let d = Diagnostic::new(
+                    start_time.span().clone(),
+                    DiagnosticSeverity::WARNING,
+                    self.source().map(|s| s.to_string()),
+                    "invalid start time (out of valid range)".to_string()
+                );
+                self.diagnostics.push(d);
+                return;
+            };
+
+            let end_time = entry.time_range().end();
+            let Some(end) = end_time.to_datetime(journal.front_matter().date()) else {
+                let d = Diagnostic::new(
+                    end_time.span().clone(),
+                    DiagnosticSeverity::WARNING,
+                    self.source().map(|s| s.to_string()),
+                    "invalid end time (out of valid range)".to_string(),
+                );
+                self.diagnostics.push(d);
+                return;
+            };
+            let Ok(calculated_duration) = (end - start).to_std() else {
+                let d = Diagnostic::new(
+                    end_time.span().clone(),
+                    DiagnosticSeverity::WARNING,
+                    self.source().map(|s| s.to_string()),
+                    "end time should be the same or after the start time".to_string()
+                );
+                self.diagnostics.push(d);
+                return;
+            };
+
+            if let Some(d) = lint_incorrect_duration(self.source(), calculated_duration, entry) {
+                self.diagnostics.push(d);
+                return;
+            }
         }
     }
 
