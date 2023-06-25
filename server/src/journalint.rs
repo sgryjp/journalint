@@ -33,7 +33,11 @@ impl<'a> Journalint<'a> {
     }
 
     pub fn diagnostics(&self) -> &[Diagnostic] {
-        self.diagnostics.as_ref()
+        &self.diagnostics
+    }
+
+    pub fn linemap(&self) -> &LineMap {
+        &self.linemap
     }
 
     /// Parse a journal file content.

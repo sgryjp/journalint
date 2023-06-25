@@ -47,7 +47,7 @@ impl Diagnostic {
         self.message.as_ref()
     }
 
-    pub fn into_lsp_types(self, linemap: LineMap) -> lsp_types::Diagnostic {
+    pub fn into_lsp_types(&self, linemap: &LineMap) -> lsp_types::Diagnostic {
         let range = lsp_types::Range::new(
             linemap.position_from_offset(self.span().start),
             linemap.position_from_offset(self.span().end),
@@ -56,8 +56,8 @@ impl Diagnostic {
             range,
             Some(self.severity),
             None,
-            self.source,
-            self.message,
+            self.source().cloned(),
+            self.message().to_owned(),
             None,
             None,
         )

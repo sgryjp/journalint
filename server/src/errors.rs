@@ -3,6 +3,9 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum JournalintError {
+    #[error("Unexpected error: {0}")]
+    Unexpected(String),
+
     #[error("Parse error")]
     FatalParseError {
         position: Option<Position>,
