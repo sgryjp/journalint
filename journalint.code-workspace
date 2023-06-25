@@ -1,10 +1,10 @@
 {
 	"folders": [
 		{
-			"path": "client"
+			"path": "crates/journalint"
 		},
 		{
-			"path": "server"
+			"path": "tools/journalint-vscode"
 		}
 	]
 }
