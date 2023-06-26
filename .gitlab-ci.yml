@@ -9,6 +9,14 @@ default:
     when: on_success
     expire_in: 30 days
 
+cargo-fmt:
+  stage: test
+  image: rust:latest
+  script:
+    - rustup component add clippy rustfmt
+    - cargo fmt --all --check
+    - cargo clippy -- -D warnings
+
 build-crates-linux:
   stage: build
   image: rust:latest
@@ -23,7 +31,8 @@ build-crates-windows:
   extends:
     - .shared_windows_runners
   script:
-    - Invoke-WebRequest -OutFile rustup-init.exe https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe
+    - Invoke-WebRequest -OutFile rustup-init.exe
+                        https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe
     - ./rustup-init.exe -y --target stable
     - $env:PATH="$env:USERPROFILE\.cargo\bin;$env:PATH"
     - cargo build --release
