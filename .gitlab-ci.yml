@@ -22,7 +22,7 @@ build-vsix:
     - (cd tools/journalint-vscode; npm exec -- vsce package)
   artifacts:
     paths:
-      - "journalint-*.vsix"
+      - "tools/journalint-vscode/journalint-*.vsix"
 
 test-crates:
   stage: test
