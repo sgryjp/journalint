@@ -1,10 +1,15 @@
+.shared_windows_runners:
+  tags:
+    - shared-windows
+    - windows-1809
+
 default:
   artifacts:
     untracked: false
     when: on_success
     expire_in: 30 days
 
-build-crates:
+build-crates-linux:
   stage: build
   image: rust:latest
   script:
@@ -13,12 +18,24 @@ build-crates:
     paths:
       - "target/release/journalint"
 
+build-crates-windows:
+  stage: build
+  extends:
+    - .shared_windows_runners
+  script:
+    - Invoke-WebRequest -OutFile rustup-init.exe https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe
+    - ./rustup-init.exe -y --target stable
+    - $env:PATH="$env:USERPROFILE\.cargo\bin;$env:PATH"
+    - cargo build --release
+  artifacts:
+    paths:
+      - "target/release/journalint.exe"
+
 build-vsix:
   stage: build
   image: node:lts
-  before_script:
-    - (cd tools/journalint-vscode; npm ci)
   script:
+    - (cd tools/journalint-vscode; npm ci)
     - (cd tools/journalint-vscode; npm exec -- vsce package)
   artifacts:
     paths:
@@ -34,7 +51,6 @@ test-crates:
 # test-vsix:
 #   stage: test
 #   image: node:lts
-#   before_script:
-#     - (cd tools/journalint-vscode; npm ci)
 #   script:
+#     - (cd tools/journalint-vscode; npm ci)
 #     - (cd tools/journalint-vscode; npm run test)
