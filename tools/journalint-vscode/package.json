@@ -4,6 +4,10 @@
   "description": "Linter for my personal journal files.",
   "license": "(MIT OR Apache-2.1)",
   "version": "0.1.0",
+  "repository": {
+    "type": "git",
+    "url": "https://gitlab.com/sgryjp/journalint.git"
+  },
   "engines": {
     "vscode": "^1.76.0"
   },
