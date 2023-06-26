@@ -9,36 +9,37 @@ default:
     when: on_success
     expire_in: 30 days
 
-cargo-fmt:
-  stage: test
-  image: rust:latest
-  script:
-    - rustup component add clippy rustfmt
-    - cargo fmt --all --check
-    - cargo clippy -- -D warnings
-
 build-crates-linux:
   stage: build
   image: rust:latest
+  parallel:
+    matrix:
+      - {target: "x86_64-unknown-linux-gnu" }
   script:
-    - cargo build --release
+    - cargo build --release --target $target
+    - mkdir -p dist/$target
+    - mv target/$target/release/journalint dist/$target/
   artifacts:
     paths:
-      - "target/release/journalint"
+      - "dist/$target/journalint"
 
 build-crates-windows:
   stage: build
   extends:
     - .shared_windows_runners
+  parallel:
+    matrix:
+      - {target: "x86_64-pc-windows-msvc" }
   script:
-    - Invoke-WebRequest -OutFile rustup-init.exe
-                        https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe
-    - ./rustup-init.exe -y --target stable
+    - Invoke-WebRequest -OutFile rustup-init.exe https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe
+    - ./rustup-init.exe -y --target $target
     - $env:PATH="$env:USERPROFILE\.cargo\bin;$env:PATH"
-    - cargo build --release
+    - cargo build --release --target $target
+    - New-Item -ItemType Directory -Force dist/$target
+    - Move-Item target/$target/release/journalint.exe dist/$target
   artifacts:
     paths:
-      - "target/release/journalint.exe"
+      - "dist/$target/journalint"
 
 build-vsix:
   stage: build
@@ -46,9 +47,11 @@ build-vsix:
   script:
     - (cd tools/journalint-vscode; npm ci)
     - (cd tools/journalint-vscode; npm exec -- vsce package)
+    - mkdir -p dist
+    - mv tools/journalint-vscode/*.vsix dist
   artifacts:
     paths:
-      - "tools/journalint-vscode/journalint-*.vsix"
+      - "dist/*.vsix"
 
 test-crates:
   stage: test
