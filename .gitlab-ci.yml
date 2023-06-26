@@ -47,8 +47,8 @@ build-vsix:
   script:
     - (cd tools/journalint-vscode; npm ci)
     - (cd tools/journalint-vscode; npm exec -- vsce package)
-    - New-Item -ItemType Directory -Force dist
-    - Move-Item tools/journalint-vscode/*.vsix dist
+    - mkdir -p dist
+    - mv tools/journalint-vscode/*.vsix dist
   artifacts:
     paths:
       - "dist/*.vsix"
