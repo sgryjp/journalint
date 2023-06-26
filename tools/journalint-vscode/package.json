@@ -15,9 +15,9 @@
     "Other"
   ],
   "main": "./out/extension.js",
-	"activationEvents": [
-		"onLanguage:markdown"
-	],
+  "activationEvents": [
+    "onLanguage:markdown"
+  ],
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
