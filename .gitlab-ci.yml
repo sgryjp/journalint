@@ -1,0 +1,40 @@
+default:
+  artifacts:
+    untracked: false
+    when: on_success
+    expire_in: 30 days
+
+build-crates:
+  stage: build
+  image: rust:latest
+  script:
+    - cargo build --release
+  artifacts:
+    paths:
+      - "target/release/journalint"
+
+build-vsix:
+  stage: build
+  image: node:lts
+  before_script:
+    - (cd tools/journalint-vscode; npm ci)
+  script:
+    - (cd tools/journalint-vscode; npm exec -- vsce package)
+  artifacts:
+    paths:
+      - "journalint-*.vsix"
+
+test-crates:
+  stage: test
+  image: rust:latest
+  script:
+    - cargo test
+
+# (Because the project is not Web extension, testing require a desktop environment.)
+# test-vsix:
+#   stage: test
+#   image: node:lts
+#   before_script:
+#     - (cd tools/journalint-vscode; npm ci)
+#   script:
+#     - (cd tools/journalint-vscode; npm run test)
