@@ -38,10 +38,6 @@ export function activate(context: vscode.ExtensionContext) {
   };
   const clientOptions: LanguageClientOptions = {
     documentSelector: [{ scheme: "file", language: "markdown" }],
-    // synchronize: {
-    //   // Notify the server about file changes to '.clientrc files contained in the workspace
-    //   fileEvents: workspace.createFileSystemWatcher("**/.clientrc"),
-    // },
   };
 
   // Start LSP client
