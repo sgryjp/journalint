@@ -1,6 +1,6 @@
 import path = require("path");
 import process = require("process");
-import { ExtensionContext, ExtensionMode } from "vscode";
+import * as vscode from "vscode";
 
 import {
   LanguageClient,
@@ -11,11 +11,11 @@ import {
 
 let client: LanguageClient;
 
-export function activate(context: ExtensionContext) {
+export function activate(context: vscode.ExtensionContext) {
   console.log("Activating journalint extension...");
 
   // Add PATH to debug build of journalint
-  if (context.extensionMode !== ExtensionMode.Production) {
+  if (context.extensionMode !== vscode.ExtensionMode.Production) {
     const srcRoot = path.dirname(path.dirname(__dirname));
     const executablePath = path.join(srcRoot, "server", "target", "debug");
     process.env.PATH = executablePath + path.delimiter;
