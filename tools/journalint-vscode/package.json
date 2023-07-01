@@ -1,6 +1,12 @@
 {
   "name": "journalint",
   "displayName": "journalint",
+  "publisher": "sgryjp",
+  "author": {
+    "name": "Suguru Yamamoto",
+    "email": "sgryjp@gmail.com",
+    "url": "https://github.com/sgryjp"
+  },
   "description": "Linter for my personal journal files.",
   "license": "(MIT OR Apache-2.1)",
   "version": "0.1.0",
