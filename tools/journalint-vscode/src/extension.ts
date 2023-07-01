@@ -10,9 +10,13 @@ import {
 } from "vscode-languageclient/node";
 
 let client: LanguageClient;
+let outputChannel: vscode.OutputChannel;
 
 export function activate(context: vscode.ExtensionContext) {
-  console.log("Activating journalint extension...");
+  // Create output channel for logging activity of this extension
+  outputChannel = vscode.window.createOutputChannel("journalint-vscode");
+
+  outputChannel.appendLine("Activating journalint-vscode...");
 
   // Add PATH to debug build of journalint
   if (context.extensionMode !== vscode.ExtensionMode.Production) {
@@ -48,12 +52,18 @@ export function activate(context: vscode.ExtensionContext) {
     clientOptions
   );
   client.start();
+  outputChannel.appendLine("Activated journalint-vscode.");
 }
 
 export function deactivate(): Thenable<void> | undefined {
-  console.log(`Deactivating journalint extension...`);
-  if (!client) {
-    return undefined;
+  try {
+    outputChannel.appendLine(`Deactivating journalint extension...`);
+    if (!client) {
+      return undefined;
+    }
+    return client.stop();
+  } finally {
+    outputChannel.appendLine(`Deactivated journalint extension.`);
+    outputChannel.dispose();
   }
-  return client.stop();
 }
