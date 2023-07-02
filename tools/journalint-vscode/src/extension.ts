@@ -21,7 +21,8 @@ export function activate(context: vscode.ExtensionContext) {
   // Add PATH to the bundled journalint native binary.
   // (`scripts/compile.js` builds and place it into the `bundles` directory.)
   // Note that `__dirname` points to the `out` directory in development and in production.
-  const executablePath = path.join(path.dirname(__dirname), "bundles", "bin");
+  const target = `${process.platform}_${process.arch}`;
+  const executablePath = path.join(path.dirname(__dirname), "bundles", target);
   outputChannel.appendLine(`Appending [${executablePath}] to PATH.`);
   process.env.PATH = executablePath + path.delimiter;
 
