@@ -3,6 +3,11 @@
     - shared-windows
     - windows-1809
 
+stages:
+  - build_crates
+  - build_vsix
+  - test
+
 default:
   artifacts:
     untracked: false
@@ -10,7 +15,7 @@ default:
     expire_in: 30 days
 
 build-crates-linux:
-  stage: build
+  stage: build_crates
   image: rust:latest
   parallel:
     matrix:
@@ -25,7 +30,7 @@ build-crates-linux:
       - "dist"
 
 build-crates-windows:
-  stage: build
+  stage: build_crates
   extends:
     - .shared_windows_runners
   parallel:
@@ -43,7 +48,7 @@ build-crates-windows:
       - "dist"
 
 build-vsix-linux:
-  stage: build
+  stage: build_vsix
   image: node:lts
   parallel:
     matrix:
@@ -59,7 +64,7 @@ build-vsix-linux:
       - "dist/*"
 
 build-vsix-windows:
-  stage: build
+  stage: build_vsix
   extends:
     - .shared_windows_runners
   parallel:
