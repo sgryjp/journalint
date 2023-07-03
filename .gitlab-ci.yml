@@ -24,10 +24,9 @@ build-crates-linux:
     - rustc --version
     - cargo build --release --target $rust_target
     - mkdir -p dist/$rust_target
-    - mv target/$target/release/journalint dist/$rust_target/
   artifacts:
     paths:
-      - "dist"
+      - "target/$rust_target/release/journalint"
 
 build-crates-windows:
   stage: build_crates
@@ -42,26 +41,25 @@ build-crates-windows:
     - $env:PATH="$env:USERPROFILE\.cargo\bin;$env:PATH"
     - cargo build --release --target $rust_target
     - New-Item -ItemType Directory -Force dist/$rust_target
-    - Move-Item target/$target/release/journalint.exe dist/$rust_target/
   artifacts:
     paths:
-      - "dist"
+      - "target/$rust_target/release/journalint.exe"
 
 build-vsix-linux:
   stage: build_vsix
   image: node:lts
   parallel:
     matrix:
-      - {node_target: "linux-x64" }
+      - { node_target: "linux-x64", rust_target: "x86_64-unknown-linux-gnu" }
   script:
     - node --version
+    - ls -lF target/$rust_target/release
     - (cd tools/journalint-vscode; npm ci)
     - (cd tools/journalint-vscode; npm exec -- vsce package --target ${node_target})
     - mkdir -p dist
-    - mv tools/journalint-vscode/*.vsix dist
   artifacts:
     paths:
-      - "dist/*"
+      - "tools/journalint-vscode/*.vsix"
 
 build-vsix-windows:
   stage: build_vsix
@@ -69,16 +67,16 @@ build-vsix-windows:
     - .shared_windows_runners
   parallel:
     matrix:
-      - {node_target: "win32-x64" }
+      - { node_target: "win32-x64", rust_target: "x86_64-pc-windows-msvc" }
   script:
     - node --version
+    - Get-ChildItem target/$rust_target/release
     - (cd tools/journalint-vscode; npm ci)
     - (cd tools/journalint-vscode; npm exec -- vsce package)
-    - mkdir -p dist
-    - mv tools/journalint-vscode/*.vsix dist
+    - New-Item -ItemType Directory -Force dist
   artifacts:
     paths:
-      - "dist/*"
+      - "tools/journalint-vscode/*.vsix"
 
 test-crates:
   stage: test
