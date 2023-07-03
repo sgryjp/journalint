@@ -19,7 +19,7 @@ build-crates-linux:
   image: rust:latest
   parallel:
     matrix:
-      - { rust_target: "x86_64-unknown-linux-gnu" }
+      - { rust_target: "x86_64-unknown-linux-musl" }
   script:
     - rustc --version
     - cargo build --release --target $rust_target
