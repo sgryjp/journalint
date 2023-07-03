@@ -14,12 +14,12 @@ build-crates-linux:
   image: rust:latest
   parallel:
     matrix:
-      - {target: "x86_64-unknown-linux-gnu" }
+      - { rust_target: "x86_64-unknown-linux-gnu" }
   script:
     - rustc --version
-    - cargo build --release --target $target
-    - mkdir -p dist/$target
-    - mv target/$target/release/journalint dist/$target/
+    - cargo build --release --target $rust_target
+    - mkdir -p dist/$rust_target
+    - mv target/$target/release/journalint dist/$rust_target/
   artifacts:
     paths:
       - "dist"
@@ -30,14 +30,14 @@ build-crates-windows:
     - .shared_windows_runners
   parallel:
     matrix:
-      - {target: "x86_64-pc-windows-msvc" }
+      - { rust_target: "x86_64-pc-windows-msvc" }
   script:
     - Invoke-WebRequest -OutFile rustup-init.exe https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe
-    - ./rustup-init.exe -y --target $target
+    - ./rustup-init.exe -y --target $rust_target
     - $env:PATH="$env:USERPROFILE\.cargo\bin;$env:PATH"
-    - cargo build --release --target $target
-    - New-Item -ItemType Directory -Force dist/$target
-    - Move-Item target/$target/release/journalint.exe dist/$target/
+    - cargo build --release --target $rust_target
+    - New-Item -ItemType Directory -Force dist/$rust_target
+    - Move-Item target/$target/release/journalint.exe dist/$rust_target/
   artifacts:
     paths:
       - "dist"
