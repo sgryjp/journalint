@@ -17,9 +17,8 @@ default:
 build-crates-linux:
   stage: build_crates
   image: rust:latest
-  parallel:
-    matrix:
-      - { rust_target: "x86_64-unknown-linux-gnu" }
+  variables:
+    rust_target: "x86_64-unknown-linux-gnu"
   script:
     - rustc --version
     - cargo build --release --target $rust_target
@@ -32,9 +31,8 @@ build-crates-windows:
   stage: build_crates
   extends:
     - .shared_windows_runners
-  parallel:
-    matrix:
-      - { rust_target: "x86_64-pc-windows-msvc" }
+  variables:
+    rust_target: "x86_64-pc-windows-msvc"
   script:
     - Invoke-WebRequest -OutFile rustup-init.exe https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe
     - ./rustup-init.exe -y --target $rust_target
@@ -48,9 +46,9 @@ build-crates-windows:
 build-vsix-linux:
   stage: build_vsix
   image: node:lts
-  parallel:
-    matrix:
-      - { node_target: "linux-x64", rust_target: "x86_64-unknown-linux-gnu" }
+  variables:
+    node_target: "linux-x64"
+    rust_target: "x86_64-unknown-linux-gnu"
   script:
     - node --version
     - ls -lF target/$rust_target/release
@@ -66,15 +64,15 @@ build-vsix-windows:
   stage: build_vsix
   extends:
     - .shared_windows_runners
-  parallel:
-    matrix:
-      - { node_target: "win32-x64", rust_target: "x86_64-pc-windows-msvc" }
+  variables:
+    node_target: "win32-x64"
+    rust_target: "x86_64-pc-windows-msvc"
   script:
     - node --version
     - Get-ChildItem target/$rust_target/release
     - npm install -g @vscode/vsce
-    - (cd tools/journalint-vscode; npm ci)
-    - (cd tools/journalint-vscode; vsce package --target ${node_target})
+    - cd tools/journalint-vscode && npm ci
+    - cd tools/journalint-vscode && vsce package --target ${node_target}
     - New-Item -ItemType Directory -Force dist
   artifacts:
     paths:
@@ -85,11 +83,3 @@ test-crates:
   image: rust:latest
   script:
     - cargo test
-
-# (Because the project is not Web extension, testing require a desktop environment.)
-# test-vsix:
-#   stage: test
-#   image: node:lts
-#   script:
-#     - (cd tools/journalint-vscode; npm ci)
-#     - (cd tools/journalint-vscode; npm run test)
