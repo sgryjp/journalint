@@ -54,8 +54,9 @@ build-vsix-linux:
   script:
     - node --version
     - ls -lF target/$rust_target/release
+    - npm install -g @vscode/vsce
     - (cd tools/journalint-vscode; npm ci)
-    - (cd tools/journalint-vscode; npm exec -- vsce package --target ${node_target})
+    - (cd tools/journalint-vscode; vsce package --target ${node_target})
     - mkdir -p dist
   artifacts:
     paths:
@@ -71,8 +72,9 @@ build-vsix-windows:
   script:
     - node --version
     - Get-ChildItem target/$rust_target/release
+    - npm install -g @vscode/vsce
     - (cd tools/journalint-vscode; npm ci)
-    - (cd tools/journalint-vscode; npm exec -- vsce package)
+    - (cd tools/journalint-vscode; vsce package --target ${node_target})
     - New-Item -ItemType Directory -Force dist
   artifacts:
     paths:
