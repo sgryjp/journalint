@@ -3,6 +3,11 @@
     - shared-windows
     - windows-1809
 
+stages:
+  - build_crates
+  - build_vsix
+  - test
+
 default:
   artifacts:
     untracked: false
@@ -10,59 +15,71 @@ default:
     expire_in: 30 days
 
 build-crates-linux:
-  stage: build
+  stage: build_crates
   image: rust:latest
-  parallel:
-    matrix:
-      - {target: "x86_64-unknown-linux-gnu" }
+  variables:
+    rust_target: "x86_64-unknown-linux-gnu"
   script:
-    - cargo build --release --target $target
-    - mkdir -p dist/$target
-    - mv target/$target/release/journalint dist/$target/
+    - rustc --version
+    - cargo build --release --target $rust_target
+    - mkdir -p dist/$rust_target
   artifacts:
     paths:
-      - "dist/$target/journalint"
+      - "target/$rust_target/release/journalint"
 
 build-crates-windows:
-  stage: build
+  stage: build_crates
   extends:
     - .shared_windows_runners
-  parallel:
-    matrix:
-      - {target: "x86_64-pc-windows-msvc" }
+  variables:
+    rust_target: "x86_64-pc-windows-msvc"
   script:
     - Invoke-WebRequest -OutFile rustup-init.exe https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe
-    - ./rustup-init.exe -y --target $target
+    - ./rustup-init.exe -y --target $rust_target
     - $env:PATH="$env:USERPROFILE\.cargo\bin;$env:PATH"
-    - cargo build --release --target $target
-    - New-Item -ItemType Directory -Force dist/$target
-    - Move-Item target/$target/release/journalint.exe dist/$target
+    - cargo build --release --target $rust_target
+    - New-Item -ItemType Directory -Force dist/$rust_target
   artifacts:
     paths:
-      - "dist/$target/journalint"
+      - "target/$rust_target/release/journalint.exe"
 
-build-vsix:
-  stage: build
+build-vsix-linux:
+  stage: build_vsix
   image: node:lts
+  variables:
+    node_target: "linux-x64"
+    rust_target: "x86_64-unknown-linux-gnu"
   script:
+    - node --version
+    - ls -lF target/$rust_target/release
+    - npm install -g @vscode/vsce
     - (cd tools/journalint-vscode; npm ci)
-    - (cd tools/journalint-vscode; npm exec -- vsce package)
+    - (cd tools/journalint-vscode; vsce package --target ${node_target})
     - mkdir -p dist
-    - mv tools/journalint-vscode/*.vsix dist
   artifacts:
     paths:
-      - "dist/*.vsix"
+      - "tools/journalint-vscode/*.vsix"
+
+build-vsix-windows:
+  stage: build_vsix
+  extends:
+    - .shared_windows_runners
+  variables:
+    node_target: "win32-x64"
+    rust_target: "x86_64-pc-windows-msvc"
+  script:
+    - node --version
+    - Get-ChildItem target/$rust_target/release
+    - npm install -g @vscode/vsce
+    - cd tools/journalint-vscode && npm ci
+    - cd tools/journalint-vscode && vsce package --target ${node_target}
+    - New-Item -ItemType Directory -Force dist
+  artifacts:
+    paths:
+      - "tools/journalint-vscode/*.vsix"
 
 test-crates:
   stage: test
   image: rust:latest
   script:
     - cargo test
-
-# (Because the project is not Web extension, testing require a desktop environment.)
-# test-vsix:
-#   stage: test
-#   image: node:lts
-#   script:
-#     - (cd tools/journalint-vscode; npm ci)
-#     - (cd tools/journalint-vscode; npm run test)
