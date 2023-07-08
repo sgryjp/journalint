@@ -1,6 +1,5 @@
 ---
 source: crates/journalint/src/main.rs
-assertion_line: 92
 expression: diagnostics
 ---
 []
