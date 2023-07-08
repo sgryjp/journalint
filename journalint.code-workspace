@@ -5,6 +5,9 @@
 		},
 		{
 			"path": "tools/journalint-vscode"
+		},
+		{
+			"path": "scripts"
 		}
 	]
 }
