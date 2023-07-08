@@ -34,6 +34,15 @@ export function activate(context: vscode.ExtensionContext) {
   outputChannel.appendLine(`Prepending [${executablePath}] to PATH.`);
   process.env.PATH = executablePath + path.delimiter + process.env.PATH;
 
+  // Warn if there is not a native binary.
+  const suffix = process.platform === "win32" ? ".exe" : "";
+  const executableFullName = path.join(executablePath, "journalint" + suffix);
+  if (!fs.existsSync(executableFullName)) {
+    outputChannel.appendLine(
+      `WARNING: Native binary not found: [${executableFullName}]`
+    );
+  }
+
   // Configure LSP client
   const serverOptions: ServerOptions = {
     run: {
