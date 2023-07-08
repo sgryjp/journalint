@@ -43,6 +43,11 @@ export function activate(context: vscode.ExtensionContext) {
     );
   }
 
+  // Add RUST_BACKTRACE=1 if not defined
+  if (!process.env.RUST_BACKTRACE) {
+    process.env.RUST_BACKTRACE = "1";
+  }
+
   // Configure LSP client
   const serverOptions: ServerOptions = {
     run: {
