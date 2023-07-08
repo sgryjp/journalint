@@ -8,6 +8,7 @@ use crate::linemap::LineMap;
 ///
 /// This is basically the same as lsp_types::Diagnostic except that this has a field
 /// `span` of type Range<usize>, not a field `range` of type lsp_types::Range.
+#[derive(serde::Serialize, serde::Deserialize)]
 pub struct Diagnostic {
     span: Range<usize>,
     severity: DiagnosticSeverity,
