@@ -60,7 +60,9 @@ impl<'a> Journalint<'a> {
     }
 
     fn _lint(&mut self) {
-        let journal = self.journal().unwrap();
+        let Some(journal) = self.journal() else {
+            return;
+        };
 
         // Scan entries
         for entry in journal.entries() {
