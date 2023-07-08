@@ -1,3 +1,4 @@
+import fs = require("fs");
 import path = require("path");
 import process = require("process");
 import * as vscode from "vscode";
@@ -18,13 +19,20 @@ export function activate(context: vscode.ExtensionContext) {
 
   outputChannel.appendLine("Activating journalint-vscode...");
 
-  // Add PATH to the bundled journalint native binary.
-  // (`scripts/compile.js` builds and place it into the `bundles` directory.)
-  // Note that `__dirname` points to the `out` directory in development and in production.
-  const target = `${process.platform}-${process.arch}`;
-  const executablePath = path.join(path.dirname(__dirname), "bundles", target);
-  outputChannel.appendLine(`Appending [${executablePath}] to PATH.`);
-  process.env.PATH = executablePath + path.delimiter;
+  // Add PATH to the journalint native binary.
+  let executablePath;
+  if (context.extensionMode === vscode.ExtensionMode.Production) {
+    // `scripts/compile.js` builds and place it into the `bundles` directory.
+    // Note that `__dirname` points to the `out` directory in development and in production.
+    const target = `${process.platform}-${process.arch}`;
+    const projectDir = path.dirname(__dirname);
+    executablePath = path.join(projectDir, "bundles", target);
+  } else {
+    const workspaceDir = path.dirname(path.dirname(path.dirname(__dirname)));
+    executablePath = path.join(workspaceDir, "target", "debug");
+  }
+  outputChannel.appendLine(`Prepending [${executablePath}] to PATH.`);
+  process.env.PATH = executablePath + path.delimiter + process.env.PATH;
 
   // Configure LSP client
   const serverOptions: ServerOptions = {
