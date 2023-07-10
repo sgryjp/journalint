@@ -167,6 +167,18 @@ mod tests {
     const EXAMPLE_ENTRY: &str = "- 09:00-10:15 ABCDEFG8 AB3 1.00 foo: bar: baz";
 
     #[test]
+    fn code() {
+        let parser = super::_code();
+        let result = parser.parse("X1234567");
+        assert_eq!(
+            result,
+            Ok(Code {
+                value: String::from("X1234567"),
+                span: 0..8,
+            })
+        );
+    }
+    #[test]
     fn journal_entry() {
         let parser = super::journal_entry();
         let entry = parser.parse(EXAMPLE_ENTRY).unwrap();
