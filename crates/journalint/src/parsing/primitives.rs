@@ -115,7 +115,7 @@ impl Duration {
 }
 
 fn _fixed_length_digits(len: usize) -> impl Parser<char, String, Error = Simple<char>> {
-    one_of::<char, &str, Simple<char>>("0123456789")
+    filter(|c: &char| c.is_ascii_digit())
         .repeated()
         .at_least(len)
         .at_most(len)
