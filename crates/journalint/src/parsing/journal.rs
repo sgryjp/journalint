@@ -97,7 +97,11 @@ pub struct Description {
 }
 
 fn _code() -> impl Parser<char, Code, Error = Simple<char>> {
-    text::ident().map_with_span(|s, span| Code { value: s, span })
+    filter(|c: &char| c.is_ascii_alphanumeric())
+        .repeated()
+        .at_least(1)
+        .collect::<String>()
+        .map_with_span(|s, span| Code { value: s, span })
 }
 
 fn _description() -> impl Parser<char, Description, Error = Simple<char>> {
@@ -111,7 +115,7 @@ fn _description() -> impl Parser<char, Description, Error = Simple<char>> {
 fn journal_entry() -> impl Parser<char, JournalEntry, Error = Simple<char>> {
     just('-')
         .ignore_then(timerange().padded())
-        .then(_code().padded().repeated().padded())
+        .then(_code().padded().repeated().at_least(2).at_most(2))
         .then(duration().padded())
         .then(_description())
         .map_with_span(
@@ -164,11 +168,13 @@ mod tests {
     use super::super::primitives::{LooseDate, LooseTime};
     use super::*;
 
+    //                           0---------1---------2---------3---------4---45
     const EXAMPLE_ENTRY: &str = "- 09:00-10:15 ABCDEFG8 AB3 1.00 foo: bar: baz";
 
     #[test]
     fn code() {
         let parser = super::_code();
+
         let result = parser.parse("X1234567");
         assert_eq!(
             result,
@@ -177,11 +183,23 @@ mod tests {
                 span: 0..8,
             })
         );
+
+        let result = parser.parse("014");
+        assert_eq!(
+            result,
+            Ok(Code {
+                value: String::from("014"),
+                span: 0..3,
+            })
+        );
     }
     #[test]
     fn journal_entry() {
         let parser = super::journal_entry();
-        let entry = parser.parse(EXAMPLE_ENTRY).unwrap();
+        let (entry, errors) = parser.parse_recovery_verbose(EXAMPLE_ENTRY);
+        errors.iter().for_each(|e| println!("!! {:?}", e));
+        assert!(entry.is_some());
+        let entry = entry.unwrap();
 
         assert_eq!(
             entry.time_range,
