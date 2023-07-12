@@ -85,23 +85,19 @@ pub(super) fn front_matter() -> impl Parser<char, FrontMatter, Error = Simple<ch
         )
         .try_map(|items, span| {
             let mut date: Option<LooseDate> = None;
-            let mut start_time: Option<LooseTime> = None;
-            let mut end_time: Option<LooseTime> = None;
+            let mut start: Option<LooseTime> = None;
+            let mut end: Option<LooseTime> = None;
             for item in items {
                 match item {
                     FrontMatterItem::Date(d) => date = Some(d),
-                    FrontMatterItem::StartTime(t) => start_time = Some(t),
-                    FrontMatterItem::EndTime(t) => end_time = Some(t),
+                    FrontMatterItem::StartTime(t) => start = Some(t),
+                    FrontMatterItem::EndTime(t) => end = Some(t),
                 }
             }
             let Some(date) = date else {
                 return Err(Simple::custom(span, "date not found in the front matter".to_string()))
             };
-            Ok(FrontMatter {
-                date,
-                start: start_time,
-                end: end_time,
-            })
+            Ok(FrontMatter { date, start, end })
         })
 }
 
