@@ -119,21 +119,30 @@ impl JournalEntry {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Date {
-    value: NaiveDate,
+    string: String,
     span: Range<usize>,
 }
 
 impl Date {
-    pub fn new(value: NaiveDate, span: Range<usize>) -> Self {
-        Date { value, span }
+    pub fn new<S: Into<String>>(string: S, span: Range<usize>) -> Self {
+        let string: String = string.into();
+        Date { string, span }
     }
 
-    pub fn value(&self) -> NaiveDate {
-        self.value
+    pub fn str(&self) -> &str {
+        self.string.as_ref()
     }
 
     pub fn span(&self) -> &Range<usize> {
         &self.span
+    }
+
+    pub fn to_date(&self) -> Option<NaiveDate> {
+        if let Ok(d) = chrono::NaiveDate::parse_from_str(self.str(), "%Y-%m-%d") {
+            Some(d)
+        } else {
+            None
+        }
     }
 }
 
@@ -186,7 +195,10 @@ impl Time {
         let day = self.hour / 24;
         let hour = self.hour - day * 24;
         let min = self.minute;
-        NaiveDateTime::new(date.value, NaiveTime::from_hms_opt(hour, min, 0).unwrap())
+        let Some(date) = date.to_date() else {
+            return None;
+        };
+        NaiveDateTime::new(date, NaiveTime::from_hms_opt(hour, min, 0).unwrap())
             .checked_add_days(Days::new(day as u64))
     }
 }

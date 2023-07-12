@@ -1,4 +1,3 @@
-use chrono::NaiveDate;
 use chumsky::prelude::*;
 use chumsky::primitive::just;
 use chumsky::text::newline;
@@ -71,22 +70,12 @@ fn _fixed_length_digits(len: usize) -> impl Parser<char, String, Error = Simple<
 
 pub fn date() -> impl Parser<char, ast::Date, Error = Simple<char>> {
     _fixed_length_digits(4)
-        .then_ignore(just('-'))
-        .then(_fixed_length_digits(2))
-        .then_ignore(just('-'))
-        .then(_fixed_length_digits(2))
-        .try_map(|((y, m), d), span| {
-            NaiveDate::from_ymd_opt(
-                str::parse::<i32>(&y).unwrap(),
-                str::parse::<u32>(&m).unwrap(),
-                str::parse::<u32>(&d).unwrap(),
-            )
-            .map(|d| ast::Date::new(d, span.clone()))
-            .ok_or(Simple::custom(
-                span,
-                format!("invalid date: {:4}-{}-{}", y, m, d),
-            ))
-        })
+        .chain::<char, _, _>(just('-'))
+        .chain::<char, _, _>(_fixed_length_digits(2))
+        .chain::<char, _, _>(just('-'))
+        .chain::<char, _, _>(_fixed_length_digits(2))
+        .collect::<String>()
+        .map_with_span(ast::Date::new)
 }
 
 pub fn time() -> impl Parser<char, ast::Time, Error = Simple<char>> {
@@ -185,8 +174,6 @@ pub(crate) fn journal() -> impl Parser<char, ast::Journal, Error = Simple<char>>
 mod tests {
     use std::ops::Range;
 
-    use chrono::NaiveDate;
-
     use super::*;
 
     //                           0---------1---------2---------3---------4---45
@@ -197,10 +184,7 @@ mod tests {
         let p = super::_front_matter_date();
         assert_eq!(
             p.parse("date: 2006-01-02").unwrap(),
-            ast::FrontMatterItem::Date(ast::Date::new(
-                NaiveDate::from_ymd_opt(2006, 1, 2).unwrap(),
-                6..16
-            )),
+            ast::FrontMatterItem::Date(ast::Date::new("2006-01-02", 6..16)),
         );
         assert!(p.parse("date :2006-012-02").is_err());
     }
@@ -238,7 +222,7 @@ mod tests {
             ))
             .unwrap(),
             ast::FrontMatter::new(
-                ast::Date::new(NaiveDate::from_ymd_opt(2006, 1, 2).unwrap(), 10..20),
+                ast::Date::new("2006-01-02", 10..20),
                 Some(ast::Time::new(15, 4, 28..33)),
                 Some(ast::Time::new(24, 56, 39..44))
             )
@@ -251,10 +235,8 @@ mod tests {
         let p = super::date();
         assert_eq!(
             p.parse("2006-01-02").unwrap(),
-            ast::Date::new(NaiveDate::from_ymd_opt(2006, 1, 2).unwrap(), 0..10),
+            ast::Date::new("2006-01-02", 0..10)
         );
-
-        assert!(p.parse("2006-01-00").is_err());
     }
 
     #[test]
@@ -403,7 +385,7 @@ mod tests {
         assert_eq!(
             *journal.front_matter(),
             ast::FrontMatter::new(
-                ast::Date::new(NaiveDate::from_ymd_opt(2006, 1, 2).unwrap(), 10..20),
+                ast::Date::new("2006-01-02", 10..20),
                 Some(ast::Time::new(15, 4, 28..33)),
                 None,
             )
