@@ -30,17 +30,13 @@ impl Journal {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FrontMatter {
-    date: LooseDate,
-    start: Option<LooseTime>,
-    end: Option<LooseTime>,
+    date: Date,
+    start: Option<Time>,
+    end: Option<Time>,
 }
 
 impl FrontMatter {
-    pub fn new(
-        date: LooseDate,
-        start_time: Option<LooseTime>,
-        end_time: Option<LooseTime>,
-    ) -> Self {
+    pub fn new(date: Date, start_time: Option<Time>, end_time: Option<Time>) -> Self {
         Self {
             date,
             start: start_time,
@@ -48,24 +44,24 @@ impl FrontMatter {
         }
     }
 
-    pub fn date(&self) -> &LooseDate {
+    pub fn date(&self) -> &Date {
         &self.date
     }
 
-    pub fn start(&self) -> Option<&LooseTime> {
+    pub fn start(&self) -> Option<&Time> {
         self.start.as_ref()
     }
 
-    pub fn end(&self) -> Option<&LooseTime> {
+    pub fn end(&self) -> Option<&Time> {
         self.end.as_ref()
     }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum FrontMatterItem {
-    Date(LooseDate),
-    StartTime(LooseTime),
-    EndTime(LooseTime),
+    Date(Date),
+    StartTime(Time),
+    EndTime(Time),
 }
 
 #[derive(Debug, PartialEq)]
@@ -76,7 +72,7 @@ pub enum Line {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct JournalEntry {
-    time_range: LooseTimeRange,
+    time_range: TimeRange,
     codes: Vec<Code>,
     duration: Duration,
     description: Description,
@@ -85,7 +81,7 @@ pub struct JournalEntry {
 
 impl JournalEntry {
     pub fn new(
-        time_range: LooseTimeRange,
+        time_range: TimeRange,
         codes: Vec<Code>,
         duration: Duration,
         description: Description,
@@ -100,7 +96,7 @@ impl JournalEntry {
         }
     }
 
-    pub fn time_range(&self) -> &LooseTimeRange {
+    pub fn time_range(&self) -> &TimeRange {
         &self.time_range
     }
 
@@ -122,14 +118,14 @@ impl JournalEntry {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct LooseDate {
+pub struct Date {
     value: NaiveDate,
     span: Range<usize>,
 }
 
-impl LooseDate {
+impl Date {
     pub fn new(value: NaiveDate, span: Range<usize>) -> Self {
-        LooseDate { value, span }
+        Date { value, span }
     }
 
     pub fn value(&self) -> NaiveDate {
@@ -142,36 +138,36 @@ impl LooseDate {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct LooseTimeRange {
-    start: LooseTime,
-    end: LooseTime,
+pub struct TimeRange {
+    start: Time,
+    end: Time,
     span: Range<usize>,
 }
 
-impl LooseTimeRange {
-    pub fn new(start: LooseTime, end: LooseTime, span: Range<usize>) -> Self {
+impl TimeRange {
+    pub fn new(start: Time, end: Time, span: Range<usize>) -> Self {
         Self { start, end, span }
     }
 
-    pub fn end(&self) -> &LooseTime {
+    pub fn end(&self) -> &Time {
         &self.end
     }
 
-    pub fn start(&self) -> &LooseTime {
+    pub fn start(&self) -> &Time {
         &self.start
     }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct LooseTime {
+pub struct Time {
     hour: u32,
     minute: u32,
     span: Range<usize>,
 }
 
-impl LooseTime {
+impl Time {
     pub fn new(hour: u32, minute: u32, span: Range<usize>) -> Self {
-        LooseTime { hour, minute, span }
+        Time { hour, minute, span }
     }
 
     pub fn hour(&self) -> u32 {
@@ -186,7 +182,7 @@ impl LooseTime {
         &self.span
     }
 
-    pub fn to_datetime(&self, date: &LooseDate) -> Option<NaiveDateTime> {
+    pub fn to_datetime(&self, date: &Date) -> Option<NaiveDateTime> {
         let day = self.hour / 24;
         let hour = self.hour - day * 24;
         let min = self.minute;
@@ -195,10 +191,10 @@ impl LooseTime {
     }
 }
 
-impl TryFrom<LooseTime> for chrono::NaiveTime {
+impl TryFrom<Time> for chrono::NaiveTime {
     type Error = JournalintError;
 
-    fn try_from(value: LooseTime) -> Result<Self, Self::Error> {
+    fn try_from(value: Time) -> Result<Self, Self::Error> {
         let (minute, h) = (value.minute % 60, value.minute - ((value.minute % 60) * 60));
         let hour = value.hour + h;
         match chrono::NaiveTime::from_hms_opt(hour, minute, 0) {
