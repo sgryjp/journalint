@@ -5,6 +5,7 @@ use crate::ast;
 use crate::diagnostic::{Diagnostic, DiagnosticSeverity};
 use crate::linemap::LineMap;
 use crate::linting::lint_incorrect_duration;
+use crate::parsers;
 
 pub struct Journalint<'a> {
     source: Option<String>,
@@ -46,7 +47,7 @@ impl<'a> Journalint<'a> {
 
     /// Parse a journal file content.
     fn _parse(&mut self, filename: Option<String>, content: &str) {
-        let (journal, errors) = crate::parsing::journal::journal().parse_recovery_verbose(content);
+        let (journal, errors) = parsers::journal().parse_recovery(content);
         self.journal = journal;
         for e in errors {
             let diagnostic = Diagnostic::new(

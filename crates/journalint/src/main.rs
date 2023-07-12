@@ -6,7 +6,7 @@ mod errors;
 mod journalint;
 mod linemap;
 mod linting;
-mod parsing;
+mod parsers;
 mod server;
 
 use std::env;
