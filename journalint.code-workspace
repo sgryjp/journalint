@@ -9,5 +9,10 @@
 		{
 			"path": "scripts"
 		}
-	]
+	],
+	"settings": {
+		"rust-analyzer.linkedProjects": [
+			"./Cargo.toml"
+		]
+	}
 }
