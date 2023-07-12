@@ -1,5 +1,6 @@
 #![allow(dead_code)] // TODO: Remove this
 mod arg;
+mod ast;
 mod diagnostic;
 mod errors;
 mod journalint;

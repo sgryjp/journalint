@@ -1,11 +1,12 @@
 use lsp_types::DiagnosticSeverity;
 
-use crate::{diagnostic::Diagnostic, parsing::journal::Journal};
+use crate::ast;
+use crate::diagnostic::Diagnostic;
 
 pub fn lint_incorrect_duration(
     source: Option<&str>,
     calculated_duration: std::time::Duration,
-    entry: &crate::parsing::journal::JournalEntry,
+    entry: &ast::JournalEntry,
 ) -> Option<Diagnostic> {
     (&calculated_duration != entry.duration().value()).then(|| {
         let written_duration = entry.duration().value().as_secs_f64() / 3600.0;
@@ -23,7 +24,7 @@ pub fn lint_incorrect_duration(
     })
 }
 
-pub fn incorrect_duration(source: Option<&str>, journal: &Journal) -> Vec<Diagnostic> {
+pub fn incorrect_duration(source: Option<&str>, journal: &ast::Journal) -> Vec<Diagnostic> {
     let mut diagnostics = Vec::new();
 
     for entry in journal.entries() {

@@ -4,77 +4,36 @@ use chumsky::Parser;
 
 use super::primitives::date;
 use super::primitives::time;
-use super::primitives::LooseDate;
-use super::primitives::LooseTime;
+use crate::ast;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct FrontMatter {
-    date: LooseDate,
-    start: Option<LooseTime>,
-    end: Option<LooseTime>,
-}
-
-impl FrontMatter {
-    pub fn new(
-        date: LooseDate,
-        start_time: Option<LooseTime>,
-        end_time: Option<LooseTime>,
-    ) -> Self {
-        Self {
-            date,
-            start: start_time,
-            end: end_time,
-        }
-    }
-
-    pub fn date(&self) -> &LooseDate {
-        &self.date
-    }
-
-    pub fn start(&self) -> Option<&LooseTime> {
-        self.start.as_ref()
-    }
-
-    pub fn end(&self) -> Option<&LooseTime> {
-        self.end.as_ref()
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-enum FrontMatterItem {
-    Date(LooseDate),
-    StartTime(LooseTime),
-    EndTime(LooseTime),
-}
-
-fn _front_matter_date() -> impl Parser<char, FrontMatterItem, Error = Simple<char>> {
+fn _front_matter_date() -> impl Parser<char, ast::FrontMatterItem, Error = Simple<char>> {
     just("date")
         .then(just(':').padded())
         .ignore_then(date())
-        .map(FrontMatterItem::Date)
+        .map(ast::FrontMatterItem::Date)
 }
 
-fn _front_matter_start_time() -> impl Parser<char, FrontMatterItem, Error = Simple<char>> {
+fn _front_matter_start_time() -> impl Parser<char, ast::FrontMatterItem, Error = Simple<char>> {
     just("start")
         .then(just(':').padded())
         .ignore_then(time())
-        .map(FrontMatterItem::StartTime)
+        .map(ast::FrontMatterItem::StartTime)
 }
 
-fn _front_matter_end_time() -> impl Parser<char, FrontMatterItem, Error = Simple<char>> {
+fn _front_matter_end_time() -> impl Parser<char, ast::FrontMatterItem, Error = Simple<char>> {
     just("end")
         .then(just(':').padded())
         .ignore_then(time())
-        .map(FrontMatterItem::EndTime)
+        .map(ast::FrontMatterItem::EndTime)
 }
 
-fn _front_matter_item() -> impl Parser<char, FrontMatterItem, Error = Simple<char>> {
+fn _front_matter_item() -> impl Parser<char, ast::FrontMatterItem, Error = Simple<char>> {
     _front_matter_date()
         .or(_front_matter_start_time())
         .or(_front_matter_end_time())
 }
 
-pub(super) fn front_matter() -> impl Parser<char, FrontMatter, Error = Simple<char>> {
+pub(super) fn front_matter() -> impl Parser<char, ast::FrontMatter, Error = Simple<char>> {
     let delimiter = just('-').repeated().at_least(3);
     delimiter
         .then(text::newline().repeated())
@@ -84,20 +43,20 @@ pub(super) fn front_matter() -> impl Parser<char, FrontMatter, Error = Simple<ch
                 .repeated(),
         )
         .try_map(|items, span| {
-            let mut date: Option<LooseDate> = None;
-            let mut start: Option<LooseTime> = None;
-            let mut end: Option<LooseTime> = None;
+            let mut date: Option<ast::LooseDate> = None;
+            let mut start: Option<ast::LooseTime> = None;
+            let mut end: Option<ast::LooseTime> = None;
             for item in items {
                 match item {
-                    FrontMatterItem::Date(d) => date = Some(d),
-                    FrontMatterItem::StartTime(t) => start = Some(t),
-                    FrontMatterItem::EndTime(t) => end = Some(t),
+                    ast::FrontMatterItem::Date(d) => date = Some(d),
+                    ast::FrontMatterItem::StartTime(t) => start = Some(t),
+                    ast::FrontMatterItem::EndTime(t) => end = Some(t),
                 }
             }
             let Some(date) = date else {
                 return Err(Simple::custom(span, "date not found in the front matter".to_string()))
             };
-            Ok(FrontMatter { date, start, end })
+            Ok(ast::FrontMatter::new(date, start, end))
         })
 }
 
@@ -112,7 +71,7 @@ mod tests {
         let p = super::_front_matter_date();
         assert_eq!(
             p.parse("date: 2006-01-02").unwrap(),
-            FrontMatterItem::Date(LooseDate::new(
+            ast::FrontMatterItem::Date(ast::LooseDate::new(
                 NaiveDate::from_ymd_opt(2006, 1, 2).unwrap(),
                 6..16
             )),
@@ -125,7 +84,7 @@ mod tests {
         let p = super::_front_matter_start_time();
         assert_eq!(
             p.parse("start: 24:56").unwrap(),
-            FrontMatterItem::StartTime(LooseTime::new(24, 56, 7..12))
+            ast::FrontMatterItem::StartTime(ast::LooseTime::new(24, 56, 7..12))
         );
         assert!(p.parse("date :2006-12-32").is_err());
     }
@@ -135,7 +94,7 @@ mod tests {
         let p = super::_front_matter_end_time();
         assert_eq!(
             p.parse("end: 24:56").unwrap(),
-            FrontMatterItem::EndTime(LooseTime::new(24, 56, 5..10))
+            ast::FrontMatterItem::EndTime(ast::LooseTime::new(24, 56, 5..10))
         );
         assert!(p.parse("date :2006-12-32").is_err());
     }
@@ -152,11 +111,11 @@ mod tests {
                 "---\n"
             ))
             .unwrap(),
-            FrontMatter {
-                date: LooseDate::new(NaiveDate::from_ymd_opt(2006, 1, 2).unwrap(), 10..20),
-                start: Some(LooseTime::new(15, 4, 28..33)),
-                end: Some(LooseTime::new(24, 56, 39..44))
-            }
+            ast::FrontMatter::new(
+                ast::LooseDate::new(NaiveDate::from_ymd_opt(2006, 1, 2).unwrap(), 10..20),
+                Some(ast::LooseTime::new(15, 4, 28..33)),
+                Some(ast::LooseTime::new(24, 56, 39..44))
+            )
         );
         assert!(p.parse("date :2006-12-32").is_err());
     }

@@ -1,17 +1,17 @@
 use ariadne::{Color, Label, Report, ReportKind, Source};
 use chumsky::Parser;
 
+use crate::ast;
 use crate::diagnostic::{Diagnostic, DiagnosticSeverity};
 use crate::linemap::LineMap;
 use crate::linting::lint_incorrect_duration;
-use crate::parsing::journal::Journal;
 
 pub struct Journalint<'a> {
     source: Option<String>,
     content: &'a str,
     diagnostics: Vec<Diagnostic>,
     linemap: LineMap,
-    journal: Option<Journal>,
+    journal: Option<ast::Journal>,
 }
 
 impl<'a> Journalint<'a> {
@@ -28,7 +28,7 @@ impl<'a> Journalint<'a> {
         journalint
     }
 
-    pub fn journal(&self) -> Option<&Journal> {
+    pub fn journal(&self) -> Option<&ast::Journal> {
         self.journal.as_ref()
     }
 
