@@ -78,7 +78,7 @@ impl LineMap {
             .line_offsets
             .get(line)
             .unwrap_or(self.line_offsets.last().unwrap());
-        x + character
+        min(x + character, self.content_length)
     }
 }
 
@@ -115,6 +115,6 @@ mod tests {
         assert_eq!(lm._offset_from_position(1, 2), 4); // \n
         assert_eq!(lm._offset_from_position(2, 0), 5); // c
         assert_eq!(lm._offset_from_position(2, 1), 6); // EOS
-        assert_eq!(lm._offset_from_position(2, 2), 7); // EOS + 1
+        assert_eq!(lm._offset_from_position(2, 2), 6); // EOS + 1
     }
 }
