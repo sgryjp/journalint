@@ -12,7 +12,9 @@ impl LineMap {
     pub fn new(content: &str) -> Self {
         let mut line_offsets = vec![0];
 
-        let mut iter = content.char_indices();
+        // char_indices() is based on UTF-8 but chumsky consumes the input as a char
+        // stream so we need to count chars.
+        let mut iter = content.chars().enumerate();
         loop {
             let Some((offset1, ch1)) = iter.next() else {
                 break;
@@ -36,7 +38,7 @@ impl LineMap {
         assert!(!line_offsets.is_empty());
         Self {
             line_offsets,
-            content_length: content.len(),
+            content_length: content.chars().count(),
         }
     }
 
@@ -48,6 +50,7 @@ impl LineMap {
     fn _position_from_offset(&self, offset: usize) -> (u32, u32) {
         let line_offsets = &self.line_offsets;
 
+        // Find the largest line-offset that is smaller than the given offset
         assert!(!line_offsets.is_empty());
         for line_index in 1..line_offsets.len() {
             let line_offset = line_offsets[line_index];
@@ -85,23 +88,21 @@ mod tests {
 
     #[test]
     fn new() {
-        let lm = LineMap::new("a\n亜\r\nc"); // '亜' in UTF8: e4 ba 9c
-        assert_eq!(lm.line_offsets, vec![0, 2, 7]);
+        let lm = LineMap::new("a\n亜\r\nc");
+        assert_eq!(lm.line_offsets, vec![0, 2, 5]);
     }
 
     #[test]
     fn _position_from_offset() {
-        let lm = LineMap::new("a\n亜\r\nc"); // '亜' in UTF8: e4 ba 9c
+        let lm = LineMap::new("a\n亜\r\nc");
         assert_eq!(lm._position_from_offset(0), (0, 0)); // a
         assert_eq!(lm._position_from_offset(1), (0, 1)); // \n
-        assert_eq!(lm._position_from_offset(2), (1, 0)); // '亜'[0]
-        assert_eq!(lm._position_from_offset(3), (1, 1)); // '亜'[1]
-        assert_eq!(lm._position_from_offset(4), (1, 2)); // '亜'[2]
-        assert_eq!(lm._position_from_offset(5), (1, 3)); // \r
-        assert_eq!(lm._position_from_offset(6), (1, 4)); // \n
-        assert_eq!(lm._position_from_offset(7), (2, 0)); // c
-        assert_eq!(lm._position_from_offset(8), (2, 1)); // EOS
-        assert_eq!(lm._position_from_offset(9), (2, 1)); // EOS + 1
+        assert_eq!(lm._position_from_offset(2), (1, 0)); // '亜'
+        assert_eq!(lm._position_from_offset(3), (1, 1)); // \r
+        assert_eq!(lm._position_from_offset(4), (1, 2)); // \n
+        assert_eq!(lm._position_from_offset(5), (2, 0)); // c
+        assert_eq!(lm._position_from_offset(6), (2, 1)); // EOS
+        assert_eq!(lm._position_from_offset(7), (2, 1)); // EOS + 1
     }
 
     #[test]
@@ -109,13 +110,11 @@ mod tests {
         let lm = LineMap::new("a\n亜\r\nc"); // '亜' in UTF8: e4 ba 9c
         assert_eq!(lm._offset_from_position(0, 0), 0); // a
         assert_eq!(lm._offset_from_position(0, 1), 1); // \n
-        assert_eq!(lm._offset_from_position(1, 0), 2); // '亜'[0]
-        assert_eq!(lm._offset_from_position(1, 1), 3); // '亜'[1]
-        assert_eq!(lm._offset_from_position(1, 2), 4); // '亜'[2]
-        assert_eq!(lm._offset_from_position(1, 3), 5); // \r
-        assert_eq!(lm._offset_from_position(1, 4), 6); // \n
-        assert_eq!(lm._offset_from_position(2, 0), 7); // c
-        assert_eq!(lm._offset_from_position(2, 1), 8); // EOS
-        assert_eq!(lm._offset_from_position(2, 2), 9); // EOS + 1
+        assert_eq!(lm._offset_from_position(1, 0), 2); // '亜'
+        assert_eq!(lm._offset_from_position(1, 1), 3); // \r
+        assert_eq!(lm._offset_from_position(1, 2), 4); // \n
+        assert_eq!(lm._offset_from_position(2, 0), 5); // c
+        assert_eq!(lm._offset_from_position(2, 1), 6); // EOS
+        assert_eq!(lm._offset_from_position(2, 2), 7); // EOS + 1
     }
 }
