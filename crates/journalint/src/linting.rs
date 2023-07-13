@@ -11,7 +11,7 @@ pub fn lint_incorrect_duration(
     (&calculated_duration != entry.duration().value()).then(|| {
         let written_duration = entry.duration().value().as_secs_f64() / 3600.0;
         let expected = calculated_duration.as_secs_f64() / 3600.0;
-        let d = Diagnostic::new(
+        Diagnostic::new(
             entry.duration().span().clone(),
             DiagnosticSeverity::WARNING,
             source.map(|s| s.to_string()),
@@ -19,49 +19,8 @@ pub fn lint_incorrect_duration(
                 "Incorrect duration: found {:1.2}, expected {:1.2}",
                 written_duration, expected
             ),
-        );
-        d
+        )
     })
-}
-
-pub fn incorrect_duration(source: Option<&str>, journal: &ast::Journal) -> Vec<Diagnostic> {
-    let mut diagnostics = Vec::new();
-
-    for entry in journal.entries() {
-        let Some(start) = entry
-            .time_range()
-            .start()
-            .to_datetime(journal.front_matter().date())
-        else {
-            return diagnostics; // TODO: Make this case a warning
-        };
-        let Some(end) = entry
-            .time_range()
-            .end()
-            .to_datetime(journal.front_matter().date())
-        else {
-            return diagnostics; // TODO: Make this case a warning
-        };
-        let Ok(calculated_duration) = (end - start).to_std() else {
-            return diagnostics; // TODO: Make this case a warning, using the Err variant
-        };
-
-        if &calculated_duration != entry.duration().value() {
-            let written_duration = entry.duration().value().as_secs_f64() / 3600.0;
-            let expected = calculated_duration.as_secs_f64() / 3600.0;
-            diagnostics.push(Diagnostic::new(
-                entry.duration().span().clone(),
-                DiagnosticSeverity::WARNING,
-                source.map(|s| s.to_owned()),
-                format!(
-                    "Incorrect duration: found {:1.2}, expected {:1.2}",
-                    written_duration, expected
-                ),
-            ));
-        }
-    }
-
-    diagnostics
 }
 
 #[cfg(test)]
