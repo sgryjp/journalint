@@ -60,7 +60,14 @@ export function activate(context: vscode.ExtensionContext) {
     },
   };
   const clientOptions: LanguageClientOptions = {
-    documentSelector: [{ scheme: "file", language: "markdown" }],
+    documentSelector: [
+      {
+        scheme: "file",
+        language: "markdown",
+        // Target only a saved file named like "YYYY-MM-DD.md"
+        pattern: "**/????-??-??.md",
+      },
+    ],
   };
 
   // Start LSP client
