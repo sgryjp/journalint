@@ -69,11 +69,11 @@ impl<'a> Journalint<'a> {
         for entry in journal.entries() {
             let start_time = entry.time_range().start();
             let Some(start) = start_time.to_datetime(journal.front_matter().date()) else {
-               let d = Diagnostic::new(
+                let d = Diagnostic::new(
                     start_time.span().clone(),
                     DiagnosticSeverity::WARNING,
                     self.source().map(|s| s.to_string()),
-                    "invalid start time (out of valid range)".to_string()
+                    "invalid start time (out of valid range)".to_string(),
                 );
                 self.diagnostics.push(d);
                 return;
@@ -95,7 +95,7 @@ impl<'a> Journalint<'a> {
                     end_time.span().clone(),
                     DiagnosticSeverity::WARNING,
                     self.source().map(|s| s.to_string()),
-                    "end time should be the same or after the start time".to_string()
+                    "end time should be the same or after the start time".to_string(),
                 );
                 self.diagnostics.push(d);
                 return;

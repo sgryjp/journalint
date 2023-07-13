@@ -53,7 +53,10 @@ pub fn front_matter() -> impl Parser<char, ast::FrontMatter, Error = Simple<char
                 }
             }
             let Some(date) = date else {
-                return Err(Simple::custom(span, "date not found in the front matter".to_string()))
+                return Err(Simple::custom(
+                    span,
+                    "date not found in the front matter".to_string(),
+                ));
             };
             Ok(ast::FrontMatter::new(date, start, end))
         })

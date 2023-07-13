@@ -23,7 +23,9 @@ pub fn main_loop(
                 let params: DidChangeTextDocumentParams = serde_json::from_value(notif.params)?;
                 let uri = params.text_document.uri;
                 let Some(content) = params.content_changes.last().map(|e| e.text.as_str()) else {
-                    return Err(JournalintError::Unexpected("No content in textDocument/didChange notification.".into()));
+                    return Err(JournalintError::Unexpected(
+                        "No content in textDocument/didChange notification.".into(),
+                    ));
                 };
                 let version = params.text_document.version;
                 run(conn, &uri, content, Some(version))?;
@@ -42,11 +44,11 @@ fn run(
     // Extract filename in the given URL
     let Some(segments) = uri.path_segments() else {
         let msg = format!("failed to split into segments: [{}]", uri);
-        return Err(JournalintError::Unexpected(msg))
+        return Err(JournalintError::Unexpected(msg));
     };
     let Some(filename) = segments.into_iter().last() else {
         let msg = format!("failed to extract last segment: [{}]", uri);
-        return Err(JournalintError::Unexpected(msg))
+        return Err(JournalintError::Unexpected(msg));
     };
     let filename = String::from(filename);
 

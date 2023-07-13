@@ -28,10 +28,18 @@ pub fn incorrect_duration(source: Option<&str>, journal: &ast::Journal) -> Vec<D
     let mut diagnostics = Vec::new();
 
     for entry in journal.entries() {
-        let Some(start) = entry.time_range().start().to_datetime(journal.front_matter().date()) else {
+        let Some(start) = entry
+            .time_range()
+            .start()
+            .to_datetime(journal.front_matter().date())
+        else {
             return diagnostics; // TODO: Make this case a warning
         };
-        let Some(end) = entry.time_range().end().to_datetime(journal.front_matter().date()) else {
+        let Some(end) = entry
+            .time_range()
+            .end()
+            .to_datetime(journal.front_matter().date())
+        else {
             return diagnostics; // TODO: Make this case a warning
         };
         let Ok(calculated_duration) = (end - start).to_std() else {
