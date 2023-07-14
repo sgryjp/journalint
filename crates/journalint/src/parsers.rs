@@ -1,3 +1,5 @@
+use std::ops::Range;
+
 use chumsky::prelude::*;
 use chumsky::primitive::just;
 use chumsky::text::newline;
@@ -102,14 +104,14 @@ pub fn timerange() -> impl Parser<char, ast::TimeRange, Error = Simple<char>> {
 }
 
 pub fn duration() -> impl Parser<char, ast::Duration, Error = Simple<char>> {
-    _fixed_length_digits(1)
-        .then_ignore(just('.'))
-        .then(_fixed_length_digits(2))
-        .map(|(a, b)| format!("{}.{}", a, b))
-        .try_map(|s, span| {
-            str::parse::<f64>(&s).map_err(|e| Simple::custom(span, format!("{}", e)))
+    filter(|c: &char| c.is_ascii_digit() || *c == '.')
+        .repeated()
+        .collect::<String>()
+        .try_map(|s, span: Range<usize>| {
+            str::parse::<f64>(&s)
+                .map(|n| ast::Duration::from_secs((n * 3600.0) as u64, span.clone()))
+                .map_err(|e| Simple::custom(span, e.to_string()))
         })
-        .map_with_span(|n, span| ast::Duration::from_secs((n * 3600.0) as u64, span))
 }
 
 fn _code() -> impl Parser<char, ast::Code, Error = Simple<char>> {
@@ -273,24 +275,9 @@ mod tests {
     #[test]
     fn duration() {
         let p = super::duration();
-        assert!(p.parse(".12").is_err());
-        assert_eq!(
-            p.parse("1.23").unwrap(),
-            ast::Duration::from_secs(4428, 0..4)
-        );
-        assert!(p.parse("12.34").is_err());
-        assert!(p.parse("1.2").is_err());
-        assert_eq!(
-            p.parse("1.23").unwrap(),
-            ast::Duration::from_secs(4428, 0..4)
-        );
-        assert_eq!(
-            p.parse("1.234").unwrap(),
-            ast::Duration::from_secs(4428, 0..4)
-        );
-
-        assert!(p.parse("1.2").is_err());
-        assert!(p.parse(".123").is_err());
+        assert_eq!(p.parse(".12"), Ok(ast::Duration::from_secs(432, 0..3)));
+        assert_eq!(p.parse("12.34"), Ok(ast::Duration::from_secs(44424, 0..5)));
+        assert!(p.parse("1.2.1").is_err());
     }
 
     #[test]
