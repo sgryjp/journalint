@@ -6,6 +6,7 @@ mod errors;
 mod journalint;
 mod linemap;
 mod linting;
+mod parser2;
 mod parsers;
 mod server;
 

@@ -6,6 +6,9 @@ pub enum JournalintError {
     #[error("Unexpected error: {0}")]
     Unexpected(String),
 
+    #[error("Parse error: {0}")]
+    ParseError(String),
+
     #[error("Out of range date: year={year}, month={month}, day={day}")]
     OutOfRangeDate { year: i32, month: u32, day: u32 },
 
