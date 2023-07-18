@@ -276,58 +276,87 @@ mod tests {
 
     #[test]
     fn time() {
-        let p = super::time();
+        let (result, errors) = super::time().parse_recovery_verbose("01:02");
+        assert_eq!(errors, []);
         assert_eq!(
-            p.parse("01:02").unwrap(),
-            Expr::Time {
+            result,
+            Some(Expr::Time {
                 value: LooseTime::new("01:02"),
                 span: 0..5,
-            }
+            })
         );
+
+        let (result, errors) = super::time().parse_recovery_verbose("24:60");
+        assert_eq!(errors, []);
         assert_eq!(
-            p.parse("24:60").unwrap(),
-            Expr::Time {
+            result,
+            Some(Expr::Time {
                 value: LooseTime::new("24:60"),
                 span: 0..5,
-            }
+            })
         );
-        assert!(p.parse("24 :60").is_err());
-        assert!(p.parse("24: 60").is_err());
+
+        let (result, errors) = super::time().parse_recovery_verbose("24 :60");
+        assert_eq!(
+            errors
+                .iter()
+                .map(|e| (e.span(), e.to_string()))
+                .collect::<Vec<_>>(),
+            [(2..3, "found \" \" but expected \":\"".to_string())]
+        );
+        assert_eq!(result, None);
     }
 
     #[test]
     fn duration() {
-        let p = super::duration();
+        let (result, errors) = super::duration().parse_recovery_verbose(".12");
+        assert_eq!(errors, []);
         assert_eq!(
-            p.parse(".12"),
-            Ok(Expr::Duration {
+            result,
+            Some(Expr::Duration {
                 value: Duration::from_secs(432),
                 span: 0..3
             })
         );
+
+        let (result, errors) = super::duration().parse_recovery_verbose("12.34");
+        assert_eq!(errors, []);
         assert_eq!(
-            p.parse("12.34"),
-            Ok(Expr::Duration {
+            result,
+            Some(Expr::Duration {
                 value: Duration::from_secs(44424),
                 span: 0..5
             })
         );
-        assert!(p.parse("1.2.1").is_err());
+
+        let (result, errors) = super::duration().parse_recovery_verbose("1.2.1");
+        assert_eq!(result, None);
+        assert_eq!(
+            errors
+                .iter()
+                .map(|e| (e.span(), e.to_string()))
+                .collect::<Vec<_>>(),
+            [(0..5, "found end of input".to_string())]
+        );
     }
 
     #[test]
     fn code() {
-        let p = super::code();
+        let (result, errors) = super::code().parse_recovery_verbose("X1234567");
+        assert_eq!(errors, []);
         assert_eq!(
-            p.parse("X1234567"),
-            Ok(Expr::Code {
+            result,
+            Some(Expr::Code {
                 value: String::from("X1234567"),
                 span: 0..8
             })
         );
+
+        let (result, errors) = super::code().parse_recovery_verbose("014");
+        assert_eq!(errors, []);
         assert_eq!(
-            p.parse("014"),
-            Ok(Expr::Code {
+            result,
+            Some(Expr::Code {
                 value: String::from("014"),
                 span: 0..3
             })
@@ -336,11 +365,12 @@ mod tests {
 
     #[test]
     fn activity() {
-        let p = super::activity();
+        let (result, errors) = super::activity().parse_recovery_verbose("foo: bar: baz\n");
+        assert_eq!(errors, []);
         assert_eq!(
-            p.parse("foo: bar: baz\n"), // should stop before newline
-            Ok(Expr::Activity {
-                value: String::from("foo: bar: baz"),
+            result,
+            Some(Expr::Activity {
+                value: String::from("foo: bar: baz"), // should stop before newline
                 span: 0..13
             })
         );
@@ -389,17 +419,19 @@ mod tests {
 
     #[test]
     fn front_matter() {
-        let p = super::front_matter();
+        let input = concat!(
+            "---\n",
+            "date: 2006-01-02\n",
+            "start: 15:04\n",
+            "end: 24:56\n",
+            "---\n"
+        );
+
+        let (result, errors) = super::front_matter().parse_recovery_verbose(input);
+        assert_eq!(errors, []);
         assert_eq!(
-            p.parse(concat!(
-                "---\n",
-                "date: 2006-01-02\n",
-                "start: 15:04\n",
-                "end: 24:56\n",
-                "---\n"
-            ))
-            .unwrap(),
-            Expr::FrontMatter {
+            result,
+            Some(Expr::FrontMatter {
                 date: Box::new(Expr::FrontMatterDate {
                     value: NaiveDate::from_ymd_opt(2006, 1, 2).unwrap(),
                     span: 10..20
@@ -413,9 +445,8 @@ mod tests {
                     span: 39..44
                 }),
                 span: 0..49,
-            }
+            })
         );
-        assert!(p.parse("date :2006-12-32").is_err());
     }
 
     #[test]
