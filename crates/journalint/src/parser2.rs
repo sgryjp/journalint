@@ -79,40 +79,53 @@ impl LooseTime {
 }
 
 fn front_matter() -> impl Parser<char, Expr, Error = Simple<char>> {
-    let delimiter = just('-').repeated().at_least(3);
-    let fm_date = just("date").padded().then(just(':').padded()).ignore_then(
-        newline()
-            .not()
-            .repeated()
-            .collect::<String>()
-            .try_map(|s, span| {
-                NaiveDate::parse_from_str(s.as_str(), "%Y-%m-%d")
-                    .map_err(|e| Simple::custom(span, format!("unrecognizable date: {e}: {s}")))
-            })
-            .map_with_span(|value, span| Expr::FrontMatterDate { value, span }),
-    );
-    let fm_start = just("start").padded().then(just(':').padded()).ignore_then(
-        newline()
-            .not()
-            .repeated()
-            .collect::<String>()
-            .map_with_span(|value, span| Expr::FrontMatterStartTime {
-                value: LooseTime(value),
-                span,
-            }),
-    );
-    let fm_end = just("end").padded().then(just(':').padded()).ignore_then(
-        newline()
-            .not()
-            .repeated()
-            .collect::<String>()
-            .map_with_span(|value, span| Expr::FrontMatterEndTime {
-                value: LooseTime(value),
-                span,
-            }),
-    );
+    let delimiter = just('-').repeated().at_least(3).debug("delimiter");
+    let fm_date = just("date")
+        .padded()
+        .then(just(':').padded())
+        .ignore_then(
+            newline()
+                .not()
+                .repeated()
+                .collect::<String>()
+                .try_map(|s, span| {
+                    NaiveDate::parse_from_str(s.as_str(), "%Y-%m-%d")
+                        .map_err(|e| Simple::custom(span, format!("unrecognizable date: {e}: {s}")))
+                })
+                .map_with_span(|value, span| Expr::FrontMatterDate { value, span }),
+        )
+        .debug("fm_date");
+    let fm_start = just("start")
+        .padded()
+        .then(just(':').padded())
+        .ignore_then(
+            newline()
+                .not()
+                .repeated()
+                .collect::<String>()
+                .map_with_span(|value, span| Expr::FrontMatterStartTime {
+                    value: LooseTime(value),
+                    span,
+                }),
+        )
+        .debug("fm_start");
+    let fm_end = just("end")
+        .padded()
+        .then(just(':').padded())
+        .ignore_then(
+            newline()
+                .not()
+                .repeated()
+                .collect::<String>()
+                .map_with_span(|value, span| Expr::FrontMatterEndTime {
+                    value: LooseTime(value),
+                    span,
+                }),
+        )
+        .debug("fm_end");
 
     delimiter
+        .clone()
         .then(newline())
         .ignore_then(
             fm_date
@@ -152,6 +165,7 @@ fn front_matter() -> impl Parser<char, Expr, Error = Simple<char>> {
                 span,
             })
         })
+        .debug("front_matter")
 }
 
 fn time() -> impl Parser<char, Expr, Error = Simple<char>> {
@@ -165,6 +179,7 @@ fn time() -> impl Parser<char, Expr, Error = Simple<char>> {
             value: LooseTime(string),
             span,
         })
+        .debug("time")
 }
 
 fn duration() -> impl Parser<char, Expr, Error = Simple<char>> {
@@ -179,6 +194,7 @@ fn duration() -> impl Parser<char, Expr, Error = Simple<char>> {
                 })
                 .map_err(|e| Simple::custom(span, format!("unrecognizable duration: {e}: {s}")))
         })
+        .debug("duration")
 }
 
 fn code() -> impl Parser<char, Expr, Error = Simple<char>> {
@@ -187,6 +203,7 @@ fn code() -> impl Parser<char, Expr, Error = Simple<char>> {
         .at_least(1)
         .collect::<String>()
         .map_with_span(|value, span| Expr::Code { value, span })
+        .debug("code")
 }
 
 fn activity() -> impl Parser<char, Expr, Error = Simple<char>> {
@@ -195,6 +212,7 @@ fn activity() -> impl Parser<char, Expr, Error = Simple<char>> {
         .repeated()
         .collect::<String>()
         .map_with_span(|value, span| Expr::Activity { value, span })
+        .debug("activity")
 }
 
 fn entry() -> impl Parser<char, Expr, Error = Simple<char>> {
@@ -218,12 +236,13 @@ fn entry() -> impl Parser<char, Expr, Error = Simple<char>> {
 }
 
 fn journal() -> impl Parser<char, Expr, Error = Simple<char>> {
-    let target_line = entry().then_ignore(newline());
+    let target_line = entry().then_ignore(newline()).debug("target_line");
     let non_target_line = newline()
         .not()
         .repeated()
         .then_ignore(newline())
-        .to(Expr::NonTargetLine);
+        .to(Expr::NonTargetLine)
+        .debug("non_target_line");
     let line = target_line.or(non_target_line);
 
     front_matter()
@@ -233,6 +252,7 @@ fn journal() -> impl Parser<char, Expr, Error = Simple<char>> {
             front_matter: Box::new(front_matter),
             lines,
         })
+        .debug("journal")
 }
 
 #[cfg(test)]
@@ -395,6 +415,85 @@ mod tests {
             {}\n\
             ",
             EXAMPLE_ENTRY
+        );
+        let (journal, errors) = super::journal().parse_recovery_verbose(input);
+        assert_eq!(errors, []);
+        assert!(journal.is_some());
+        let journal = journal.unwrap();
+        match journal {
+            Expr::Journal {
+                front_matter,
+                lines,
+            } => {
+                assert_eq!(
+                    *front_matter,
+                    Expr::FrontMatter {
+                        date: Box::new(Expr::FrontMatterDate {
+                            value: NaiveDate::from_ymd_opt(2006, 1, 2).unwrap(),
+                            span: 10..20
+                        }),
+                        start: Box::new(Expr::FrontMatterStartTime {
+                            value: LooseTime::new("15:04"),
+                            span: 28..33
+                        }),
+                        end: Box::new(Expr::FrontMatterEndTime {
+                            value: LooseTime::new("24:56"),
+                            span: 39..44
+                        }),
+                        span: 0..49,
+                    }
+                );
+
+                assert_eq!(
+                    lines,
+                    vec![
+                        Expr::NonTargetLine,
+                        Expr::Entry {
+                            start: Box::new(Expr::Time {
+                                value: LooseTime::new("09:00"),
+                                span: 52..57
+                            }),
+                            end: Box::new(Expr::Time {
+                                value: LooseTime::new("10:15"),
+                                span: 58..63
+                            }),
+                            codes: vec![
+                                Expr::Code {
+                                    value: "ABCDEFG8".to_string(),
+                                    span: 64..72
+                                },
+                                Expr::Code {
+                                    value: "AB3".to_string(),
+                                    span: 73..76
+                                }
+                            ],
+                            duration: Box::new(Expr::Duration {
+                                value: Duration::from_secs(3600),
+                                span: 77..81
+                            }),
+                            activity: Box::new(Expr::Activity {
+                                value: "foo: bar: baz".to_string(),
+                                span: 82..95
+                            }),
+                            span: 50..95
+                        }
+                    ]
+                );
+            }
+            _ => assert!(false),
+        }
+    }
+
+    #[test]
+    fn journal_recovery() {
+        let input = concat!(
+            "---\n",
+            "date: 2006-01-02\n",
+            "start: 15:04\n",
+            "end: 24:56\n",
+            "---\n",
+            "\n",
+            "- 09:00-10:15 ABCDEFG8 AB3 1.00 foo: bar: baz\n",
         );
         let (journal, errors) = super::journal().parse_recovery_verbose(input);
         assert_eq!(errors, []);
