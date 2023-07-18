@@ -82,8 +82,8 @@ fn front_matter() -> impl Parser<char, Expr, Error = Simple<char>> {
     let delimiter = || just('-').repeated().at_least(3).debug("delimiter");
     let fm_date = || {
         just("date")
-            .padded()
-            .then(just(':').padded())
+            .then_ignore(wsp())
+            .then(just(':').then_ignore(wsp()))
             .ignore_then(
                 newline()
                     .not()
@@ -100,8 +100,8 @@ fn front_matter() -> impl Parser<char, Expr, Error = Simple<char>> {
     };
     let fm_start = || {
         just("start")
-            .padded()
-            .then(just(':').padded())
+            .then_ignore(wsp())
+            .then(just(':').then_ignore(wsp()))
             .ignore_then(
                 newline()
                     .not()
@@ -116,8 +116,8 @@ fn front_matter() -> impl Parser<char, Expr, Error = Simple<char>> {
     };
     let fm_end = || {
         just("end")
-            .padded()
-            .then(just(':').padded())
+            .then_ignore(wsp())
+            .then(just(':').then_ignore(wsp()))
             .ignore_then(
                 newline()
                     .not()
@@ -223,11 +223,11 @@ fn activity() -> impl Parser<char, Expr, Error = Simple<char>> {
 
 fn entry() -> impl Parser<char, Expr, Error = Simple<char>> {
     just('-')
-        .ignore_then(time().padded())
-        .then_ignore(just('-'))
-        .then(time().padded())
-        .then(code().padded().repeated().at_most(2))
-        .then(duration().padded())
+        .then_ignore(wsp())
+        .ignore_then(time().then_ignore(just('-')).then(time()))
+        .then_ignore(wsp())
+        .then(code().then_ignore(wsp()).repeated().at_most(2))
+        .then(duration().then_ignore(wsp()))
         .then(activity())
         .map_with_span(
             |((((start, end), codes), duration), activity), span| Expr::Entry {
@@ -262,6 +262,14 @@ fn journal() -> impl Parser<char, Expr, Error = Simple<char>> {
         .debug("journal")
 }
 
+// ----------------------------------------------------------------------------
+fn wsp() -> impl Parser<char, String, Error = Simple<char>> {
+    filter(|c: &char| c.is_whitespace() && *c != '\r' && *c != '\n')
+        .repeated()
+        .collect::<String>()
+}
+
+// ----------------------------------------------------------------------------
 #[cfg(test)]
 mod tests {
     use super::*;
