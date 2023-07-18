@@ -2,6 +2,7 @@ use std::ops::Range;
 use std::time::Duration;
 
 use chrono::{NaiveDate, NaiveTime};
+use chumsky::error::SimpleReason;
 use chumsky::prelude::*;
 use chumsky::text::newline;
 
@@ -58,6 +59,7 @@ pub enum Expr {
     },
 
     Error {
+        reason: String,
         span: Range<usize>,
     },
     NonTargetLine,
@@ -200,6 +202,15 @@ fn duration() -> impl Parser<char, Expr, Error = Simple<char>> {
                 })
                 .map_err(|e| Simple::custom(span, format!("unrecognizable duration: {e}: {s}")))
         })
+        .or_else(|e| {
+            let SimpleReason::Custom(value) = e.reason() else {
+                unreachable!();
+            };
+            Ok(Expr::Error {
+                reason: value.clone(),
+                span: e.span(),
+            })
+        })
         .debug("duration")
 }
 
@@ -329,14 +340,15 @@ mod tests {
             })
         );
 
-        let (result, errors) = super::duration().parse_recovery_verbose("1.2.1");
-        assert_eq!(result, None);
+        let input = "1.2.1";
+        let (result, errors) = super::duration().parse_recovery_verbose(input);
+        assert_eq!(errors, []);
         assert_eq!(
-            errors
-                .iter()
-                .map(|e| (e.span(), e.to_string()))
-                .collect::<Vec<_>>(),
-            [(0..5, "found end of input".to_string())]
+            result,
+            Some(Expr::Error {
+                reason: format!("unrecognizable duration: invalid float literal: {input}"),
+                span: 0..5
+            })
         );
     }
 
