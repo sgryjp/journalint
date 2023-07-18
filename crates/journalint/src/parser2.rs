@@ -316,7 +316,7 @@ mod tests {
     #[test]
     fn entry() {
         let parser = super::entry();
-        let (entry, errors) = parser.parse_recovery(EXAMPLE_ENTRY);
+        let (entry, errors) = parser.parse_recovery_verbose(EXAMPLE_ENTRY);
         assert_eq!(errors, []);
         assert_eq!(
             entry,
@@ -396,7 +396,7 @@ mod tests {
             ",
             EXAMPLE_ENTRY
         );
-        let (journal, errors) = super::journal().parse_recovery(input);
+        let (journal, errors) = super::journal().parse_recovery_verbose(input);
         assert_eq!(errors, []);
         assert!(journal.is_some());
         let journal = journal.unwrap();
