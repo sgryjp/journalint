@@ -13,8 +13,14 @@ pub enum Expr {
         value: NaiveDate,
         span: Range<usize>,
     },
-    FrontMatterStartTime(LooseTime),
-    FrontMatterEndTime(LooseTime),
+    FrontMatterStartTime {
+        value: LooseTime,
+        span: Range<usize>,
+    },
+    FrontMatterEndTime {
+        value: LooseTime,
+        span: Range<usize>,
+    },
     FrontMatter {
         date: Box<Expr>,
         start: Box<Expr>,
@@ -22,7 +28,10 @@ pub enum Expr {
         span: Range<usize>,
     },
 
-    Time(LooseTime),
+    Time {
+        value: LooseTime,
+        span: Range<usize>,
+    },
     Duration {
         value: Duration,
         span: Range<usize>,
@@ -55,15 +64,16 @@ pub enum Expr {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct LooseTime {
-    string: String,
-    span: Range<usize>,
-}
+pub struct LooseTime(String);
 
 impl LooseTime {
+    fn new<T: Into<String>>(value: T) -> LooseTime {
+        LooseTime(value.into())
+    }
+
     fn to_naivetime(&self) -> Result<NaiveTime, JournalintError> {
-        NaiveTime::parse_from_str(self.string.as_str(), "%H:%M").map_err(|e| {
-            JournalintError::ParseError(format!("unrecognizable time: {e}: {}", self.string))
+        NaiveTime::parse_from_str(self.0.as_str(), "%H:%M").map_err(|e| {
+            JournalintError::ParseError(format!("unrecognizable time: {e}: {}", self.0))
         })
     }
 }
@@ -86,14 +96,20 @@ fn front_matter() -> impl Parser<char, Expr, Error = Simple<char>> {
             .not()
             .repeated()
             .collect::<String>()
-            .map_with_span(|string, span| Expr::FrontMatterStartTime(LooseTime { string, span })),
+            .map_with_span(|value, span| Expr::FrontMatterStartTime {
+                value: LooseTime(value),
+                span,
+            }),
     );
     let fm_end = just("end").padded().then(just(':').padded()).ignore_then(
         newline()
             .not()
             .repeated()
             .collect::<String>()
-            .map_with_span(|string, span| Expr::FrontMatterEndTime(LooseTime { string, span })),
+            .map_with_span(|value, span| Expr::FrontMatterEndTime {
+                value: LooseTime(value),
+                span,
+            }),
     );
 
     delimiter
@@ -116,10 +132,10 @@ fn front_matter() -> impl Parser<char, Expr, Error = Simple<char>> {
                     Expr::FrontMatterDate { value: _, span: _ } => {
                         date = Some(expr);
                     }
-                    Expr::FrontMatterStartTime(_t) => {
+                    Expr::FrontMatterStartTime { value: _, span: _ } => {
                         start = Some(expr);
                     }
-                    Expr::FrontMatterEndTime(_t) => {
+                    Expr::FrontMatterEndTime { value: _, span: _ } => {
                         end = Some(expr);
                     }
                     _ => (),
@@ -145,7 +161,10 @@ fn time() -> impl Parser<char, Expr, Error = Simple<char>> {
         .chain(just(':'))
         .chain::<char, _, _>(filter(|c: &char| c.is_ascii_digit()).repeated().at_least(1))
         .collect::<String>()
-        .map_with_span(|string, span| Expr::Time(LooseTime { string, span }))
+        .map_with_span(|string, span| Expr::Time {
+            value: LooseTime(string),
+            span,
+        })
 }
 
 fn duration() -> impl Parser<char, Expr, Error = Simple<char>> {
@@ -225,17 +244,17 @@ mod tests {
         let p = super::time();
         assert_eq!(
             p.parse("01:02").unwrap(),
-            Expr::Time(LooseTime {
-                string: "01:02".to_string(),
+            Expr::Time {
+                value: LooseTime::new("01:02"),
                 span: 0..5,
-            })
+            }
         );
         assert_eq!(
             p.parse("24:60").unwrap(),
-            Expr::Time(LooseTime {
-                string: "24:60".to_string(),
+            Expr::Time {
+                value: LooseTime::new("24:60"),
                 span: 0..5,
-            })
+            }
         );
         assert!(p.parse("24 :60").is_err());
         assert!(p.parse("24: 60").is_err());
@@ -302,14 +321,14 @@ mod tests {
         assert_eq!(
             entry,
             Some(Expr::Entry {
-                start: Box::new(Expr::Time(LooseTime {
-                    string: "09:00".to_string(),
+                start: Box::new(Expr::Time {
+                    value: LooseTime::new("09:00"),
                     span: 2..7
-                })),
-                end: Box::new(Expr::Time(LooseTime {
-                    string: "10:15".to_string(),
+                }),
+                end: Box::new(Expr::Time {
+                    value: LooseTime::new("10:15"),
                     span: 8..13
-                })),
+                }),
                 codes: vec![
                     Expr::Code {
                         value: "ABCDEFG8".to_string(),
@@ -350,14 +369,14 @@ mod tests {
                     value: NaiveDate::from_ymd_opt(2006, 1, 2).unwrap(),
                     span: 10..20
                 }),
-                start: Box::new(Expr::FrontMatterStartTime(LooseTime {
-                    string: "15:04".to_string(),
+                start: Box::new(Expr::FrontMatterStartTime {
+                    value: LooseTime::new("15:04"),
                     span: 28..33
-                })),
-                end: Box::new(Expr::FrontMatterEndTime(LooseTime {
-                    string: "24:56".to_string(),
+                }),
+                end: Box::new(Expr::FrontMatterEndTime {
+                    value: LooseTime::new("24:56"),
                     span: 39..44
-                })),
+                }),
                 span: 0..49,
             }
         );
@@ -393,14 +412,14 @@ mod tests {
                             value: NaiveDate::from_ymd_opt(2006, 1, 2).unwrap(),
                             span: 10..20
                         }),
-                        start: Box::new(Expr::FrontMatterStartTime(LooseTime {
-                            string: "15:04".to_string(),
+                        start: Box::new(Expr::FrontMatterStartTime {
+                            value: LooseTime::new("15:04"),
                             span: 28..33
-                        })),
-                        end: Box::new(Expr::FrontMatterEndTime(LooseTime {
-                            string: "24:56".to_string(),
+                        }),
+                        end: Box::new(Expr::FrontMatterEndTime {
+                            value: LooseTime::new("24:56"),
                             span: 39..44
-                        })),
+                        }),
                         span: 0..49,
                     }
                 );
@@ -410,14 +429,14 @@ mod tests {
                     vec![
                         Expr::NonTargetLine,
                         Expr::Entry {
-                            start: Box::new(Expr::Time(LooseTime {
-                                string: "09:00".to_string(),
+                            start: Box::new(Expr::Time {
+                                value: LooseTime::new("09:00"),
                                 span: 52..57
-                            })),
-                            end: Box::new(Expr::Time(LooseTime {
-                                string: "10:15".to_string(),
+                            }),
+                            end: Box::new(Expr::Time {
+                                value: LooseTime::new("10:15"),
                                 span: 58..63
-                            })),
+                            }),
                             codes: vec![
                                 Expr::Code {
                                     value: "ABCDEFG8".to_string(),
