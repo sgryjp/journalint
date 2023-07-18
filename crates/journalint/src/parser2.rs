@@ -79,62 +79,68 @@ impl LooseTime {
 }
 
 fn front_matter() -> impl Parser<char, Expr, Error = Simple<char>> {
-    let delimiter = just('-').repeated().at_least(3).debug("delimiter");
-    let fm_date = just("date")
-        .padded()
-        .then(just(':').padded())
-        .ignore_then(
-            newline()
-                .not()
-                .repeated()
-                .collect::<String>()
-                .try_map(|s, span| {
-                    NaiveDate::parse_from_str(s.as_str(), "%Y-%m-%d")
-                        .map_err(|e| Simple::custom(span, format!("unrecognizable date: {e}: {s}")))
-                })
-                .map_with_span(|value, span| Expr::FrontMatterDate { value, span }),
-        )
-        .debug("fm_date");
-    let fm_start = just("start")
-        .padded()
-        .then(just(':').padded())
-        .ignore_then(
-            newline()
-                .not()
-                .repeated()
-                .collect::<String>()
-                .map_with_span(|value, span| Expr::FrontMatterStartTime {
-                    value: LooseTime(value),
-                    span,
-                }),
-        )
-        .debug("fm_start");
-    let fm_end = just("end")
-        .padded()
-        .then(just(':').padded())
-        .ignore_then(
-            newline()
-                .not()
-                .repeated()
-                .collect::<String>()
-                .map_with_span(|value, span| Expr::FrontMatterEndTime {
-                    value: LooseTime(value),
-                    span,
-                }),
-        )
-        .debug("fm_end");
+    let delimiter = || just('-').repeated().at_least(3).debug("delimiter");
+    let fm_date = || {
+        just("date")
+            .padded()
+            .then(just(':').padded())
+            .ignore_then(
+                newline()
+                    .not()
+                    .repeated()
+                    .collect::<String>()
+                    .try_map(|s, span| {
+                        NaiveDate::parse_from_str(s.as_str(), "%Y-%m-%d").map_err(|e| {
+                            Simple::custom(span, format!("unrecognizable date: {e}: {s}"))
+                        })
+                    })
+                    .map_with_span(|value, span| Expr::FrontMatterDate { value, span }),
+            )
+            .debug("fm_date")
+    };
+    let fm_start = || {
+        just("start")
+            .padded()
+            .then(just(':').padded())
+            .ignore_then(
+                newline()
+                    .not()
+                    .repeated()
+                    .collect::<String>()
+                    .map_with_span(|value, span| Expr::FrontMatterStartTime {
+                        value: LooseTime(value),
+                        span,
+                    }),
+            )
+            .debug("fm_start")
+    };
+    let fm_end = || {
+        just("end")
+            .padded()
+            .then(just(':').padded())
+            .ignore_then(
+                newline()
+                    .not()
+                    .repeated()
+                    .collect::<String>()
+                    .map_with_span(|value, span| Expr::FrontMatterEndTime {
+                        value: LooseTime(value),
+                        span,
+                    }),
+            )
+            .debug("fm_end")
+    };
 
-    delimiter
-        .clone()
+    delimiter()
         .then(newline())
         .ignore_then(
-            fm_date
-                .or(fm_start)
-                .or(fm_end)
+            fm_date()
+                .or(fm_start())
+                .or(fm_end())
                 .then_ignore(newline())
                 .repeated(),
         )
-        .then_ignore(delimiter)
+        .then_ignore(delimiter())
         .then_ignore(newline())
         .try_map(|exprs: Vec<Expr>, span| {
             let mut date: Option<Expr> = None;
@@ -236,17 +242,18 @@ fn entry() -> impl Parser<char, Expr, Error = Simple<char>> {
 }
 
 fn journal() -> impl Parser<char, Expr, Error = Simple<char>> {
-    let target_line = entry().then_ignore(newline()).debug("target_line");
-    let non_target_line = newline()
-        .not()
-        .repeated()
-        .then_ignore(newline())
-        .to(Expr::NonTargetLine)
-        .debug("non_target_line");
-    let line = target_line.or(non_target_line);
+    let target_line = || entry().then_ignore(newline()).debug("target_line");
+    let non_target_line = || {
+        newline()
+            .not()
+            .repeated()
+            .then_ignore(newline())
+            .to(Expr::NonTargetLine)
+            .debug("non_target_line")
+    };
 
     front_matter()
-        .then(line.repeated())
+        .then(target_line().or(non_target_line()).repeated())
         .then_ignore(end())
         .map(|(front_matter, lines)| Expr::Journal {
             front_matter: Box::new(front_matter),
