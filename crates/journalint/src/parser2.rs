@@ -2,7 +2,6 @@ use std::ops::Range;
 use std::time::Duration;
 
 use chrono::{NaiveDate, NaiveTime};
-use chumsky::error::SimpleReason;
 use chumsky::prelude::*;
 use chumsky::text::newline;
 
@@ -194,22 +193,15 @@ fn duration() -> impl Parser<char, Expr, Error = Simple<char>> {
     filter(|c: &char| c.is_ascii_digit() || *c == '.')
         .repeated()
         .collect::<String>()
-        .try_map(|s, span: Range<usize>| {
-            str::parse::<f64>(&s)
-                .map(|n| Expr::Duration {
-                    value: Duration::from_secs_f64(n * 3600.0),
-                    span: span.clone(),
-                })
-                .map_err(|e| Simple::custom(span, format!("unrecognizable duration: {e}: {s}")))
-        })
-        .or_else(|e| {
-            let SimpleReason::Custom(value) = e.reason() else {
-                unreachable!();
-            };
-            Ok(Expr::Error {
-                reason: value.clone(),
-                span: e.span(),
-            })
+        .map_with_span(|s, span| match str::parse::<f64>(&s) {
+            Ok(n) => Expr::Duration {
+                value: Duration::from_secs_f64(n * 3600.0),
+                span,
+            },
+            Err(e) => Expr::Error {
+                reason: format!("unrecognizable duration: {e}: {s}"),
+                span,
+            },
         })
         .debug("duration")
 }
