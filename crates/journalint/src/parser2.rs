@@ -1,7 +1,7 @@
 use std::ops::Range;
 use std::time::Duration;
 
-use chrono::{NaiveDate, NaiveTime};
+use chrono::{DateTime, Days, NaiveDate, NaiveDateTime, NaiveTime, Utc};
 use chumsky::prelude::*;
 use chumsky::text::newline;
 
@@ -70,6 +70,52 @@ pub struct LooseTime(String);
 impl LooseTime {
     fn new<T: Into<String>>(value: T) -> LooseTime {
         LooseTime(value.into())
+    }
+
+    pub fn to_datetime(&self, date: &NaiveDate) -> Result<DateTime<Utc>, JournalintError> {
+        match NaiveTime::parse_from_str(self.0.as_str(), "%H:%M") {
+            Ok(t) => {
+                let datetime = NaiveDateTime::new(*date, t);
+                Ok(DateTime::from_utc(datetime, Utc))
+            }
+            Err(e) => {
+                // Try parsing as it's beyond 24:00.
+                let hhmm: Vec<&str> = self.0.split(':').collect();
+                if hhmm.len() != 2 {
+                    return Err(JournalintError::ParseError(format!(
+                        "the time value is not in format \"HH:MM\": {}",
+                        self.0
+                    )));
+                }
+                let Ok(h) = str::parse::<u32>(hhmm[0]) else {
+                    return Err(JournalintError::ParseError(format!(
+                        "the hour is not a number: {}",
+                        self.0
+                    )));
+                };
+                let Ok(m) = str::parse::<u32>(hhmm[1]) else {
+                    return Err(JournalintError::ParseError(format!(
+                        "the minute is not a number: {}",
+                        self.0
+                    )));
+                };
+                if h < 24 {
+                    return Err(JournalintError::ParseError(format!(
+                        "invalid time value: {}: {}",
+                        e, self.0
+                    )));
+                }
+                let time = NaiveTime::from_hms_opt(h - 24, m, 0).unwrap();
+                let Some(date) = date.checked_add_days(Days::new(1)) else {
+                    return Err(JournalintError::ParseError(format!(
+                        "cannot calculate one date ahead of {}",
+                        date
+                    )));
+                };
+                let datetime = NaiveDateTime::new(date, time);
+                Ok(DateTime::from_utc(datetime, Utc))
+            }
+        }
     }
 
     fn to_naivetime(&self) -> Result<NaiveTime, JournalintError> { // TODO: Remove if unused
@@ -276,6 +322,58 @@ fn wsp() -> impl Parser<char, String, Error = Simple<char>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn loose_time_to_datetime() {
+        let date1 = NaiveDate::from_ymd_opt(2006, 2, 3).unwrap();
+        let date2 = NaiveDate::from_ymd_opt(262143, 12, 31).unwrap();
+        // No colon
+        assert!(matches!(
+            LooseTime::new("2456").to_datetime(&date1),
+            Err(JournalintError::ParseError(..))
+        ));
+        // Too many colons
+        assert!(matches!(
+            LooseTime::new("2:4:56").to_datetime(&date1),
+            Err(JournalintError::ParseError(..))
+        ));
+        // Non-number hour
+        assert!(matches!(
+            LooseTime::new("2z:56").to_datetime(&date1),
+            Err(JournalintError::ParseError(..))
+        ));
+        // Non-number minute
+        assert!(matches!(
+            LooseTime::new("24:5z").to_datetime(&date1),
+            Err(JournalintError::ParseError(..))
+        ));
+        // Not parsable as a time value and its hour is less than 24.
+        assert!(matches!(
+            LooseTime::new("00:61").to_datetime(&date1),
+            Err(JournalintError::ParseError(..))
+        ));
+        // Loosely valid time value but out of supported range.
+        assert!(matches!(
+            LooseTime::new("24:56").to_datetime(&date2),
+            Err(JournalintError::ParseError(..))
+        ));
+        // Loosely valid time value which exceeds 23:59.
+        assert_eq!(
+            LooseTime::new("24:56")
+                .to_datetime(&date1)
+                .map(|d| d.fixed_offset())
+                .ok(),
+            DateTime::parse_from_rfc3339("2006-02-04T00:56:00+00:00").ok()
+        );
+        // Strictly valid time value.
+        assert_eq!(
+            LooseTime::new("12:34")
+                .to_datetime(&date1)
+                .map(|d| d.fixed_offset())
+                .ok(),
+            DateTime::parse_from_rfc3339("2006-02-03T12:34:00+00:00").ok()
+        );
+    }
 
     #[test]
     fn time() {
