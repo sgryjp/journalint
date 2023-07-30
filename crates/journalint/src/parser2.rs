@@ -72,7 +72,7 @@ impl LooseTime {
         LooseTime(value.into())
     }
 
-    fn to_naivetime(&self) -> Result<NaiveTime, JournalintError> {
+    fn to_naivetime(&self) -> Result<NaiveTime, JournalintError> { // TODO: Remove if unused
         NaiveTime::parse_from_str(self.0.as_str(), "%H:%M").map_err(|e| {
             JournalintError::ParseError(format!("unrecognizable time: {e}: {}", self.0))
         })
@@ -104,7 +104,7 @@ fn front_matter() -> impl Parser<char, Expr, Error = Simple<char>> {
             .then_ignore(wsp())
             .then(just(':').then_ignore(wsp()))
             .ignore_then(
-                newline()
+                newline() // TODO: Accept HH:MM formatted string where HH and MM are *digits*
                     .not()
                     .repeated()
                     .collect::<String>()
