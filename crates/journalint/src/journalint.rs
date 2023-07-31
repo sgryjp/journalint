@@ -7,10 +7,10 @@ use crate::linemap::LineMap;
 use crate::parsers;
 
 pub struct Journalint<'a> {
-    source: Option<String>,
-    content: &'a str,
-    diagnostics: Vec<Diagnostic>,
-    linemap: LineMap,
+    pub source: Option<String>, // TODO: make these fields private
+    pub content: &'a str,
+    pub diagnostics: Vec<Diagnostic>,
+    pub linemap: LineMap,
 }
 
 impl<'a> Journalint<'a> {

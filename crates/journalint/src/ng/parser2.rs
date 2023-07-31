@@ -83,32 +83,38 @@ impl LooseTime {
                 let hhmm: Vec<&str> = self.0.split(':').collect();
                 if hhmm.len() != 2 {
                     return Err(JournalintError::ParseError(format!(
-                        "the time value is not in format \"HH:MM\": {}",
+                        "the time value is not in format \"HH:MM\": '{}'",
                         self.0
                     )));
                 }
                 let Ok(h) = str::parse::<u32>(hhmm[0]) else {
                     return Err(JournalintError::ParseError(format!(
-                        "the hour is not a number: {}",
+                        "the hour is not a number: '{}'",
                         self.0
                     )));
                 };
                 let Ok(m) = str::parse::<u32>(hhmm[1]) else {
                     return Err(JournalintError::ParseError(format!(
-                        "the minute is not a number: {}",
+                        "the minute is not a number: '{}'",
                         self.0
                     )));
                 };
                 if h < 24 {
                     return Err(JournalintError::ParseError(format!(
-                        "invalid time value: {}: {}",
+                        "invalid time value: {}: '{}'",
+                        e, self.0
+                    )));
+                }
+                if 60 < m {
+                    return Err(JournalintError::ParseError(format!(
+                        "invalid minute value: {}: '{}'",
                         e, self.0
                     )));
                 }
                 let time = NaiveTime::from_hms_opt(h - 24, m, 0).unwrap();
                 let Some(date) = date.checked_add_days(Days::new(1)) else {
                     return Err(JournalintError::ParseError(format!(
-                        "cannot calculate one date ahead of {}",
+                        "failed to calculate one date ahead of '{}'",
                         date
                     )));
                 };
@@ -118,7 +124,8 @@ impl LooseTime {
         }
     }
 
-    fn to_naivetime(&self) -> Result<NaiveTime, JournalintError> { // TODO: Remove if unused
+    pub fn to_naivetime(&self) -> Result<NaiveTime, JournalintError> {
+        // TODO: Remove if unused
         NaiveTime::parse_from_str(self.0.as_str(), "%H:%M").map_err(|e| {
             JournalintError::ParseError(format!("unrecognizable time: {e}: {}", self.0))
         })
@@ -316,6 +323,11 @@ fn wsp() -> impl Parser<char, String, Error = Simple<char>> {
     filter(|c: &char| c.is_whitespace() && *c != '\r' && *c != '\n')
         .repeated()
         .collect::<String>()
+}
+
+// ----------------------------------------------------------------------------
+pub fn parse(content: &str) -> (Option<Expr>, Vec<Simple<char>>) {
+    journal().parse_recovery(content)
 }
 
 // ----------------------------------------------------------------------------

@@ -21,7 +21,7 @@ use lsp_types::{
 
 use crate::arg::Arguments;
 use crate::errors::JournalintError;
-use crate::journalint::Journalint;
+use crate::ng::run;
 use crate::server::main_loop;
 
 fn main() -> Result<(), JournalintError> {
@@ -48,7 +48,7 @@ fn command_main(args: Arguments) -> exitcode::ExitCode {
         }
     };
 
-    Journalint::new(Some(filename), &content).report();
+    run(content.as_str(), Some(filename)).report();
     exitcode::OK
 }
 
