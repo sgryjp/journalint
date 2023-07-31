@@ -24,8 +24,8 @@ impl<'a> Journalint<'a> {
             linemap: LineMap::new(content),
             journal: None,
         };
-        journalint._parse(filename, content);
-        journalint._lint();
+        journalint.parse(filename, content);
+        journalint.lint();
         journalint
     }
 
@@ -46,7 +46,7 @@ impl<'a> Journalint<'a> {
     }
 
     /// Parse a journal file content.
-    fn _parse(&mut self, filename: Option<String>, content: &str) {
+    fn parse(&mut self, filename: Option<String>, content: &str) {
         let (journal, errors) = parsers::journal().parse_recovery(content);
         self.journal = journal;
         for e in errors {
@@ -60,7 +60,7 @@ impl<'a> Journalint<'a> {
         }
     }
 
-    fn _lint(&mut self) {
+    fn lint(&mut self) {
         let Some(journal) = self.journal() else {
             return;
         };
