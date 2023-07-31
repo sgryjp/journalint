@@ -1,10 +1,9 @@
 use ariadne::{Color, Label, Report, ReportKind, Source};
 use chumsky::Parser;
 
-use crate::ast::Journal;
+use crate::ast::{Journal, JournalEntry};
 use crate::diagnostic::{Diagnostic, DiagnosticSeverity};
 use crate::linemap::LineMap;
-use crate::linting::lint_incorrect_duration;
 use crate::parsers;
 
 pub struct Journalint<'a> {
@@ -94,7 +93,7 @@ impl<'a> Journalint<'a> {
                     ));
                 };
 
-                lint_incorrect_duration(source.as_deref(), calculated_duration, entry)
+                Self::lint_incorrect_duration(source.as_deref(), calculated_duration, entry)
             })
             .collect()
     }
@@ -103,6 +102,26 @@ impl<'a> Journalint<'a> {
         self.diagnostics
             .iter()
             .for_each(|d| _report_diagnostic(self.content, d))
+    }
+
+    fn lint_incorrect_duration(
+        source: Option<&str>,
+        calculated_duration: std::time::Duration,
+        entry: &JournalEntry,
+    ) -> Option<Diagnostic> {
+        (&calculated_duration != entry.duration().value()).then(|| {
+            let written_duration = entry.duration().value().as_secs_f64() / 3600.0;
+            let expected = calculated_duration.as_secs_f64() / 3600.0;
+            Diagnostic::new(
+                entry.duration().span().clone(),
+                DiagnosticSeverity::WARNING,
+                source.map(|s| s.to_string()),
+                format!(
+                    "Incorrect duration: found {:1.2}, expected {:1.2}",
+                    written_duration, expected
+                ),
+            )
+        })
     }
 }
 
@@ -123,4 +142,32 @@ fn _report_diagnostic(content: &str, diag: &Diagnostic) {
         .finish()
         .eprint((filename, Source::from(content)))
         .unwrap();
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::journalint::Journalint;
+
+    #[test]
+    fn incorrect_duration() {
+        const TEST_DATA: &str = "\
+        ---\n\
+        date: 2006-01-02\n\
+        start: 15:04\n\
+        end: 17:29\n\
+        ---\n\
+        \n\
+        - 09:00-10:15 ABCDEFG8 AB3 1.00 foo: bar: baz\n\
+        ";
+
+        let journalint = Journalint::new(None, TEST_DATA);
+        let diagnostics = journalint.diagnostics();
+        assert_eq!(diagnostics.len(), 1);
+        let diagnostic = &diagnostics[0];
+        assert_eq!(*diagnostic.span(), 77..81);
+        assert_eq!(
+            diagnostic.message(),
+            "Incorrect duration: found 1.00, expected 1.25"
+        );
+    }
 }
