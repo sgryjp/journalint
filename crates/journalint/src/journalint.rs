@@ -1,7 +1,7 @@
 use ariadne::{Color, Label, Report, ReportKind, Source};
 use chumsky::Parser;
 
-use crate::ast::{self, Journal};
+use crate::ast::Journal;
 use crate::diagnostic::{Diagnostic, DiagnosticSeverity};
 use crate::linemap::LineMap;
 use crate::linting::lint_incorrect_duration;
@@ -12,7 +12,6 @@ pub struct Journalint<'a> {
     content: &'a str,
     diagnostics: Vec<Diagnostic>,
     linemap: LineMap,
-    journal: Option<ast::Journal>,
 }
 
 impl<'a> Journalint<'a> {
@@ -27,12 +26,7 @@ impl<'a> Journalint<'a> {
             content,
             diagnostics,
             linemap: LineMap::new(content),
-            journal: None,
         }
-    }
-
-    pub fn journal(&self) -> Option<&ast::Journal> {
-        self.journal.as_ref()
     }
 
     pub fn source(&self) -> Option<&str> {
