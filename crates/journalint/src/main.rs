@@ -5,7 +5,7 @@ mod diagnostic;
 mod errors;
 mod journalint;
 mod linemap;
-mod parser2;
+mod ng;
 mod parsers;
 mod server;
 
