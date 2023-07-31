@@ -1,7 +1,7 @@
 use ariadne::{Color, Label, Report, ReportKind, Source};
 use chumsky::Parser;
 
-use crate::ast;
+use crate::ast::{self, Journal};
 use crate::diagnostic::{Diagnostic, DiagnosticSeverity};
 use crate::linemap::LineMap;
 use crate::linting::lint_incorrect_duration;
@@ -17,16 +17,18 @@ pub struct Journalint<'a> {
 
 impl<'a> Journalint<'a> {
     pub fn new(filename: Option<String>, content: &'a str) -> Self {
-        let mut journalint = Self {
-            source: filename.clone(),
+        let (journal, mut diagnostics) = Journalint::parse(filename.clone(), content);
+        if let Some(journal) = journal {
+            diagnostics.append(&mut Journalint::lint(&journal, filename.clone()));
+        }
+
+        Self {
+            source: filename,
             content,
-            diagnostics: Vec::new(),
+            diagnostics,
             linemap: LineMap::new(content),
             journal: None,
-        };
-        journalint.parse(filename, content);
-        journalint.lint();
-        journalint
+        }
     }
 
     pub fn journal(&self) -> Option<&ast::Journal> {
@@ -46,66 +48,61 @@ impl<'a> Journalint<'a> {
     }
 
     /// Parse a journal file content.
-    fn parse(&mut self, filename: Option<String>, content: &str) {
+    fn parse(filename: Option<String>, content: &str) -> (Option<Journal>, Vec<Diagnostic>) {
         let (journal, errors) = parsers::journal().parse_recovery(content);
-        self.journal = journal;
-        for e in errors {
-            let diagnostic = Diagnostic::new(
-                e.span(),
-                DiagnosticSeverity::ERROR,
-                filename.clone(),
-                e.to_string(),
-            );
-            self.diagnostics.push(diagnostic);
-        }
+        (
+            journal,
+            errors
+                .iter()
+                .map(|e| {
+                    Diagnostic::new(
+                        e.span(),
+                        DiagnosticSeverity::ERROR,
+                        filename.clone(),
+                        e.to_string(),
+                    )
+                })
+                .collect(),
+        )
     }
 
-    fn lint(&mut self) {
-        let Some(journal) = self.journal() else {
-            return;
-        };
-
+    fn lint(journal: &Journal, source: Option<String>) -> Vec<Diagnostic> {
         // Scan entries
-        for entry in journal.entries() {
-            let start_time = entry.time_range().start();
-            let Some(start) = start_time.to_datetime(journal.front_matter().date()) else {
-                let d = Diagnostic::new(
-                    start_time.span().clone(),
-                    DiagnosticSeverity::WARNING,
-                    self.source().map(|s| s.to_string()),
-                    "invalid start time (out of valid range)".to_string(),
-                );
-                self.diagnostics.push(d);
-                return;
-            };
+        journal
+            .entries()
+            .iter()
+            .filter_map(|entry| {
+                let start_time = entry.time_range().start();
+                let Some(start) = start_time.to_datetime(journal.front_matter().date()) else {
+                    return Some(Diagnostic::new(
+                        start_time.span().clone(),
+                        DiagnosticSeverity::WARNING,
+                        source.clone(),
+                        "invalid start time (out of valid range)".to_string(),
+                    ));
+                };
 
-            let end_time = entry.time_range().end();
-            let Some(end) = end_time.to_datetime(journal.front_matter().date()) else {
-                let d = Diagnostic::new(
-                    end_time.span().clone(),
-                    DiagnosticSeverity::WARNING,
-                    self.source().map(|s| s.to_string()),
-                    "invalid end time (out of valid range)".to_string(),
-                );
-                self.diagnostics.push(d);
-                return;
-            };
-            let Ok(calculated_duration) = (end - start).to_std() else {
-                let d = Diagnostic::new(
-                    end_time.span().clone(),
-                    DiagnosticSeverity::WARNING,
-                    self.source().map(|s| s.to_string()),
-                    "end time should be the same or after the start time".to_string(),
-                );
-                self.diagnostics.push(d);
-                return;
-            };
+                let end_time = entry.time_range().end();
+                let Some(end) = end_time.to_datetime(journal.front_matter().date()) else {
+                    return Some(Diagnostic::new(
+                        end_time.span().clone(),
+                        DiagnosticSeverity::WARNING,
+                        source.clone(),
+                        "invalid end time (out of valid range)".to_string(),
+                    ));
+                };
+                let Ok(calculated_duration) = (end - start).to_std() else {
+                    return Some(Diagnostic::new(
+                        end_time.span().clone(),
+                        DiagnosticSeverity::WARNING,
+                        source.clone(),
+                        "end time should be the same or after the start time".to_string(),
+                    ));
+                };
 
-            if let Some(d) = lint_incorrect_duration(self.source(), calculated_duration, entry) {
-                self.diagnostics.push(d);
-                return;
-            }
-        }
+                lint_incorrect_duration(source.as_deref(), calculated_duration, entry)
+            })
+            .collect()
     }
 
     pub fn report(&self) {
