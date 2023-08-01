@@ -1,4 +1,5 @@
 use std::ops::Range;
+use std::time::Duration;
 
 use chrono::{DateTime, NaiveDate, Utc};
 use lsp_types::DiagnosticSeverity;
@@ -20,19 +21,17 @@ pub struct Linter {
     start_resolved: Option<DateTime<Utc>>,
     end: Option<LooseTime>,
     end_resolved: Option<DateTime<Utc>>,
+
+    entry_start_value: Option<DateTime<Utc>>,
+    entry_end_value: Option<DateTime<Utc>>,
+    entry_end_span: Option<Range<usize>>,
 }
 
 impl Linter {
     pub fn new(source: Option<String>) -> Linter {
-        Linter {
-            source,
-            diagnostics: Vec::new(),
-            date: None,
-            start: None,
-            start_resolved: None,
-            end: None,
-            end_resolved: None,
-        }
+        let mut linter = Linter::default();
+        linter.source = source;
+        linter
     }
 
     fn on_visit_frontmatter_date(&mut self, date: &NaiveDate, _span: &Range<usize>) {
@@ -40,6 +39,8 @@ impl Linter {
     }
 
     fn on_visit_frontmatter_starttime(&mut self, start_time: &LooseTime, _span: &Range<usize>) {
+        // TODO:
+        // Rename
         self.start = Some(start_time.clone());
     }
 
@@ -89,16 +90,82 @@ impl Linter {
         }
     }
 
-    fn on_visit_time(&mut self, time: &LooseTime, span: &Range<usize>) {
+    fn on_leave_entry(
+        &mut self,
+        _start_time: &Expr,
+        _end_time: &Expr,
+        _codes: &Vec<Expr>,
+        _duration: &Expr,
+        _span: &Range<usize>,
+    ) {
+        self.entry_start_value = None;
+    }
+
+    fn on_visit_start_time(&mut self, start_time: &LooseTime, span: &Range<usize>) {
         if let Some(date) = self.date {
-            if let Err(e) = time.to_datetime(&date) {
-                self.diagnostics.push(Diagnostic::new(
-                    span.clone(),
-                    DiagnosticSeverity::WARNING,
-                    self.source.clone(),
-                    e.to_string(),
-                ));
+            match start_time.to_datetime(&date) {
+                Ok(d) => {
+                    self.entry_start_value = Some(d);
+                }
+                Err(e) => {
+                    self.diagnostics.push(Diagnostic::new(
+                        span.clone(),
+                        DiagnosticSeverity::WARNING,
+                        self.source.clone(),
+                        e.to_string(),
+                    ));
+                }
             }
+        }
+    }
+
+    fn on_visit_end_time(&mut self, end_time: &LooseTime, span: &Range<usize>) {
+        if let Some(date) = self.date {
+            match end_time.to_datetime(&date) {
+                Ok(d) => {
+                    self.entry_end_value = Some(d);
+                }
+                Err(e) => {
+                    self.diagnostics.push(Diagnostic::new(
+                        span.clone(),
+                        DiagnosticSeverity::WARNING,
+                        self.source.clone(),
+                        e.to_string(),
+                    ));
+                }
+            }
+        }
+    }
+
+    fn on_visit_duration(&mut self, duration: &Duration, span: &Range<usize>) {
+        let start = self.entry_start_value.unwrap();
+        let end = self.entry_end_value.unwrap();
+
+        let Ok(calculated) = (end - start).to_std() else {
+            self.diagnostics.push(Diagnostic::new(
+                self.entry_end_span.as_ref().unwrap().clone(),
+                DiagnosticSeverity::WARNING,
+                self.source.clone(),
+                format!(
+                    "End time must be ahead of start time: {}-{}",
+                    start.format("%H:%M"),
+                    end.format("%H:%M")
+                ),
+            ));
+            return;
+        };
+        let written = duration;
+        if calculated != *written {
+            self.diagnostics.push(Diagnostic::new(
+                span.clone(),
+                DiagnosticSeverity::WARNING,
+                self.source.clone(),
+                format!(
+                    "Incorrect duration: found {:1.2}, expected {:1.2}",
+                    written.as_secs_f64(),
+                    calculated.as_secs_f64()
+                ),
+            ));
         }
     }
 }
@@ -125,12 +192,17 @@ fn walk(expr: &Expr, visitor: &mut Linter) {
             walk(end, visitor);
             visitor.on_leave_frontmatter(date, start, end, span);
         }
-        Expr::Time { value, span } => {
-            visitor.on_visit_time(value, span);
+        Expr::StartTime { value, span } => {
+            visitor.on_visit_start_time(value, span);
         }
-        // Expr::Duration { value: _, span: _ } => todo!(),
-        // Expr::Code { value: _, span: _ } => todo!(),
-        // Expr::Activity { value: _, span: _ } => todo!(),
+        Expr::EndTime { value, span } => {
+            visitor.on_visit_end_time(value, span);
+        }
+        Expr::Duration { value, span } => {
+            visitor.on_visit_duration(value, span);
+        }
+        // Expr::Code { value, span } => todo!(),
+        // Expr::Activity { value, span } => todo!(),
         Expr::Entry {
             start,
             end,
@@ -156,7 +228,7 @@ fn walk(expr: &Expr, visitor: &mut Linter) {
                 walk(line, visitor);
             }
         }
-        // Expr::Error { reason: _, span: _ } => todo!(),
+        // Expr::Error { reason, span } => todo!(),
         // Expr::NonTargetLine => todo!(),
         _ => (),
     }

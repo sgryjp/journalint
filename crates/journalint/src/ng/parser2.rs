@@ -28,7 +28,11 @@ pub enum Expr {
         span: Range<usize>,
     },
 
-    Time {
+    StartTime {
+        value: LooseTime,
+        span: Range<usize>,
+    },
+    EndTime {
         value: LooseTime,
         span: Range<usize>,
     },
@@ -228,18 +232,31 @@ fn front_matter() -> impl Parser<char, Expr, Error = Simple<char>> {
         .debug("front_matter")
 }
 
-fn time() -> impl Parser<char, Expr, Error = Simple<char>> {
+fn _time() -> impl Parser<char, String, Error = Simple<char>> {
     filter(|c: &char| c.is_ascii_digit())
         .repeated()
         .at_least(1)
         .chain(just(':'))
         .chain::<char, _, _>(filter(|c: &char| c.is_ascii_digit()).repeated().at_least(1))
         .collect::<String>()
-        .map_with_span(|string, span| Expr::Time {
+}
+
+fn start_time() -> impl Parser<char, Expr, Error = Simple<char>> {
+    _time()
+        .map_with_span(|string, span| Expr::StartTime {
             value: LooseTime(string),
             span,
         })
-        .debug("time")
+        .debug("start_time")
+}
+
+fn end_time() -> impl Parser<char, Expr, Error = Simple<char>> {
+    _time()
+        .map_with_span(|string, span| Expr::EndTime {
+            value: LooseTime(string),
+            span,
+        })
+        .debug("end_time")
 }
 
 fn duration() -> impl Parser<char, Expr, Error = Simple<char>> {
@@ -280,7 +297,7 @@ fn activity() -> impl Parser<char, Expr, Error = Simple<char>> {
 fn entry() -> impl Parser<char, Expr, Error = Simple<char>> {
     just('-')
         .then_ignore(wsp())
-        .ignore_then(time().then_ignore(just('-')).then(time()))
+        .ignore_then(start_time().then_ignore(just('-')).then(end_time()))
         .then_ignore(wsp())
         .then(code().then_ignore(wsp()).repeated().at_most(2))
         .then(duration().then_ignore(wsp()))
@@ -388,28 +405,16 @@ mod tests {
     }
 
     #[test]
-    fn time() {
-        let (result, errors) = super::time().parse_recovery_verbose("01:02");
+    fn _time() {
+        let (result, errors) = super::_time().parse_recovery_verbose("01:02");
         assert_eq!(errors, []);
-        assert_eq!(
-            result,
-            Some(Expr::Time {
-                value: LooseTime::new("01:02"),
-                span: 0..5,
-            })
-        );
+        assert_eq!(result, Some("01:02".to_string()));
 
-        let (result, errors) = super::time().parse_recovery_verbose("24:60");
+        let (result, errors) = super::_time().parse_recovery_verbose("24:60");
         assert_eq!(errors, []);
-        assert_eq!(
-            result,
-            Some(Expr::Time {
-                value: LooseTime::new("24:60"),
-                span: 0..5,
-            })
-        );
+        assert_eq!(result, Some("24:60".to_string()));
 
-        let (result, errors) = super::time().parse_recovery_verbose("24 :60");
+        let (result, errors) = super::_time().parse_recovery_verbose("24 :60");
         assert_eq!(
             errors
                 .iter()
@@ -418,6 +423,32 @@ mod tests {
             [(2..3, "found \" \" but expected \":\"".to_string())]
         );
         assert_eq!(result, None);
+    }
+
+    #[test]
+    fn start_time() {
+        let (result, errors) = super::start_time().parse_recovery_verbose("01:02");
+        assert_eq!(errors, []);
+        assert_eq!(
+            result,
+            Some(Expr::StartTime {
+                value: LooseTime("01:02".to_string()),
+                span: 0..5
+            })
+        );
+    }
+
+    #[test]
+    fn end_time() {
+        let (result, errors) = super::end_time().parse_recovery_verbose("01:02");
+        assert_eq!(errors, []);
+        assert_eq!(
+            result,
+            Some(Expr::EndTime {
+                value: LooseTime("01:02".to_string()),
+                span: 0..5
+            })
+        );
     }
 
     #[test]
@@ -500,11 +531,11 @@ mod tests {
         assert_eq!(
             entry,
             Some(Expr::Entry {
-                start: Box::new(Expr::Time {
+                start: Box::new(Expr::StartTime {
                     value: LooseTime::new("09:00"),
                     span: 2..7
                 }),
-                end: Box::new(Expr::Time {
+                end: Box::new(Expr::EndTime {
                     value: LooseTime::new("10:15"),
                     span: 8..13
                 }),
@@ -609,11 +640,11 @@ mod tests {
                     vec![
                         Expr::NonTargetLine,
                         Expr::Entry {
-                            start: Box::new(Expr::Time {
+                            start: Box::new(Expr::StartTime {
                                 value: LooseTime::new("09:00"),
                                 span: 52..57
                             }),
-                            end: Box::new(Expr::Time {
+                            end: Box::new(Expr::EndTime {
                                 value: LooseTime::new("10:15"),
                                 span: 58..63
                             }),
