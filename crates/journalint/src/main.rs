@@ -1,12 +1,10 @@
 #![allow(dead_code)] // TODO: Remove this
 mod arg;
-mod ast;
 mod diagnostic;
 mod errors;
 mod journalint;
 mod linemap;
 mod ng;
-mod parsers;
 mod server;
 
 use std::env;

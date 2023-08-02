@@ -29,9 +29,10 @@ pub struct Linter {
 
 impl Linter {
     pub fn new(source: Option<String>) -> Linter {
-        let mut linter = Linter::default();
-        linter.source = source;
-        linter
+        Linter {
+            source,
+            ..Default::default()
+        }
     }
 
     fn on_visit_frontmatter_date(&mut self, date: &NaiveDate, _span: &Range<usize>) {

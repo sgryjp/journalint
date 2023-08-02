@@ -5,14 +5,11 @@ use lsp_types::DiagnosticSeverity;
 
 use crate::diagnostic::Diagnostic;
 use crate::journalint::Journalint;
-use crate::linemap::LineMap;
 use crate::ng::parser2::parse;
 
 use self::linter2::lint;
 
 pub fn run(content: &str, source: Option<String>) -> Journalint {
-    let linemap = LineMap::new(content);
-
     // Parse
     let (journal, errors) = parse(content);
     let mut diagnostics = errors
@@ -30,12 +27,8 @@ pub fn run(content: &str, source: Option<String>) -> Journalint {
     // Lint
     if let Some(journal) = journal {
         diagnostics.append(&mut lint(&journal, source.clone()));
+        //eprintln!("{:?}", journal); //////
     }
 
-    Journalint {
-        source,
-        content,
-        diagnostics,
-        linemap,
-    }
+    Journalint::new(&source, content, diagnostics)
 }
