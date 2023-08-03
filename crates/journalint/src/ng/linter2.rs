@@ -22,9 +22,8 @@ pub struct Linter {
     fm_end: Option<(LooseTime, Range<usize>)>,
     fm_end_datetime: Option<DateTime<Utc>>,
 
-    entry_start_value: Option<DateTime<Utc>>,
-    entry_end_value: Option<DateTime<Utc>>,
-    entry_end_span: Option<Range<usize>>,
+    entry_start: Option<(DateTime<Utc>, Range<usize>)>,
+    entry_end: Option<(DateTime<Utc>, Range<usize>)>,
 }
 
 impl Linter {
@@ -119,16 +118,15 @@ impl Linter {
         _duration: &Expr,
         _span: &Range<usize>,
     ) {
-        self.entry_start_value = None;
-        self.entry_end_value = None;
-        self.entry_end_span = None;
+        self.entry_start = None;
+        self.entry_end = None;
     }
 
     fn on_visit_start_time(&mut self, start_time: &LooseTime, span: &Range<usize>) {
         if let Some(date) = self.fm_date {
             match start_time.to_datetime(&date) {
                 Ok(d) => {
-                    self.entry_start_value = Some(d);
+                    self.entry_start = Some((d, span.clone()));
                 }
                 Err(e) => {
                     self.diagnostics.push(Diagnostic::new(
@@ -146,8 +144,7 @@ impl Linter {
         if let Some(date) = self.fm_date {
             match end_time.to_datetime(&date) {
                 Ok(d) => {
-                    self.entry_end_value = Some(d);
-                    self.entry_end_span = Some(span.clone());
+                    self.entry_end = Some((d, span.clone()));
                 }
                 Err(e) => {
                     self.diagnostics.push(Diagnostic::new(
@@ -162,16 +159,16 @@ impl Linter {
     }
 
     fn on_visit_duration(&mut self, duration: &Duration, span: &Range<usize>) {
-        let start = self.entry_start_value.unwrap();
-        let end = self.entry_end_value.unwrap();
+        let (start, start_span) = self.entry_start.as_ref().unwrap();
+        let (end, end_span) = self.entry_end.as_ref().unwrap();
 
-        let Ok(calculated) = (end - start).to_std() else {
+        let Ok(calculated) = (*end - *start).to_std() else {
             self.diagnostics.push(Diagnostic::new(
-                self.entry_end_span.as_ref().unwrap().clone(),
+                end_span.clone(),
                 DiagnosticSeverity::WARNING,
                 self.source.clone(),
                 format!(
-                    "End time must be ahead of start time: {}-{}",
+                    "end time must be ahead of start time: {}-{}",
                     start.format("%H:%M"),
                     end.format("%H:%M")
                 ),
@@ -185,7 +182,7 @@ impl Linter {
                 DiagnosticSeverity::WARNING,
                 self.source.clone(),
                 format!(
-                    "Incorrect duration: found {:1.2}, expected {:1.2}",
+                    "incorrect duration: found {:1.2}, expected {:1.2}",
                     written.as_secs_f64() / 3600.0,
                     calculated.as_secs_f64() / 3600.0
                 ),
