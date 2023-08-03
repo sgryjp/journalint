@@ -35,21 +35,19 @@ impl Linter {
         }
     }
 
-    fn on_visit_frontmatter_date(&mut self, date: &NaiveDate, _span: &Range<usize>) {
+    fn on_visit_fm_date(&mut self, date: &NaiveDate, _span: &Range<usize>) {
         self.fm_date = Some(*date);
     }
 
-    fn on_visit_frontmatter_starttime(&mut self, start_time: &LooseTime, span: &Range<usize>) {
-        // TODO:
-        // Rename
+    fn on_visit_fm_start(&mut self, start_time: &LooseTime, span: &Range<usize>) {
         self.fm_start = Some((start_time.clone(), span.clone()));
     }
 
-    fn on_visit_frontmatter_endtime(&mut self, end_time: &LooseTime, span: &Range<usize>) {
+    fn on_visit_fm_end(&mut self, end_time: &LooseTime, span: &Range<usize>) {
         self.fm_end = Some((end_time.clone(), span.clone()));
     }
 
-    fn on_leave_frontmatter(
+    fn on_leave_fm(
         &mut self,
         _date: &Expr,
         _start: &Expr,
@@ -199,13 +197,13 @@ impl Linter {
 fn walk(expr: &Expr, visitor: &mut Linter) {
     match expr {
         Expr::FrontMatterDate { value, span } => {
-            visitor.on_visit_frontmatter_date(value, span);
+            visitor.on_visit_fm_date(value, span);
         }
         Expr::FrontMatterStartTime { value, span } => {
-            visitor.on_visit_frontmatter_starttime(value, span);
+            visitor.on_visit_fm_start(value, span);
         }
         Expr::FrontMatterEndTime { value, span } => {
-            visitor.on_visit_frontmatter_endtime(value, span);
+            visitor.on_visit_fm_end(value, span);
         }
         Expr::FrontMatter {
             date,
@@ -216,7 +214,7 @@ fn walk(expr: &Expr, visitor: &mut Linter) {
             walk(date, visitor);
             walk(start, visitor);
             walk(end, visitor);
-            visitor.on_leave_frontmatter(date, start, end, span);
+            visitor.on_leave_fm(date, start, end, span);
         }
         Expr::StartTime { value, span } => {
             visitor.on_visit_start_time(value, span);
