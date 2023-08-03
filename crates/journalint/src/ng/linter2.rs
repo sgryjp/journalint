@@ -16,7 +16,7 @@ pub struct Linter {
     source: Option<String>,
     diagnostics: Vec<Diagnostic>,
 
-    fm_date: Option<NaiveDate>,
+    fm_date: Option<(NaiveDate, Range<usize>)>,
     fm_start: Option<(LooseTime, Range<usize>)>,
     fm_start_datetime: Option<DateTime<Utc>>,
     fm_end: Option<(LooseTime, Range<usize>)>,
@@ -34,8 +34,8 @@ impl Linter {
         }
     }
 
-    fn on_visit_fm_date(&mut self, date: &NaiveDate, _span: &Range<usize>) {
-        self.fm_date = Some(*date);
+    fn on_visit_fm_date(&mut self, date: &NaiveDate, span: &Range<usize>) {
+        self.fm_date = Some((*date, span.clone()));
     }
 
     fn on_visit_fm_start(&mut self, start_time: &LooseTime, span: &Range<usize>) {
@@ -46,16 +46,12 @@ impl Linter {
         self.fm_end = Some((end_time.clone(), span.clone()));
     }
 
-    fn on_leave_fm(
-        &mut self,
-        _date: &Expr,
-        _start: &Expr,
-        _end: &Expr,
-        span: &Range<usize>,
-    ) {
+    fn on_leave_fm(&mut self, _date: &Expr, _start: &Expr, _end: &Expr, span: &Range<usize>) {
         // Calculate exact time of start and end
-        if let (Some(date), Some((start, start_span))) = (self.fm_date, self.fm_start.as_ref()) {
-            self.fm_start_datetime = match start.to_datetime(&date) {
+        if let (Some((date, _)), Some((start, start_span))) =
+            (self.fm_date.as_ref(), self.fm_start.as_ref())
+        {
+            self.fm_start_datetime = match start.to_datetime(date) {
                 Ok(dt) => Some(dt),
                 Err(e) => {
                     self.diagnostics.push(Diagnostic::new(
@@ -68,8 +64,10 @@ impl Linter {
                 }
             };
         }
-        if let (Some(date), Some((end, end_span))) = (self.fm_date, self.fm_end.as_ref()) {
-            self.fm_end_datetime = match end.to_datetime(&date) {
+        if let (Some((date, _)), Some((end, end_span))) =
+            (self.fm_date.as_ref(), self.fm_end.as_ref())
+        {
+            self.fm_end_datetime = match end.to_datetime(date) {
                 Ok(dt) => Some(dt),
                 Err(e) => {
                     self.diagnostics.push(Diagnostic::new(
@@ -123,7 +121,7 @@ impl Linter {
     }
 
     fn on_visit_start_time(&mut self, start_time: &LooseTime, span: &Range<usize>) {
-        if let Some(date) = self.fm_date {
+        if let Some((date, _)) = self.fm_date {
             match start_time.to_datetime(&date) {
                 Ok(d) => {
                     self.entry_start = Some((d, span.clone()));
@@ -141,7 +139,7 @@ impl Linter {
     }
 
     fn on_visit_end_time(&mut self, end_time: &LooseTime, span: &Range<usize>) {
-        if let Some(date) = self.fm_date {
+        if let Some((date, _)) = self.fm_date {
             match end_time.to_datetime(&date) {
                 Ok(d) => {
                     self.entry_end = Some((d, span.clone()));
@@ -159,7 +157,7 @@ impl Linter {
     }
 
     fn on_visit_duration(&mut self, duration: &Duration, span: &Range<usize>) {
-        let (start, start_span) = self.entry_start.as_ref().unwrap();
+        let (start, _) = self.entry_start.as_ref().unwrap();
         let (end, end_span) = self.entry_end.as_ref().unwrap();
 
         let Ok(calculated) = (*end - *start).to_std() else {
