@@ -17,9 +17,9 @@ pub struct Linter {
     diagnostics: Vec<Diagnostic>,
 
     fm_date: Option<NaiveDate>,
-    fm_start: Option<LooseTime>,
+    fm_start: Option<(LooseTime, Range<usize>)>,
     fm_start_resolved: Option<DateTime<Utc>>,
-    fm_end: Option<LooseTime>,
+    fm_end: Option<(LooseTime, Range<usize>)>,
     fm_end_resolved: Option<DateTime<Utc>>,
 
     entry_start_value: Option<DateTime<Utc>>,
@@ -39,14 +39,14 @@ impl Linter {
         self.fm_date = Some(*date);
     }
 
-    fn on_visit_frontmatter_starttime(&mut self, start_time: &LooseTime, _span: &Range<usize>) {
+    fn on_visit_frontmatter_starttime(&mut self, start_time: &LooseTime, span: &Range<usize>) {
         // TODO:
         // Rename
-        self.fm_start = Some(start_time.clone());
+        self.fm_start = Some((start_time.clone(), span.clone()));
     }
 
-    fn on_visit_frontmatter_endtime(&mut self, end_time: &LooseTime, _span: &Range<usize>) {
-        self.fm_end = Some(end_time.clone());
+    fn on_visit_frontmatter_endtime(&mut self, end_time: &LooseTime, span: &Range<usize>) {
+        self.fm_end = Some((end_time.clone(), span.clone()));
     }
 
     fn on_leave_frontmatter(
@@ -57,11 +57,33 @@ impl Linter {
         span: &Range<usize>,
     ) {
         // Calculate exact time of start and end
-        if let (Some(date), Some(start)) = (self.fm_date, self.fm_start.as_ref()) {
-            self.fm_start_resolved = start.to_datetime(&date).ok(); //TODO: ok?
+        if let (Some(date), Some((start, start_span))) = (self.fm_date, self.fm_start.as_ref()) {
+            self.fm_start_resolved = match start.to_datetime(&date) {
+                Ok(dt) => Some(dt),
+                Err(e) => {
+                    self.diagnostics.push(Diagnostic::new(
+                        start_span.clone(),
+                        DiagnosticSeverity::WARNING,
+                        self.source.clone(),
+                        format!("invalid start time: {}", e),
+                    ));
+                    None
+                }
+            };
         }
-        if let (Some(date), Some(end)) = (self.fm_date, self.fm_end.as_ref()) {
-            self.fm_end_resolved = end.to_datetime(&date).ok(); //TODO: ok?
+        if let (Some(date), Some((end, end_span))) = (self.fm_date, self.fm_end.as_ref()) {
+            self.fm_end_resolved = match end.to_datetime(&date) {
+                Ok(dt) => Some(dt),
+                Err(e) => {
+                    self.diagnostics.push(Diagnostic::new(
+                        end_span.clone(),
+                        DiagnosticSeverity::WARNING,
+                        self.source.clone(),
+                        format!("invalid end time: {}", e),
+                    ));
+                    None
+                }
+            };
         }
 
         // Warn if one of date, start and end is missing
