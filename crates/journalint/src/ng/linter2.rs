@@ -2,7 +2,6 @@ use std::ops::Range;
 use std::time::Duration;
 
 use chrono::{DateTime, NaiveDate, Utc};
-use lsp_types::DiagnosticSeverity;
 
 use crate::diagnostic::Diagnostic;
 use crate::ng::parser2::{Expr, LooseTime};
@@ -54,9 +53,8 @@ impl Linter {
             self.fm_start_datetime = match start.to_datetime(date) {
                 Ok(dt) => Some(dt),
                 Err(e) => {
-                    self.diagnostics.push(Diagnostic::new(
+                    self.diagnostics.push(Diagnostic::new_warning(
                         start_span.clone(),
-                        DiagnosticSeverity::WARNING,
                         self.source.clone(),
                         format!("invalid start time: {}", e),
                     ));
@@ -70,9 +68,8 @@ impl Linter {
             self.fm_end_datetime = match end.to_datetime(date) {
                 Ok(dt) => Some(dt),
                 Err(e) => {
-                    self.diagnostics.push(Diagnostic::new(
+                    self.diagnostics.push(Diagnostic::new_warning(
                         end_span.clone(),
-                        DiagnosticSeverity::WARNING,
                         self.source.clone(),
                         format!("invalid end time: {}", e),
                     ));
@@ -83,25 +80,22 @@ impl Linter {
 
         // Warn if one of date, start and end is missing
         if self.fm_date.is_none() {
-            self.diagnostics.push(Diagnostic::new(
+            self.diagnostics.push(Diagnostic::new_warning(
                 span.clone(),
-                DiagnosticSeverity::WARNING,
                 self.source.clone(),
                 "date field is missing".to_string(),
             ));
         }
         if self.fm_start.is_none() {
-            self.diagnostics.push(Diagnostic::new(
+            self.diagnostics.push(Diagnostic::new_warning(
                 span.clone(),
-                DiagnosticSeverity::WARNING,
                 self.source.clone(),
                 "start field is missing".to_string(),
             ));
         }
         if self.fm_end.is_none() {
-            self.diagnostics.push(Diagnostic::new(
+            self.diagnostics.push(Diagnostic::new_warning(
                 span.clone(),
-                DiagnosticSeverity::WARNING,
                 self.source.clone(),
                 "end field is missing".to_string(),
             ));
@@ -127,9 +121,8 @@ impl Linter {
                     self.entry_start = Some((d, span.clone()));
                 }
                 Err(e) => {
-                    self.diagnostics.push(Diagnostic::new(
+                    self.diagnostics.push(Diagnostic::new_warning(
                         span.clone(),
-                        DiagnosticSeverity::WARNING,
                         self.source.clone(),
                         e.to_string(),
                     ));
@@ -145,9 +138,8 @@ impl Linter {
                     self.entry_end = Some((d, span.clone()));
                 }
                 Err(e) => {
-                    self.diagnostics.push(Diagnostic::new(
+                    self.diagnostics.push(Diagnostic::new_warning(
                         span.clone(),
-                        DiagnosticSeverity::WARNING,
                         self.source.clone(),
                         e.to_string(),
                     ));
@@ -161,9 +153,8 @@ impl Linter {
         let (end, end_span) = self.entry_end.as_ref().unwrap();
 
         let Ok(calculated) = (*end - *start).to_std() else {
-            self.diagnostics.push(Diagnostic::new(
+            self.diagnostics.push(Diagnostic::new_warning(
                 end_span.clone(),
-                DiagnosticSeverity::WARNING,
                 self.source.clone(),
                 format!(
                     "end time must be ahead of start time: {}-{}",
@@ -175,9 +166,8 @@ impl Linter {
         };
         let written = duration;
         if calculated != *written {
-            self.diagnostics.push(Diagnostic::new(
+            self.diagnostics.push(Diagnostic::new_warning(
                 span.clone(),
-                DiagnosticSeverity::WARNING,
                 self.source.clone(),
                 format!(
                     "incorrect duration: found {:1.2}, expected {:1.2}",

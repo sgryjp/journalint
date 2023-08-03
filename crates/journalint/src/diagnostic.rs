@@ -17,17 +17,14 @@ pub struct Diagnostic {
 }
 
 impl Diagnostic {
-    pub fn new(
-        // TODO: Defining new_error and new_warning.
-        // TODO: Define set_source (builder)
+    pub fn new_warning(
         span: Range<usize>,
-        severity: DiagnosticSeverity,
         source: Option<String>,
         message: String,
     ) -> Self {
         Self {
             span,
-            severity,
+            severity: DiagnosticSeverity::WARNING,
             source,
             message,
         }

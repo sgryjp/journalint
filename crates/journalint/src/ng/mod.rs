@@ -1,8 +1,6 @@
 mod linter2;
 mod parser2;
 
-use lsp_types::DiagnosticSeverity;
-
 use crate::diagnostic::Diagnostic;
 use crate::journalint::Journalint;
 use crate::ng::parser2::parse;
@@ -15,9 +13,8 @@ pub fn run(content: &str, source: Option<String>) -> Journalint {
     let mut diagnostics = errors
         .iter()
         .map(|e| {
-            Diagnostic::new(
+            Diagnostic::new_warning(
                 e.span(),
-                DiagnosticSeverity::WARNING,
                 source.clone(),
                 format!("{}", e), //TODO:
             )
