@@ -100,6 +100,8 @@ impl Linter {
         _span: &Range<usize>,
     ) {
         self.entry_start_value = None;
+        self.entry_end_value = None;
+        self.entry_end_span = None;
     }
 
     fn on_visit_start_time(&mut self, start_time: &LooseTime, span: &Range<usize>) {
@@ -125,6 +127,7 @@ impl Linter {
             match end_time.to_datetime(&date) {
                 Ok(d) => {
                     self.entry_end_value = Some(d);
+                    self.entry_end_span = Some(span.clone());
                 }
                 Err(e) => {
                     self.diagnostics.push(Diagnostic::new(
