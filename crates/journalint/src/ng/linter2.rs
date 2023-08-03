@@ -117,7 +117,7 @@ impl Linter {
         &mut self,
         _start_time: &Expr,
         _end_time: &Expr,
-        _codes: &Vec<Expr>,
+        _codes: &[Expr],
         _duration: &Expr,
         _span: &Range<usize>,
     ) {
