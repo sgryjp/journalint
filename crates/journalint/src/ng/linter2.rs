@@ -16,11 +16,11 @@ pub struct Linter {
     source: Option<String>,
     diagnostics: Vec<Diagnostic>,
 
-    date: Option<NaiveDate>,
-    start: Option<LooseTime>,
-    start_resolved: Option<DateTime<Utc>>,
-    end: Option<LooseTime>,
-    end_resolved: Option<DateTime<Utc>>,
+    fm_date: Option<NaiveDate>,
+    fm_start: Option<LooseTime>,
+    fm_start_resolved: Option<DateTime<Utc>>,
+    fm_end: Option<LooseTime>,
+    fm_end_resolved: Option<DateTime<Utc>>,
 
     entry_start_value: Option<DateTime<Utc>>,
     entry_end_value: Option<DateTime<Utc>>,
@@ -36,17 +36,17 @@ impl Linter {
     }
 
     fn on_visit_frontmatter_date(&mut self, date: &NaiveDate, _span: &Range<usize>) {
-        self.date = Some(*date);
+        self.fm_date = Some(*date);
     }
 
     fn on_visit_frontmatter_starttime(&mut self, start_time: &LooseTime, _span: &Range<usize>) {
         // TODO:
         // Rename
-        self.start = Some(start_time.clone());
+        self.fm_start = Some(start_time.clone());
     }
 
     fn on_visit_frontmatter_endtime(&mut self, end_time: &LooseTime, _span: &Range<usize>) {
-        self.end = Some(end_time.clone());
+        self.fm_end = Some(end_time.clone());
     }
 
     fn on_leave_frontmatter(
@@ -57,15 +57,15 @@ impl Linter {
         span: &Range<usize>,
     ) {
         // Calculate exact time of start and end
-        if let (Some(date), Some(start)) = (self.date, self.start.as_ref()) {
-            self.start_resolved = start.to_datetime(&date).ok(); //TODO: ok?
+        if let (Some(date), Some(start)) = (self.fm_date, self.fm_start.as_ref()) {
+            self.fm_start_resolved = start.to_datetime(&date).ok(); //TODO: ok?
         }
-        if let (Some(date), Some(end)) = (self.date, self.end.as_ref()) {
-            self.end_resolved = end.to_datetime(&date).ok(); //TODO: ok?
+        if let (Some(date), Some(end)) = (self.fm_date, self.fm_end.as_ref()) {
+            self.fm_end_resolved = end.to_datetime(&date).ok(); //TODO: ok?
         }
 
         // Warn if one of date, start and end is missing
-        if self.date.is_none() {
+        if self.fm_date.is_none() {
             self.diagnostics.push(Diagnostic::new(
                 span.clone(),
                 DiagnosticSeverity::WARNING,
@@ -73,7 +73,7 @@ impl Linter {
                 "date field is missing".to_string(),
             ));
         }
-        if self.start.is_none() {
+        if self.fm_start.is_none() {
             self.diagnostics.push(Diagnostic::new(
                 span.clone(),
                 DiagnosticSeverity::WARNING,
@@ -81,7 +81,7 @@ impl Linter {
                 "start field is missing".to_string(),
             ));
         }
-        if self.end.is_none() {
+        if self.fm_end.is_none() {
             self.diagnostics.push(Diagnostic::new(
                 span.clone(),
                 DiagnosticSeverity::WARNING,
@@ -105,7 +105,7 @@ impl Linter {
     }
 
     fn on_visit_start_time(&mut self, start_time: &LooseTime, span: &Range<usize>) {
-        if let Some(date) = self.date {
+        if let Some(date) = self.fm_date {
             match start_time.to_datetime(&date) {
                 Ok(d) => {
                     self.entry_start_value = Some(d);
@@ -123,7 +123,7 @@ impl Linter {
     }
 
     fn on_visit_end_time(&mut self, end_time: &LooseTime, span: &Range<usize>) {
-        if let Some(date) = self.date {
+        if let Some(date) = self.fm_date {
             match end_time.to_datetime(&date) {
                 Ok(d) => {
                     self.entry_end_value = Some(d);
