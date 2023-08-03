@@ -18,9 +18,9 @@ pub struct Linter {
 
     fm_date: Option<NaiveDate>,
     fm_start: Option<(LooseTime, Range<usize>)>,
-    fm_start_resolved: Option<DateTime<Utc>>,
+    fm_start_datetime: Option<DateTime<Utc>>,
     fm_end: Option<(LooseTime, Range<usize>)>,
-    fm_end_resolved: Option<DateTime<Utc>>,
+    fm_end_datetime: Option<DateTime<Utc>>,
 
     entry_start_value: Option<DateTime<Utc>>,
     entry_end_value: Option<DateTime<Utc>>,
@@ -58,7 +58,7 @@ impl Linter {
     ) {
         // Calculate exact time of start and end
         if let (Some(date), Some((start, start_span))) = (self.fm_date, self.fm_start.as_ref()) {
-            self.fm_start_resolved = match start.to_datetime(&date) {
+            self.fm_start_datetime = match start.to_datetime(&date) {
                 Ok(dt) => Some(dt),
                 Err(e) => {
                     self.diagnostics.push(Diagnostic::new(
@@ -72,7 +72,7 @@ impl Linter {
             };
         }
         if let (Some(date), Some((end, end_span))) = (self.fm_date, self.fm_end.as_ref()) {
-            self.fm_end_resolved = match end.to_datetime(&date) {
+            self.fm_end_datetime = match end.to_datetime(&date) {
                 Ok(dt) => Some(dt),
                 Err(e) => {
                     self.diagnostics.push(Diagnostic::new(
