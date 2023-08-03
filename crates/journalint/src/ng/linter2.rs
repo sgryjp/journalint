@@ -163,8 +163,8 @@ impl Linter {
                 self.source.clone(),
                 format!(
                     "Incorrect duration: found {:1.2}, expected {:1.2}",
-                    written.as_secs_f64(),
-                    calculated.as_secs_f64()
+                    written.as_secs_f64() / 3600.0,
+                    calculated.as_secs_f64() / 3600.0
                 ),
             ));
         }
