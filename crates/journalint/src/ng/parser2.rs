@@ -277,7 +277,7 @@ fn duration() -> impl Parser<char, Expr, Error = Simple<char>> {
 }
 
 fn code() -> impl Parser<char, Expr, Error = Simple<char>> {
-    filter(|c: &char| c.is_ascii_alphanumeric())
+    filter(|c: &char| !c.is_ascii_whitespace())
         .repeated()
         .at_least(1)
         .collect::<String>()
@@ -503,6 +503,16 @@ mod tests {
             result,
             Some(Expr::Code {
                 value: String::from("014"),
+                span: 0..3
+            })
+        );
+
+        let (result, errors) = super::code().parse_recovery_verbose("---");
+        assert_eq!(errors, []);
+        assert_eq!(
+            result,
+            Some(Expr::Code {
+                value: String::from("---"),
                 span: 0..3
             })
         );
