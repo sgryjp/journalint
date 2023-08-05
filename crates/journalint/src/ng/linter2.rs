@@ -23,6 +23,7 @@ pub struct Linter {
 
     entry_start: Option<(DateTime<Utc>, Range<usize>)>,
     entry_end: Option<(DateTime<Utc>, Range<usize>)>,
+    prev_entry_end: Option<(DateTime<Utc>, Range<usize>)>,
 }
 
 impl Linter {
@@ -108,26 +109,43 @@ impl Linter {
         _end_time: &Expr,
         _codes: &[Expr],
         _duration: &Expr,
+        _activity: &Expr,
         _span: &Range<usize>,
     ) {
         self.entry_start = None;
-        self.entry_end = None;
+
+        self.prev_entry_end = std::mem::replace(&mut self.entry_end, None);
     }
 
     fn on_visit_start_time(&mut self, start_time: &LooseTime, span: &Range<usize>) {
         if let Some((date, _)) = self.fm_date {
             match start_time.to_datetime(&date) {
-                Ok(d) => {
-                    self.entry_start = Some((d, span.clone()));
+                Ok(start_dt) => {
+                    self.entry_start = Some((start_dt, span.clone()));
+
+                    // Check if start time matches the end of the previous entry
+                    if let Some((prev_end_dt, _)) = self.prev_entry_end {
+                        if start_dt != prev_end_dt {
+                            self.diagnostics.push(Diagnostic::new_warning(
+                                span.clone(),
+                                self.source.clone(),
+                                format!(
+                                    "gap found: previous entry's end time was {}",
+                                    prev_end_dt.format("%H:%M")
+                                ),
+                            ));
+                        }
+                    }
                 }
                 Err(e) => {
+                    // Start time is not a valid value
                     self.diagnostics.push(Diagnostic::new_warning(
                         span.clone(),
                         self.source.clone(),
                         e.to_string(),
                     ));
                 }
-            }
+            };
         }
     }
 
@@ -218,7 +236,7 @@ fn walk(expr: &Expr, visitor: &mut Linter) {
             codes,
             duration,
             activity,
-            span: _,
+            span,
         } => {
             walk(start, visitor);
             walk(end, visitor);
@@ -227,6 +245,7 @@ fn walk(expr: &Expr, visitor: &mut Linter) {
             }
             walk(duration, visitor);
             walk(activity, visitor);
+            visitor.on_leave_entry(start, end, codes, duration, activity, span);
         }
         Expr::Journal {
             front_matter,
