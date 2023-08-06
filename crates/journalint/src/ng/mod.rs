@@ -16,7 +16,7 @@ pub fn run(content: &str, source: Option<String>) -> Journalint {
             Diagnostic::new_warning(
                 e.span(),
                 source.clone(),
-                format!("{}", e), //TODO:
+                format!("parse error: {}", e),
             )
         })
         .collect::<Vec<Diagnostic>>();
