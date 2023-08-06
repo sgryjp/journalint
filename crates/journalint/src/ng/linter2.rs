@@ -1,4 +1,5 @@
 use std::ops::Range;
+use std::path::PathBuf;
 use std::time::Duration;
 
 use chrono::{DateTime, NaiveDate, Utc};
@@ -36,6 +37,29 @@ impl Linter {
 
     fn on_visit_fm_date(&mut self, date: &NaiveDate, span: &Range<usize>) {
         self.fm_date = Some((*date, span.clone()));
+
+        // Check the date value matches the one in the file name
+        if let Some(source) = &self.source {
+            let source = PathBuf::from(source);
+            let Some(date_in_filename) = source.file_stem() else {
+                return;
+            };
+            let Some(date_in_filename) = date_in_filename.to_str() else {
+                return;
+            };
+            if let Ok(date_in_filename) = NaiveDate::parse_from_str(date_in_filename, "%Y-%m-%d") {
+                if date_in_filename != *date {
+                    self.diagnostics.push(Diagnostic::new_warning(
+                        span.clone(),
+                        self.source.clone(),
+                        format!(
+                            "date is different from the one in the filename: expected to be {}",
+                            date_in_filename.format("%Y-%m-%d")
+                        ),
+                    ));
+                }
+            }
+        }
     }
 
     fn on_visit_fm_start(&mut self, start_time: &LooseTime, span: &Range<usize>) {
@@ -188,8 +212,7 @@ impl Linter {
                 span.clone(),
                 self.source.clone(),
                 format!(
-                    "incorrect duration: found {:1.2}, expected {:1.2}",
-                    written.as_secs_f64() / 3600.0,
+                    "incorrect duration: expected {:1.2}",
                     calculated.as_secs_f64() / 3600.0
                 ),
             ));

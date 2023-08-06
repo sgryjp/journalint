@@ -17,11 +17,7 @@ pub struct Diagnostic {
 }
 
 impl Diagnostic {
-    pub fn new_warning(
-        span: Range<usize>,
-        source: Option<String>,
-        message: String,
-    ) -> Self {
+    pub fn new_warning(span: Range<usize>, source: Option<String>, message: String) -> Self {
         Self {
             span,
             severity: DiagnosticSeverity::WARNING,
