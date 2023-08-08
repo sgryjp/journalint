@@ -103,20 +103,15 @@ impl LooseTime {
                         self.0
                     )));
                 };
-                if h < 24 {
-                    return Err(JournalintError::ParseError(format!(
-                        "invalid time value: {}: '{}'",
-                        e, self.0
-                    )));
-                }
                 if 60 < m {
                     return Err(JournalintError::ParseError(format!(
                         "invalid minute value: {}: '{}'",
                         e, self.0
                     )));
                 }
-                let time = NaiveTime::from_hms_opt(h - 24, m, 0).unwrap();
-                let Some(date) = date.checked_add_days(Days::new(1)) else {
+                let num_days = h / 24;
+                let time = NaiveTime::from_hms_opt(h - num_days * 24, m, 0).unwrap();
+                let Some(date) = date.checked_add_days(Days::new(num_days as u64)) else {
                     return Err(JournalintError::ParseError(format!(
                         "failed to calculate one date ahead of '{}'",
                         date
@@ -393,6 +388,14 @@ mod tests {
                 .map(|d| d.fixed_offset())
                 .ok(),
             DateTime::parse_from_rfc3339("2006-02-04T00:56:00+00:00").ok()
+        );
+        // Loosely valid time value which exceeds 23:59 (more than two days)
+        assert_eq!(
+            LooseTime::new("50:56")
+                .to_datetime(&date1)
+                .map(|d| d.fixed_offset())
+                .ok(),
+            DateTime::parse_from_rfc3339("2006-02-05T02:56:00+00:00").ok()
         );
         // Strictly valid time value.
         assert_eq!(
