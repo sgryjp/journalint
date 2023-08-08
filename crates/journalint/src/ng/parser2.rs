@@ -346,86 +346,67 @@ pub fn parse(content: &str) -> (Option<Expr>, Vec<Simple<char>>) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rstest::*;
 
-    #[test]
-    fn loose_time_to_datetime() {
-        let date1 = NaiveDate::from_ymd_opt(2006, 2, 3).unwrap();
-        let date2 = NaiveDate::from_ymd_opt(262143, 12, 31).unwrap();
-        // No colon
+    #[rstest]
+    #[case("2456", 2006, 2, 3)] // No colon
+    #[case("2:4:56", 2006, 2, 3)] // Too many colons
+    #[case("2z:56", 2006, 2, 3)] // Non-number hour
+    #[case("24:5z", 2006, 2, 3)] // Non-number minute
+    #[case("00:61", 2006, 2, 3)] // Not parsable as a time value and its hour is less than 24.
+    #[case("24:56", 262143, 12, 31)] // Loosely valid time value but out of supported range.
+    fn loose_time_to_datetime_error(
+        #[case] input: &str,
+        #[case] year: i32,
+        #[case] month: u32,
+        #[case] day: u32,
+    ) {
+        let date = NaiveDate::from_ymd_opt(year, month, day).unwrap();
+
         assert!(matches!(
-            LooseTime::new("2456").to_datetime(&date1),
+            LooseTime::new(input).to_datetime(&date),
             Err(JournalintError::ParseError(..))
         ));
-        // Too many colons
-        assert!(matches!(
-            LooseTime::new("2:4:56").to_datetime(&date1),
-            Err(JournalintError::ParseError(..))
-        ));
-        // Non-number hour
-        assert!(matches!(
-            LooseTime::new("2z:56").to_datetime(&date1),
-            Err(JournalintError::ParseError(..))
-        ));
-        // Non-number minute
-        assert!(matches!(
-            LooseTime::new("24:5z").to_datetime(&date1),
-            Err(JournalintError::ParseError(..))
-        ));
-        // Not parsable as a time value and its hour is less than 24.
-        assert!(matches!(
-            LooseTime::new("00:61").to_datetime(&date1),
-            Err(JournalintError::ParseError(..))
-        ));
-        // Loosely valid time value but out of supported range.
-        assert!(matches!(
-            LooseTime::new("24:56").to_datetime(&date2),
-            Err(JournalintError::ParseError(..))
-        ));
-        // Loosely valid time value which exceeds 23:59.
+    }
+
+    #[rstest]
+    #[case("24:56", "2006-02-04T00:56:00+00:00")] // Loosely valid time value which exceeds 23:59.
+    #[case("50:56", "2006-02-05T02:56:00+00:00")] // Loosely valid time value which exceeds 23:59 (more than two days)
+    #[case("12:34", "2006-02-03T12:34:00+00:00")] // Strictly valid time value.
+    fn loose_time_to_datetime_normal(#[case] input: &str, #[case] want: &str) {
+        let date = NaiveDate::from_ymd_opt(2006, 2, 3).unwrap();
+
         assert_eq!(
-            LooseTime::new("24:56")
-                .to_datetime(&date1)
+            LooseTime::new(input)
+                .to_datetime(&date)
                 .map(|d| d.fixed_offset())
                 .ok(),
-            DateTime::parse_from_rfc3339("2006-02-04T00:56:00+00:00").ok()
-        );
-        // Loosely valid time value which exceeds 23:59 (more than two days)
-        assert_eq!(
-            LooseTime::new("50:56")
-                .to_datetime(&date1)
-                .map(|d| d.fixed_offset())
-                .ok(),
-            DateTime::parse_from_rfc3339("2006-02-05T02:56:00+00:00").ok()
-        );
-        // Strictly valid time value.
-        assert_eq!(
-            LooseTime::new("12:34")
-                .to_datetime(&date1)
-                .map(|d| d.fixed_offset())
-                .ok(),
-            DateTime::parse_from_rfc3339("2006-02-03T12:34:00+00:00").ok()
+            DateTime::parse_from_rfc3339(want).ok()
         );
     }
 
-    #[test]
-    fn _time() {
-        let (result, errors) = super::_time().parse_recovery_verbose("01:02");
-        assert_eq!(errors, []);
-        assert_eq!(result, Some("01:02".to_string()));
-
-        let (result, errors) = super::_time().parse_recovery_verbose("24:60");
-        assert_eq!(errors, []);
-        assert_eq!(result, Some("24:60".to_string()));
-
-        let (result, errors) = super::_time().parse_recovery_verbose("24 :60");
-        assert_eq!(
-            errors
-                .iter()
-                .map(|e| (e.span(), e.to_string()))
-                .collect::<Vec<_>>(),
-            [(2..3, "found \" \" but expected \":\"".to_string())]
-        );
-        assert_eq!(result, None);
+    #[rstest]
+    #[case("01:02", None)]
+    #[case("24:60", None)]
+    #[case("24 :60", Some([(2..3, "found \" \" but expected \":\"".to_string())]))]
+    fn _time(
+        #[case] input: &str,
+        #[case] expected_errors: Option<[(std::ops::Range<usize>, std::string::String); 1]>,
+    ) {
+        let (result, errors) = super::_time().parse_recovery_verbose(input);
+        if let Some(expected_errors) = expected_errors {
+            assert_eq!(
+                errors
+                    .iter()
+                    .map(|e| (e.span(), e.to_string()))
+                    .collect::<Vec<_>>(),
+                expected_errors
+            );
+            assert_eq!(result, None);
+        } else {
+            assert_eq!(errors, []);
+            assert_eq!(result, Some(input.to_string()));
+        }
     }
 
     #[test]
