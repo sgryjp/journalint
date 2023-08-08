@@ -12,13 +12,7 @@ pub fn run(content: &str, source: Option<String>) -> Journalint {
     let (journal, errors) = parse(content);
     let mut diagnostics = errors
         .iter()
-        .map(|e| {
-            Diagnostic::new_warning(
-                e.span(),
-                source.clone(),
-                format!("parse error: {}", e),
-            )
-        })
+        .map(|e| Diagnostic::new_warning(e.span(), source.clone(), format!("parse error: {}", e)))
         .collect::<Vec<Diagnostic>>();
 
     // Lint
