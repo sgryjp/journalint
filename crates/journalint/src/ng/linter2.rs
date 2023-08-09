@@ -7,10 +7,6 @@ use chrono::{DateTime, NaiveDate, Utc};
 use crate::diagnostic::Diagnostic;
 use crate::ng::parser2::{Expr, LooseTime};
 
-// Ruff は Visitor パターンで処理している。
-// Visitor パターンで特定種別の Node を visit する仕組みを作っておき、
-// Checker struct に Visitor を implement して visit_stmt などをオーバーライドしてチェック。
-
 #[derive(Default)]
 pub struct Linter {
     source: Option<String>,

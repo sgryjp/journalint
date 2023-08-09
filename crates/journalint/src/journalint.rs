@@ -4,7 +4,7 @@ use crate::diagnostic::Diagnostic;
 use crate::linemap::LineMap;
 
 pub struct Journalint<'a> {
-    source: Option<String>, // TODO: make these fields private
+    #[allow(dead_code)] source: Option<String>,
     content: &'a str,
     diagnostics: Vec<Diagnostic>,
     linemap: LineMap,
@@ -22,6 +22,7 @@ impl<'a> Journalint<'a> {
         }
     }
 
+    #[allow(dead_code)]
     pub fn source(&self) -> Option<&str> {
         self.source.as_deref()
     }

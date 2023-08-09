@@ -122,13 +122,6 @@ impl LooseTime {
             }
         }
     }
-
-    pub fn to_naivetime(&self) -> Result<NaiveTime, JournalintError> {
-        // TODO: Remove if unused
-        NaiveTime::parse_from_str(self.0.as_str(), "%H:%M").map_err(|e| {
-            JournalintError::ParseError(format!("unrecognizable time: {e}: {}", self.0))
-        })
-    }
 }
 
 fn front_matter() -> impl Parser<char, Expr, Error = Simple<char>> {
@@ -161,7 +154,7 @@ fn front_matter() -> impl Parser<char, Expr, Error = Simple<char>> {
                     .repeated()
                     .collect::<String>()
                     .map_with_span(|value, span| Expr::FrontMatterStartTime {
-                        value: LooseTime(value),
+                        value: LooseTime::new(value),
                         span,
                     }),
             )
@@ -177,7 +170,7 @@ fn front_matter() -> impl Parser<char, Expr, Error = Simple<char>> {
                     .repeated()
                     .collect::<String>()
                     .map_with_span(|value, span| Expr::FrontMatterEndTime {
-                        value: LooseTime(value),
+                        value: LooseTime::new(value),
                         span,
                     }),
             )
@@ -239,7 +232,7 @@ fn _time() -> impl Parser<char, String, Error = Simple<char>> {
 fn start_time() -> impl Parser<char, Expr, Error = Simple<char>> {
     _time()
         .map_with_span(|string, span| Expr::StartTime {
-            value: LooseTime(string),
+            value: LooseTime::new(string),
             span,
         })
         .debug("start_time")
@@ -248,7 +241,7 @@ fn start_time() -> impl Parser<char, Expr, Error = Simple<char>> {
 fn end_time() -> impl Parser<char, Expr, Error = Simple<char>> {
     _time()
         .map_with_span(|string, span| Expr::EndTime {
-            value: LooseTime(string),
+            value: LooseTime::new(string),
             span,
         })
         .debug("end_time")
@@ -416,7 +409,7 @@ mod tests {
         assert_eq!(
             result,
             Some(Expr::StartTime {
-                value: LooseTime("01:02".to_string()),
+                value: LooseTime::new("01:02"),
                 span: 0..5
             })
         );
@@ -429,7 +422,7 @@ mod tests {
         assert_eq!(
             result,
             Some(Expr::EndTime {
-                value: LooseTime("01:02".to_string()),
+                value: LooseTime::new("01:02"),
                 span: 0..5
             })
         );

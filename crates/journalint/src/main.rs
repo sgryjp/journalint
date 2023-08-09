@@ -1,4 +1,3 @@
-#![allow(dead_code)] // TODO: Remove this
 mod arg;
 mod diagnostic;
 mod errors;

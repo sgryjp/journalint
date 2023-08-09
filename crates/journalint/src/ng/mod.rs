@@ -18,7 +18,6 @@ pub fn run(content: &str, source: Option<String>) -> Journalint {
     // Lint
     if let Some(journal) = journal {
         diagnostics.append(&mut lint(&journal, source.clone()));
-        //eprintln!("{:?}", journal); //////
     }
 
     Journalint::new(&source, content, diagnostics)

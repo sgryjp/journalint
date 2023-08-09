@@ -68,7 +68,8 @@ impl LineMap {
         )
     }
 
-    pub fn offset_from_position(&self, position: &Position) -> usize {
+    #[allow(dead_code)]
+    fn offset_from_position(&self, position: &Position) -> usize {
         self._offset_from_position(position.line as usize, position.character as usize)
     }
 
