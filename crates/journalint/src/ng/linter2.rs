@@ -137,8 +137,7 @@ impl Linter {
         _span: &Range<usize>,
     ) {
         self.entry_start = None;
-
-        self.prev_entry_end = std::mem::replace(&mut self.entry_end, None);
+        self.prev_entry_end = self.entry_end.take();
     }
 
     fn on_visit_start_time(&mut self, start_time: &LooseTime, span: &Range<usize>) {
