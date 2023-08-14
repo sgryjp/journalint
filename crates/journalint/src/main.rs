@@ -67,3 +67,31 @@ fn language_server_main() -> Result<(), JournalintError> {
     eprintln!("Shutting down journalint language server.");
     Ok(())
 }
+
+#[cfg(test)]
+mod snapshot_tests {
+    use std::{ffi::OsStr, fs};
+
+    use super::*;
+
+    #[test]
+    fn test() {
+        for entry in fs::read_dir("src/snapshots").unwrap() {
+            let entry = entry.unwrap();
+            let path_buf = entry.path();
+            let path = path_buf.as_path();
+            if path.extension() != Some(OsStr::new("md")) {
+                continue;
+            }
+            let filename = path.to_string_lossy().to_string();
+            let content = read_to_string(path).unwrap();
+            let journalint = run(&content, Some(filename));
+            let diagnostics: Vec<lsp_types::Diagnostic> = journalint
+                .diagnostics()
+                .iter()
+                .map(|d| d.to_lsp_types(journalint.linemap()))
+                .collect();
+            insta::assert_yaml_snapshot!(path.file_stem().unwrap().to_str().unwrap(), diagnostics);
+        }
+    }
+}

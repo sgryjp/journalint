@@ -1,0 +1,15 @@
+---
+source: crates/journalint/src/main.rs
+expression: diagnostics
+---
+- range:
+    start:
+      line: 8
+      character: 27
+    end:
+      line: 8
+      character: 31
+  severity: 2
+  source: src/snapshots/incorrect-duration.md
+  message: "incorrect duration: expected 0.75"
+
