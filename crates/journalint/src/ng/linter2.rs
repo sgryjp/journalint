@@ -186,31 +186,32 @@ impl Linter {
     }
 
     fn on_visit_duration(&mut self, duration: &Duration, span: &Range<usize>) {
-        let (start, _) = self.entry_start.as_ref().unwrap();
-        let (end, end_span) = self.entry_end.as_ref().unwrap();
-
-        let Ok(calculated) = (*end - *start).to_std() else {
-            self.diagnostics.push(Diagnostic::new_warning(
-                end_span.clone(),
-                self.source.clone(),
-                format!(
-                    "end time must be ahead of start time: {}-{}",
-                    start.format("%H:%M"),
-                    end.format("%H:%M")
-                ),
-            ));
-            return;
-        };
-        let written = duration;
-        if calculated != *written {
-            self.diagnostics.push(Diagnostic::new_warning(
-                span.clone(),
-                self.source.clone(),
-                format!(
-                    "incorrect duration: expected {:1.2}",
-                    calculated.as_secs_f64() / 3600.0
-                ),
-            ));
+        if let (Some((start, _)), Some((end, end_span))) =
+            (self.entry_start.as_ref(), self.entry_end.as_ref())
+        {
+            let Ok(calculated) = (*end - *start).to_std() else {
+                self.diagnostics.push(Diagnostic::new_warning(
+                    end_span.clone(),
+                    self.source.clone(),
+                    format!(
+                        "end time must be ahead of start time: {}-{}",
+                        start.format("%H:%M"),
+                        end.format("%H:%M")
+                    ),
+                ));
+                return;
+            };
+            let written = duration;
+            if calculated != *written {
+                self.diagnostics.push(Diagnostic::new_warning(
+                    span.clone(),
+                    self.source.clone(),
+                    format!(
+                        "incorrect duration: expected {:1.2}",
+                        calculated.as_secs_f64() / 3600.0
+                    ),
+                ));
+            }
         }
     }
 }

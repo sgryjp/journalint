@@ -1,0 +1,15 @@
+---
+source: crates/journalint/src/main.rs
+expression: diagnostics
+---
+- range:
+    start:
+      line: 8
+      character: 8
+    end:
+      line: 8
+      character: 14
+  severity: 2
+  source: src/snapshots/end-time-exceeds-59.md
+  message: "Parse error: invalid minute value: trailing input: '09:450'"
+
