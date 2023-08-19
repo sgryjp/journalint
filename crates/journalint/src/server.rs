@@ -22,11 +22,11 @@ pub fn main_loop(
             } else if notif.method == "textDocument/didChange" {
                 let params: DidChangeTextDocumentParams = serde_json::from_value(notif.params)?;
                 let uri = params.text_document.uri;
-                let Some(content) = params.content_changes.last().map(|e| e.text.as_str()) else {
-                    return Err(JournalintError::Unexpected(
-                        "No content in textDocument/didChange notification.".into(),
-                    ));
-                };
+                let content = params
+                    .content_changes
+                    .last()
+                    .map(|e| e.text.as_str())
+                    .unwrap_or("");
                 let version = params.text_document.version;
                 run(conn, &uri, content, Some(version))?;
             }
