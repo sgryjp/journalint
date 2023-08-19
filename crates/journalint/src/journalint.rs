@@ -2,16 +2,18 @@ use ariadne::{Color, Label, Report, ReportKind, Source};
 
 use crate::diagnostic::Diagnostic;
 use crate::linemap::LineMap;
+use crate::lint::lint;
 
 pub struct Journalint<'a> {
-    #[allow(dead_code)] source: Option<String>,
+    #[allow(dead_code)]
+    source: Option<String>,
     content: &'a str,
     diagnostics: Vec<Diagnostic>,
     linemap: LineMap,
 }
 
 impl<'a> Journalint<'a> {
-    pub fn new(source: &Option<String>, content: &'a str, diagnostics: Vec<Diagnostic>) -> Self {
+    fn new(source: &Option<String>, content: &'a str, diagnostics: Vec<Diagnostic>) -> Self {
         let source = source.clone();
         let linemap = LineMap::new(content);
         Self {
@@ -40,6 +42,22 @@ impl<'a> Journalint<'a> {
             .iter()
             .for_each(|d| _report_diagnostic(self.content, d))
     }
+}
+
+pub fn parse_and_lint(content: &str, source: Option<String>) -> crate::journalint::Journalint {
+    // Parse
+    let (journal, errors) = crate::parse::parse(content);
+    let mut diagnostics = errors
+        .iter()
+        .map(|e| Diagnostic::new_warning(e.span(), source.clone(), format!("parse error: {}", e)))
+        .collect::<Vec<Diagnostic>>();
+
+    // Lint
+    if let Some(journal) = journal {
+        diagnostics.append(&mut lint(&journal, source.clone()));
+    }
+
+    crate::journalint::Journalint::new(&source, content, diagnostics)
 }
 
 fn _report_diagnostic(content: &str, diag: &Diagnostic) {

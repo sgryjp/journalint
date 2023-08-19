@@ -5,6 +5,7 @@ use lsp_types::{
 };
 
 use crate::errors::JournalintError;
+use crate::journalint::parse_and_lint;
 
 pub fn main_loop(
     conn: &Connection,
@@ -52,7 +53,7 @@ fn run(
     let filename = String::from(filename);
 
     // Parse the content then convert diagnostics into the corresponding LSP type
-    let journalint = crate::ng::run(content, Some(filename));
+    let journalint = parse_and_lint(content, Some(filename));
     let diagnostics = journalint
         .diagnostics()
         .iter()

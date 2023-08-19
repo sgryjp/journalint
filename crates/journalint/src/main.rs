@@ -3,7 +3,8 @@ mod diagnostic;
 mod errors;
 mod journalint;
 mod linemap;
-mod ng;
+mod lint;
+mod parse;
 mod server;
 
 use std::env;
@@ -11,6 +12,7 @@ use std::fs::read_to_string;
 use std::path::PathBuf;
 
 use clap::Parser;
+use journalint::parse_and_lint;
 use lsp_server::Connection;
 use lsp_types::{
     InitializeParams, ServerCapabilities, TextDocumentSyncCapability, TextDocumentSyncKind,
@@ -18,7 +20,6 @@ use lsp_types::{
 
 use crate::arg::Arguments;
 use crate::errors::JournalintError;
-use crate::ng::run;
 use crate::server::main_loop;
 
 fn main() -> Result<(), JournalintError> {
@@ -45,7 +46,7 @@ fn command_main(args: Arguments) -> exitcode::ExitCode {
         }
     };
 
-    run(content.as_str(), Some(filename)).report();
+    parse_and_lint(content.as_str(), Some(filename)).report();
     exitcode::OK
 }
 
@@ -85,7 +86,7 @@ mod snapshot_tests {
             }
             let filename = path.to_string_lossy().to_string();
             let content = read_to_string(path).unwrap();
-            let journalint = run(&content, Some(filename));
+            let journalint = parse_and_lint(&content, Some(filename));
             let diagnostics: Vec<lsp_types::Diagnostic> = journalint
                 .diagnostics()
                 .iter()

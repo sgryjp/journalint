@@ -5,7 +5,7 @@ use std::time::Duration;
 use chrono::{DateTime, NaiveDate, Utc};
 
 use crate::diagnostic::Diagnostic;
-use crate::ng::parser2::{Expr, LooseTime};
+use crate::parse::{Expr, LooseTime};
 
 #[derive(Default)]
 pub struct Linter {
