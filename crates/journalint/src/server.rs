@@ -43,12 +43,12 @@ fn run(
 ) -> Result<(), JournalintError> {
     // Extract filename in the given URL
     let Some(segments) = uri.path_segments() else {
-        let msg = format!("failed to split into segments: [{}]", uri);
-        return Err(JournalintError::Unexpected(msg));
+        let msg = format!("failed to split into segments: {}", uri);
+        return Err(JournalintError::InvalidUrl(msg));
     };
     let Some(filename) = segments.into_iter().last() else {
-        let msg = format!("failed to extract last segment: [{}]", uri);
-        return Err(JournalintError::Unexpected(msg));
+        let msg = format!("failed to extract last segment: {}", uri);
+        return Err(JournalintError::InvalidUrl(msg));
     };
     let filename = String::from(filename);
 

@@ -2,8 +2,8 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum JournalintError {
-    #[error("Unexpected error: {0}")]
-    Unexpected(String),
+    #[error("invalid URL: {0}")]
+    InvalidUrl(String),
 
     #[error("Parse error: {0}")]
     ParseError(String),
