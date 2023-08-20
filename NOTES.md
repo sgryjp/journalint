@@ -82,3 +82,11 @@ front matter の date, start, end を別々の文法上のノードとして定�
 これは、おそらくパーサーとしては素直でない作りを採用していたことに
 根本原因があると考え、素直に front matter のフィールド解釈は
 フィールドの種別を区別せず行うように変更した方が良いかもしれない。
+
+## 2023-08-19
+
+Quick Fix / Code action の実装を開始する。LSP 仕様で関連するメッセージは
+`textDocument/codeAction`。VSCode で軽く試すと、カーソル移動のたびに
+`textDocument/codeAction` のメッセージが飛んできて非同期な実行を要求される。
+また、それを無視する実装のままでカーソルを動かしたりすると
+`$/cancelRequest` の通知が飛んでくる。
