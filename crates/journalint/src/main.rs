@@ -12,7 +12,7 @@ use std::path::PathBuf;
 
 use clap::Parser;
 use lsp_server::Connection;
-use lsp_server::Message::Notification;
+use lsp_server::Message;
 use lsp_types::DidChangeTextDocumentParams;
 use lsp_types::DidOpenTextDocumentParams;
 use lsp_types::InitializeParams;
@@ -78,24 +78,28 @@ pub fn lsp_dispatch(
     _init_params: &InitializeParams,
 ) -> Result<(), JournalintError> {
     for msg in &conn.receiver {
-        if let Notification(notif) = msg {
-            if notif.method == "textDocument/didOpen" {
-                let params: DidOpenTextDocumentParams = serde_json::from_value(notif.params)?;
-                let uri = params.text_document.uri;
-                let content = params.text_document.text.as_str();
-                let version = None;
-                run(conn, &uri, content, version)?;
-            } else if notif.method == "textDocument/didChange" {
-                let params: DidChangeTextDocumentParams = serde_json::from_value(notif.params)?;
-                let uri = params.text_document.uri;
-                let content = params
-                    .content_changes
-                    .last()
-                    .map(|e| e.text.as_str())
-                    .unwrap_or("");
-                let version = params.text_document.version;
-                run(conn, &uri, content, Some(version))?;
+        match msg {
+            Message::Notification(msg) => {
+                if msg.method == "textDocument/didOpen" {
+                    let params: DidOpenTextDocumentParams = serde_json::from_value(msg.params)?;
+                    let uri = params.text_document.uri;
+                    let content = params.text_document.text.as_str();
+                    let version = None;
+                    run(conn, &uri, content, version)?;
+                } else if msg.method == "textDocument/didChange" {
+                    let params: DidChangeTextDocumentParams = serde_json::from_value(msg.params)?;
+                    let uri = params.text_document.uri;
+                    let content = params
+                        .content_changes
+                        .last()
+                        .map(|e| e.text.as_str())
+                        .unwrap_or("");
+                    let version = params.text_document.version;
+                    run(conn, &uri, content, Some(version))?;
+                }
             }
+            Message::Request(_) => (),
+            Message::Response(_) => (),
         }
     }
     Ok(())
@@ -130,7 +134,7 @@ fn run(
     let params = PublishDiagnosticsParams::new(uri.clone(), diagnostics, version);
     let params = serde_json::to_value(params)?;
     conn.sender
-        .send(Notification(lsp_server::Notification {
+        .send(Message::Notification(lsp_server::Notification {
             method: "textDocument/publishDiagnostics".to_string(),
             params,
         }))
