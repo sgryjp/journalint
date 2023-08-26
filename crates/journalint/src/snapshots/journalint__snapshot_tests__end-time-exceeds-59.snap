@@ -10,6 +10,6 @@ expression: diagnostics
       line: 8
       character: 14
   severity: 2
-  source: src/snapshots/end-time-exceeds-59.md
+  source: journalint
   message: "Parse error: invalid minute value: trailing input: '09:450'"
 

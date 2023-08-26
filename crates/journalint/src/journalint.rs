@@ -6,7 +6,7 @@ use crate::lint::lint;
 
 pub struct Journalint<'a> {
     #[allow(dead_code)]
-    source: Option<String>,
+    filename: Option<String>,
     content: &'a str,
     diagnostics: Vec<Diagnostic>,
     linemap: LineMap,
@@ -17,16 +17,11 @@ impl<'a> Journalint<'a> {
         let source = source.clone();
         let linemap = LineMap::new(content);
         Self {
-            source,
+            filename: source,
             content,
             diagnostics,
             linemap,
         }
-    }
-
-    #[allow(dead_code)]
-    pub fn source(&self) -> Option<&str> {
-        self.source.as_deref()
     }
 
     pub fn diagnostics(&self) -> &[Diagnostic] {
@@ -40,7 +35,7 @@ impl<'a> Journalint<'a> {
     pub fn report(&self) {
         self.diagnostics
             .iter()
-            .for_each(|d| _report_diagnostic(self.content, d))
+            .for_each(|d| _report_diagnostic(self.content, self.filename.as_deref(), d))
     }
 }
 
@@ -49,7 +44,7 @@ pub fn parse_and_lint(content: &str, source: Option<String>) -> crate::journalin
     let (journal, errors) = crate::parse::parse(content);
     let mut diagnostics = errors
         .iter()
-        .map(|e| Diagnostic::new_warning(e.span(), source.clone(), format!("parse error: {}", e)))
+        .map(|e| Diagnostic::new_warning(e.span(), format!("parse error: {}", e)))
         .collect::<Vec<Diagnostic>>();
 
     // Lint
@@ -60,9 +55,9 @@ pub fn parse_and_lint(content: &str, source: Option<String>) -> crate::journalin
     crate::journalint::Journalint::new(&source, content, diagnostics)
 }
 
-fn _report_diagnostic(content: &str, diag: &Diagnostic) {
+fn _report_diagnostic(content: &str, filename: Option<&str>, diag: &Diagnostic) {
     let stdin_source_name = "<STDIN>".to_string();
-    let filename = diag.source().unwrap_or(&stdin_source_name);
+    let filename = filename.unwrap_or(&stdin_source_name);
     let start = diag.span().start;
     let end = diag.span().end;
     let message = diag.message();

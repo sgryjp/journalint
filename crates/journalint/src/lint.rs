@@ -47,7 +47,6 @@ impl Linter {
                 if date_in_filename != *date {
                     self.diagnostics.push(Diagnostic::new_warning(
                         span.clone(),
-                        self.source.clone(),
                         format!(
                             "date is different from the one in the filename: expected to be {}",
                             date_in_filename.format("%Y-%m-%d")
@@ -76,7 +75,6 @@ impl Linter {
                 Err(e) => {
                     self.diagnostics.push(Diagnostic::new_warning(
                         start_span.clone(),
-                        self.source.clone(),
                         format!("invalid start time: {}", e),
                     ));
                     None
@@ -91,7 +89,6 @@ impl Linter {
                 Err(e) => {
                     self.diagnostics.push(Diagnostic::new_warning(
                         end_span.clone(),
-                        self.source.clone(),
                         format!("invalid end time: {}", e),
                     ));
                     None
@@ -103,21 +100,18 @@ impl Linter {
         if self.fm_date.is_none() {
             self.diagnostics.push(Diagnostic::new_warning(
                 span.clone(),
-                self.source.clone(),
                 "date field is missing".to_string(),
             ));
         }
         if self.fm_start.is_none() {
             self.diagnostics.push(Diagnostic::new_warning(
                 span.clone(),
-                self.source.clone(),
                 "start field is missing".to_string(),
             ));
         }
         if self.fm_end.is_none() {
             self.diagnostics.push(Diagnostic::new_warning(
                 span.clone(),
-                self.source.clone(),
                 "end field is missing".to_string(),
             ));
         }
@@ -147,7 +141,6 @@ impl Linter {
                         if start_dt != prev_end_dt {
                             self.diagnostics.push(Diagnostic::new_warning(
                                 span.clone(),
-                                self.source.clone(),
                                 format!(
                                     "gap found: previous entry's end time was {}",
                                     prev_end_dt.format("%H:%M")
@@ -158,11 +151,8 @@ impl Linter {
                 }
                 Err(e) => {
                     // Start time is not a valid value
-                    self.diagnostics.push(Diagnostic::new_warning(
-                        span.clone(),
-                        self.source.clone(),
-                        e.to_string(),
-                    ));
+                    self.diagnostics
+                        .push(Diagnostic::new_warning(span.clone(), e.to_string()));
                 }
             };
         }
@@ -175,11 +165,8 @@ impl Linter {
                     self.entry_end = Some((d, span.clone()));
                 }
                 Err(e) => {
-                    self.diagnostics.push(Diagnostic::new_warning(
-                        span.clone(),
-                        self.source.clone(),
-                        e.to_string(),
-                    ));
+                    self.diagnostics
+                        .push(Diagnostic::new_warning(span.clone(), e.to_string()));
                 }
             }
         }
@@ -192,7 +179,6 @@ impl Linter {
             let Ok(calculated) = (*end - *start).to_std() else {
                 self.diagnostics.push(Diagnostic::new_warning(
                     end_span.clone(),
-                    self.source.clone(),
                     format!(
                         "end time must be ahead of start time: {}-{}",
                         start.format("%H:%M"),
@@ -205,7 +191,6 @@ impl Linter {
             if calculated != *written {
                 self.diagnostics.push(Diagnostic::new_warning(
                     span.clone(),
-                    self.source.clone(),
                     format!(
                         "incorrect duration: expected {:1.2}",
                         calculated.as_secs_f64() / 3600.0

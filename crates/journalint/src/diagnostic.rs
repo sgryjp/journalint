@@ -1,8 +1,10 @@
 use core::ops::Range;
 
-pub use lsp_types::DiagnosticSeverity;
+use lsp_types::DiagnosticSeverity;
 
 use crate::linemap::LineMap;
+
+static SOURCE_NAME: &str = "journalint";
 
 /// Internal diagnostic data structure.
 ///
@@ -12,16 +14,14 @@ use crate::linemap::LineMap;
 pub struct Diagnostic {
     span: Range<usize>,
     severity: DiagnosticSeverity,
-    source: Option<String>,
     message: String,
 }
 
 impl Diagnostic {
-    pub fn new_warning(span: Range<usize>, source: Option<String>, message: String) -> Self {
+    pub fn new_warning(span: Range<usize>, message: String) -> Self {
         Self {
             span,
             severity: DiagnosticSeverity::WARNING,
-            source,
             message,
         }
     }
@@ -32,10 +32,6 @@ impl Diagnostic {
 
     pub fn severity(&self) -> DiagnosticSeverity {
         self.severity
-    }
-
-    pub fn source(&self) -> Option<&String> {
-        self.source.as_ref()
     }
 
     pub fn message(&self) -> &str {
@@ -51,7 +47,7 @@ impl Diagnostic {
             range,
             Some(self.severity()),
             None,
-            self.source().cloned(),
+            Some(SOURCE_NAME.to_string()),
             self.message().to_owned(),
             None,
             None,
