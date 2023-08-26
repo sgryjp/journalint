@@ -1,8 +1,0 @@
----
-date: 2023-05-04
-start: 15:04
-end: 19:45
----
-
-- 09:00-10:00 XXXXXXXX YYY 1.01 foo: bar: hoge
-a
