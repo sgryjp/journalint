@@ -1,4 +1,5 @@
 mod arg;
+mod code;
 mod diagnostic;
 mod errors;
 mod journalint;

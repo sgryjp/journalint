@@ -10,6 +10,7 @@ expression: diagnostics
       line: 8
       character: 31
   severity: 2
+  code: incorrect-duration
   source: journalint
   message: "incorrect duration: expected 0.75"
 
