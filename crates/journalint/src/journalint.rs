@@ -1,5 +1,6 @@
 use ariadne::{Color, Label, Report, ReportKind, Source};
 
+use crate::code::Code;
 use crate::diagnostic::Diagnostic;
 use crate::linemap::LineMap;
 use crate::lint::lint;
@@ -44,7 +45,7 @@ pub fn parse_and_lint(content: &str, source: Option<String>) -> crate::journalin
     let (journal, errors) = crate::parse::parse(content);
     let mut diagnostics = errors
         .iter()
-        .map(|e| Diagnostic::new_warning(e.span(), format!("parse error: {}", e)))
+        .map(|e| Diagnostic::new_warning(e.span(), Code::ParseError, format!("parse error: {}", e)))
         .collect::<Vec<Diagnostic>>();
 
     // Lint
