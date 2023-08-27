@@ -12,7 +12,7 @@ static SOURCE_NAME: &str = "journalint";
 ///
 /// This is basically the same as lsp_types::Diagnostic except that this has a field
 /// `span` of type Range<usize>, not a field `range` of type lsp_types::Range.
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct Diagnostic {
     span: Range<usize>,
     code: Code,
