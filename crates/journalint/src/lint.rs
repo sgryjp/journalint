@@ -51,7 +51,7 @@ impl Linter {
                         span.clone(),
                         Code::MismatchedDates,
                         format!(
-                            "date is different from the one in the filename: expected to be {}",
+                            "Date is different from the one in the filename: expected to be {}",
                             expectation.as_str()
                         ),
                         Some(expectation),
@@ -80,7 +80,7 @@ impl Linter {
                     self.diagnostics.push(Diagnostic::new_warning(
                         start_span.clone(),
                         Code::InvalidStartTime,
-                        format!("invalid start time: {}", e),
+                        format!("Invalid start time: {}", e),
                         None,
                     ));
                     None
@@ -96,7 +96,7 @@ impl Linter {
                     self.diagnostics.push(Diagnostic::new_warning(
                         end_span.clone(),
                         Code::InvalidEndTime,
-                        format!("invalid end time: {}", e),
+                        format!("Invalid end time: {}", e),
                         None,
                     ));
                     None
@@ -109,7 +109,7 @@ impl Linter {
             self.diagnostics.push(Diagnostic::new_warning(
                 span.clone(),
                 Code::MissingDate,
-                "date field is missing".to_string(),
+                "Field 'date' is missing".to_string(),
                 None,
             ));
         }
@@ -117,7 +117,7 @@ impl Linter {
             self.diagnostics.push(Diagnostic::new_warning(
                 span.clone(),
                 Code::MissingStartTime,
-                "start field is missing".to_string(),
+                "Field 'start' is missing".to_string(),
                 None,
             ));
         }
@@ -125,7 +125,7 @@ impl Linter {
             self.diagnostics.push(Diagnostic::new_warning(
                 span.clone(),
                 Code::MissingEndTime,
-                "end field is missing".to_string(),
+                "Field 'end' is missing".to_string(),
                 None,
             ));
         }
@@ -157,7 +157,7 @@ impl Linter {
                             self.diagnostics.push(Diagnostic::new_warning(
                                 span.clone(),
                                 Code::TimeJumped,
-                                format!("gap found: previous entry's end time was {}", expectation),
+                                format!("Gap found: previous entry's end time was {}", expectation),
                                 Some(expectation),
                             ));
                         }
@@ -168,7 +168,7 @@ impl Linter {
                     self.diagnostics.push(Diagnostic::new_warning(
                         span.clone(),
                         Code::InvalidStartTime,
-                        e.to_string(),
+                        format!("Invalid start time: {}", e),
                         None,
                     ));
                 }
@@ -186,7 +186,7 @@ impl Linter {
                     self.diagnostics.push(Diagnostic::new_warning(
                         span.clone(),
                         Code::InvalidEndTime,
-                        e.to_string(),
+                        format!("Invalid end time: {}", e),
                         None,
                     ));
                 }
@@ -203,7 +203,7 @@ impl Linter {
                     end_span.clone(),
                     Code::NegativeTimeRange,
                     format!(
-                        "end time must be ahead of start time ({})",
+                        "End time is not ahead of start time ({})",
                         start.format("%H:%M"),
                     ),
                     None,
@@ -217,7 +217,7 @@ impl Linter {
                 self.diagnostics.push(Diagnostic::new_warning(
                     span.clone(),
                     Code::IncorrectDuration,
-                    format!("incorrect duration: expected {}", expectation),
+                    format!("Incorrect duration: expected {}", expectation),
                     Some(expectation),
                 ));
             }

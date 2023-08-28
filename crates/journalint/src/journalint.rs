@@ -49,7 +49,7 @@ pub fn parse_and_lint(content: &str, source: Option<String>) -> crate::journalin
             Diagnostic::new_warning(
                 e.span(),
                 Code::ParseError,
-                format!("parse error: {}", e),
+                format!("Parse error: {}", e),
                 None,
             )
         })
