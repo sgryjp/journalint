@@ -13,7 +13,7 @@ pub enum Code {
 }
 
 impl Code {
-    pub fn to_str(&self) -> &str {
+    pub fn as_str(&self) -> &str {
         match self {
             Code::ParseError => "parse-error",
             Code::MismatchedDates => "date-mismatch",
@@ -22,11 +22,10 @@ impl Code {
             Code::MissingDate => "missing-date",
             Code::MissingStartTime => "missing-start-time",
             Code::MissingEndTime => "missing-end-time",
+            //TODO: Implement start/end time mismatch
             Code::TimeJumped => "time-jumped",
             Code::NegativeTimeRange => "negative-time-range",
             Code::IncorrectDuration => "incorrect-duration",
         }
     }
 }
-
-// end time mismatch
