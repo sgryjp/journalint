@@ -46,13 +46,15 @@ impl Linter {
             };
             if let Ok(date_in_filename) = NaiveDate::parse_from_str(date_in_filename, "%Y-%m-%d") {
                 if date_in_filename != *date {
+                    let expectation = date_in_filename.format("%Y-%m-%d").to_string();
                     self.diagnostics.push(Diagnostic::new_warning(
                         span.clone(),
                         Code::MismatchedDates,
                         format!(
                             "date is different from the one in the filename: expected to be {}",
-                            date_in_filename.format("%Y-%m-%d")
+                            expectation.as_str()
                         ),
+                        Some(expectation),
                     ));
                 }
             }
@@ -79,6 +81,7 @@ impl Linter {
                         start_span.clone(),
                         Code::InvalidStartTime,
                         format!("invalid start time: {}", e),
+                        None,
                     ));
                     None
                 }
@@ -94,6 +97,7 @@ impl Linter {
                         end_span.clone(),
                         Code::InvalidEndTime,
                         format!("invalid end time: {}", e),
+                        None,
                     ));
                     None
                 }
@@ -106,6 +110,7 @@ impl Linter {
                 span.clone(),
                 Code::MissingDate,
                 "date field is missing".to_string(),
+                None,
             ));
         }
         if self.fm_start.is_none() {
@@ -113,6 +118,7 @@ impl Linter {
                 span.clone(),
                 Code::MissingStartTime,
                 "start field is missing".to_string(),
+                None,
             ));
         }
         if self.fm_end.is_none() {
@@ -120,6 +126,7 @@ impl Linter {
                 span.clone(),
                 Code::MissingEndTime,
                 "end field is missing".to_string(),
+                None,
             ));
         }
     }
@@ -146,13 +153,12 @@ impl Linter {
                     // Check if start time matches the end of the previous entry
                     if let Some((prev_end_dt, _)) = self.prev_entry_end {
                         if start_dt != prev_end_dt {
+                            let expectation = prev_end_dt.format("%H:%M").to_string();
                             self.diagnostics.push(Diagnostic::new_warning(
                                 span.clone(),
                                 Code::TimeJumped,
-                                format!(
-                                    "gap found: previous entry's end time was {}",
-                                    prev_end_dt.format("%H:%M")
-                                ),
+                                format!("gap found: previous entry's end time was {}", expectation),
+                                Some(expectation),
                             ));
                         }
                     }
@@ -163,6 +169,7 @@ impl Linter {
                         span.clone(),
                         Code::InvalidStartTime,
                         e.to_string(),
+                        None,
                     ));
                 }
             };
@@ -180,6 +187,7 @@ impl Linter {
                         span.clone(),
                         Code::InvalidEndTime,
                         e.to_string(),
+                        None,
                     ));
                 }
             }
@@ -195,22 +203,22 @@ impl Linter {
                     end_span.clone(),
                     Code::NegativeTimeRange,
                     format!(
-                        "end time must be ahead of start time: {}-{}",
+                        "end time must be ahead of start time ({})",
                         start.format("%H:%M"),
-                        end.format("%H:%M")
                     ),
+                    None,
                 ));
                 return;
             };
             let written = duration;
             if calculated != *written {
+                let expectation = calculated.as_secs_f64() / 3600.0;
+                let expectation = format!("{:1.2}", expectation);
                 self.diagnostics.push(Diagnostic::new_warning(
                     span.clone(),
                     Code::IncorrectDuration,
-                    format!(
-                        "incorrect duration: expected {:1.2}",
-                        calculated.as_secs_f64() / 3600.0
-                    ),
+                    format!("incorrect duration: expected {}", expectation),
+                    Some(expectation),
                 ));
             }
         }

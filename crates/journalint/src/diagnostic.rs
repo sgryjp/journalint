@@ -18,15 +18,22 @@ pub struct Diagnostic {
     code: Code,
     severity: DiagnosticSeverity,
     message: String,
+    expectation: Option<String>,
 }
 
 impl Diagnostic {
-    pub fn new_warning(span: Range<usize>, code: Code, message: String) -> Self {
+    pub fn new_warning(
+        span: Range<usize>,
+        code: Code,
+        message: String,
+        expectation: Option<String>,
+    ) -> Self {
         Self {
             span,
             code,
             severity: DiagnosticSeverity::WARNING,
             message,
+            expectation,
         }
     }
 
@@ -44,6 +51,10 @@ impl Diagnostic {
 
     pub fn message(&self) -> &str {
         self.message.as_ref()
+    }
+
+    pub fn expectation(&self) -> Option<&String> {
+        self.expectation.as_ref()
     }
 
     pub fn to_lsp_types(&self, linemap: &LineMap) -> lsp_types::Diagnostic {

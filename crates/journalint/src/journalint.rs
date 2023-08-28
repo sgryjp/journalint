@@ -45,7 +45,14 @@ pub fn parse_and_lint(content: &str, source: Option<String>) -> crate::journalin
     let (journal, errors) = crate::parse::parse(content);
     let mut diagnostics = errors
         .iter()
-        .map(|e| Diagnostic::new_warning(e.span(), Code::ParseError, format!("parse error: {}", e)))
+        .map(|e| {
+            Diagnostic::new_warning(
+                e.span(),
+                Code::ParseError,
+                format!("parse error: {}", e),
+                None,
+            )
+        })
         .collect::<Vec<Diagnostic>>();
 
     // Lint
