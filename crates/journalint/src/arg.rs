@@ -6,7 +6,11 @@ pub struct Arguments {
     /// File to lint.
     pub filename: Option<String>,
 
-    /// Whether to start as a language server or not.
+    /// Fix found problems.
+    #[arg(short, long)]
+    pub fix: bool,
+
+    /// Start as a language server.
     #[arg(long)]
     pub stdio: bool,
 }

@@ -1,4 +1,5 @@
 mod arg;
+mod autofix;
 mod code;
 mod diagnostic;
 mod errors;
@@ -27,6 +28,7 @@ use crate::arg::Arguments;
 use crate::errors::JournalintError;
 use crate::journalint::parse_and_lint;
 
+/// Entry point of journalint CLI.
 fn main() -> Result<(), JournalintError> {
     let args = Arguments::parse_from(env::args());
     if args.stdio {
@@ -43,7 +45,7 @@ fn cli_main(args: Arguments) -> exitcode::ExitCode {
     };
 
     let path = PathBuf::from(&filename);
-    let content = match read_to_string(path) {
+    let content = match read_to_string(&path) {
         Ok(content) => content,
         Err(e) => {
             eprintln!("Failed to read {}: {}", filename, e);
@@ -51,7 +53,17 @@ fn cli_main(args: Arguments) -> exitcode::ExitCode {
         }
     };
 
-    parse_and_lint(content.as_str(), Some(filename)).report();
+    let journalint = parse_and_lint(content.as_str(), Some(filename));
+    if args.fix {
+        for d in journalint.diagnostics() {
+            if let Err(e) = autofix::fix(d, content.as_str(), path.as_path()) {
+                eprintln!("Autofix failed: {}", e)
+            }
+        }
+    } else {
+        journalint.report();
+    }
+
     exitcode::OK
 }
 
