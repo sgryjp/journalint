@@ -12,5 +12,5 @@ expression: diagnostics
   severity: 2
   code: incorrect-duration
   source: journalint
-  message: "incorrect duration: expected 0.75"
+  message: "Incorrect duration: expected 0.75"
 

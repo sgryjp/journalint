@@ -18,15 +18,22 @@ pub struct Diagnostic {
     code: Code,
     severity: DiagnosticSeverity,
     message: String,
+    expectation: Option<String>,
 }
 
 impl Diagnostic {
-    pub fn new_warning(span: Range<usize>, code: Code, message: String) -> Self {
+    pub fn new_warning(
+        span: Range<usize>,
+        code: Code,
+        message: String,
+        expectation: Option<String>,
+    ) -> Self {
         Self {
             span,
             code,
             severity: DiagnosticSeverity::WARNING,
             message,
+            expectation,
         }
     }
 
@@ -46,8 +53,12 @@ impl Diagnostic {
         self.message.as_ref()
     }
 
+    pub fn expectation(&self) -> Option<&String> {
+        self.expectation.as_ref()
+    }
+
     pub fn to_lsp_types(&self, linemap: &LineMap) -> lsp_types::Diagnostic {
-        let code = self.code().to_str().to_string();
+        let code = self.code().as_str().to_string();
         let range = lsp_types::Range::new(
             linemap.position_from_offset(self.span().start),
             linemap.position_from_offset(self.span().end),
