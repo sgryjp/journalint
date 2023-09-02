@@ -13,6 +13,8 @@ use std::fs::read_to_string;
 use std::path::PathBuf;
 
 use clap::Parser;
+use log::error;
+use log::info;
 use lsp_server::Connection;
 use lsp_server::Message;
 use lsp_types::DidChangeTextDocumentParams;
@@ -31,6 +33,7 @@ use crate::journalint::parse_and_lint;
 /// Entry point of journalint CLI.
 fn main() -> Result<(), JournalintError> {
     let args = Arguments::parse_from(env::args());
+    env_logger::init();
     if args.stdio {
         lsp_main()
     } else {
@@ -48,7 +51,7 @@ fn cli_main(args: Arguments) -> exitcode::ExitCode {
     let content = match read_to_string(&path) {
         Ok(content) => content,
         Err(e) => {
-            eprintln!("Failed to read {}: {}", filename, e);
+            error!("Failed to read {}: {}", filename, e);
             return exitcode::IOERR;
         }
     };
@@ -57,7 +60,7 @@ fn cli_main(args: Arguments) -> exitcode::ExitCode {
     if args.fix {
         for d in journalint.diagnostics() {
             if let Err(e) = autofix::fix(d, content.as_str(), path.as_path()) {
-                eprintln!("Autofix failed: {}", e)
+                error!("Autofix failed: {}", e)
             }
         }
     } else {
@@ -68,7 +71,7 @@ fn cli_main(args: Arguments) -> exitcode::ExitCode {
 }
 
 fn lsp_main() -> Result<(), JournalintError> {
-    eprintln!("Starting journalint language server...");
+    info!("Starting journalint language server...");
     let (conn, io_threads) = Connection::stdio();
     let server_capabilities = serde_json::to_value(ServerCapabilities {
         text_document_sync: Some(TextDocumentSyncCapability::Kind(TextDocumentSyncKind::FULL)),
@@ -82,7 +85,7 @@ fn lsp_main() -> Result<(), JournalintError> {
 
     lsp_dispatch(&conn, &init_params)?;
     io_threads.join()?;
-    eprintln!("Shutting down journalint language server.");
+    info!("Shutting down journalint language server.");
     Ok(())
 }
 
