@@ -43,10 +43,11 @@ export function activate(context: vscode.ExtensionContext) {
     );
   }
 
-  // Add RUST_BACKTRACE=1 if not defined
+  // Setup environment variables for Rust implementations
   if (!process.env.RUST_BACKTRACE) {
     process.env.RUST_BACKTRACE = "1";
   }
+  process.env.RUST_LOG = "journalint=debug"
 
   // Configure LSP client
   const serverOptions: ServerOptions = {
