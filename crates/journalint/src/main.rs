@@ -13,6 +13,7 @@ use std::fs::read_to_string;
 use std::path::PathBuf;
 
 use clap::Parser;
+use env_logger::TimestampPrecision;
 use log::error;
 use log::info;
 use lsp_server::Connection;
@@ -33,7 +34,9 @@ use crate::journalint::parse_and_lint;
 /// Entry point of journalint CLI.
 fn main() -> Result<(), JournalintError> {
     let args = Arguments::parse_from(env::args());
-    env_logger::init();
+    env_logger::builder()
+        .format_timestamp(Some(TimestampPrecision::Millis))
+        .init();
     if args.stdio {
         lsp_main()
     } else {
