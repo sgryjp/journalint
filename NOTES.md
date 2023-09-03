@@ -48,8 +48,8 @@ diagnostic として返す。
 ## 2023-07-18
 
 リカバリした上での accept は reject の一種とみなされるらしい。よって `A.or(B)`
-のうち A がリカバリした上で accept できるとしても B の評価も行われてしまうよう
-だった。したがって、次のようにパーサーを構成して:
+のうち A がリカバリした上で accept できるとしても B の評価も行われてしまうようだ
+った。したがって、次のようにパーサーを構成して:
 
     journal_entry.or(other_line)
 
@@ -87,32 +87,105 @@ traverse する中で、ある種別のノードを発見したときに呼ば�
 front matter の date, start, end を別々の文法上のノードとして定義してパーサーを
 構成していたが、その実現のために (date or start or end) というパーサーを repeat
 させていた。正常系であれば、たしかに問題なく順不同で各フィールドの値を区別して取
-得できるのだけれど、一つでも不足または accept 不可能な内容になっていたりする
-と、repeat の部分でのエラーということになり分かりにくいエラーメッセージが表示さ
-れる問題が起こった (unexpectedly found an end of input といった内容)。これは、お
-そらくパーサーとしては素直でない作りを採用していたことに根本原因があると考え、素
-直に front matter のフィールド解釈はフィールドの種別を区別せず行うように変更した
-方が良いかもしれない。
+得できるのだけれど、一つでも不足または accept 不可能な内容になっていたりすると、
+repeat の部分でのエラーということになり分かりにくいエラーメッセージが表示される
+問題が起こった (unexpectedly found an end of input といった内容)。これは、おそら
+くパーサーとしては素直でない作りを採用していたことに根本原因があると考え、素直に
+front matter のフィールド解釈はフィールドの種別を区別せず行うように変更した方が
+良いかもしれない。
 
 ## 2023-08-19
 
 Quick Fix / Code action の実装を開始する。LSP 仕様で関連するメッセージは
 `textDocument/codeAction`。VSCode で軽く試すと、カーソル移動のたびに
-`textDocument/codeAction` のメッセージが飛んできて非同期な実行を要求される。ま
-た、それを無視する実装のままでカーソルを動かしたりすると `$/cancelRequest` の通
-知が飛んでくる。
+`textDocument/codeAction` のメッセージが飛んできて非同期な実行を要求される。また
+、それを無視する実装のままでカーソルを動かしたりすると `$/cancelRequest` の通知
+が飛んでくる。
 
 ## 2023-08-27
 
-Quick Fix を実装するにあたり、まずコマンドでの自動 fix を実装することにした。そ
-れにあたって Diagnostic に Code を割り当てることにした。というのも、Code action
-がトリガーされたときにサーバーに飛んでくるメッセージは code と message くらいし
-か種類の特定に役立つ情報が無い。実行すべき修正ロジックを特定できるように、code
-を改めて定義する。
+Quick Fix を実装するにあたって Diagnostic に Code を割り当てることにした。という
+のも Code action がトリガーされたときにサーバーに飛んでくるメッセージに含められ
+る情報のうち、実行すべきアクションの特定に使えるのは code (NumberOrString) と
+message (String) しかないようだったから。
 
-自動修正はアドホックに diagnostic 生成時に期待される正しい値を文字列として算出し
-ておき、それに該当範囲を置換する形で進める。ただし置換は後方から前方に向けて連続
-実行する。本格的な仕組みを考えると、AST をシリアライズできる機能を作り、パース時
-から AST を保持して quick fix で指定された diagnostic から該当するノードを探索
-し、それを前提に前後の文脈から修正を行ってシリアライズすることで修正されたコンテ
-ンツを生成することになると思う。
+続いてコマンドでの autofix を実装する。自動修正はアドホックに diagnostic 生成時
+に期待される正しい値を文字列として算出しておき、それに該当範囲を置換する形で進め
+る。ただし置換は後方から前方に向けて連続実行する。本格的な仕組みを考えると、AST
+をシリアライズできる機能を作り、パース時から AST を保持して quick fix で指定され
+た diagnostic から該当するノードを探索し、それを前提に前後の文脈から修正を行って
+シリアライズすることで修正されたコンテンツを生成することになると思う。
+
+## 2023-08-30
+
+コマンドでの autofix が実装できたので、今度は言語サーバーとして Code action に対
+応していく。以下のように処理の流れが整理できると思う:
+
+1. サーバーは、初期化フェーズにおいて以下の [Server
+   Capability][lsp_types::ServerCapabilities] をクライアントに申告する
+   - [Text Document Sync][lsp_types::TextDocumentSyncCapability]
+   - [Code Action Provider][lsp_types::CodeActionProviderCapability]
+   - [Execute Command Provider][lsp_types::ExecuteCommandOptions]
+2. サーバーは、`textDocument/didOpen` および `textDocument/didChange` 通知を受信
+   するたびにエラーチェックを行って [`Diagnostic`][lsp_types::Diagnostic] を作成
+   し、[`textDocument/publishDiagnostics`] 通知でクライアントにそれらを報告する
+3. クライアントは、報告された Diagnostic を UI に提示する
+4. ユーザーは、Diagnostic のいずれかを選択する
+5. クライアントは、言語サーバーにファイルの URL、カーソル位置、その位置に該当す
+   る Diagnostic 一覧などを添えた [`textDocument/codeAction`] リクエストをサーバ
+   ーに送信し、Code action の一覧を問い合わせる
+6. サーバーは、指定されたカーソル位置と添付された
+   [`Diagnostic`][lsp_types::Diagnostic] のリストから code を手がかりに、実行可
+   能な[コマンド][lsp_types::Command]をリストアップしてクライアントに返送する
+   - なお、ここでの「コマンド」とはユニークな名前が付けられクライアントにサーバ
+     ーが公開している処理で、VSCode 拡張機能でいうところ
+     `vscode.commands.registerCommand` で登録する関数を指す。
+   - なお `registerCommand` を実行しても `package.json` の
+     [contributes.commands][vscodeapi-contributes.commands] でリストアップしなけ
+     ればユーザーには表向き全くアクセスできない状態になる（VSCode のコマンドパレ
+     ットにも登録されないし、キーバインドの割当もできない）。たとえば言語サーバ
+     ーの quick fix を code action として提供する場合、警告・エラーごとに異なる
+     コマンドを大量に作成することになりがちなので、一般的にこれらはユーザーから
+     はアクセスできないようにした方が良いと思われる（コマンドとしてユーザーから
+     見えなくなろうとも、警告やエラーがある位置で表示される豆電球アイコンから
+     code action は実行できる）
+7. クライアントは、サーバーから得た実行可能なコマンドの一覧を UI に提示する
+8. ユーザーは、実行可能なコマンドのうち一つを選択する
+9. クライアントは、選択された実行可能コマンドに関連付けられた関数が呼び出される
+   ので、その中で対応するサーバーのコマンドを指定した
+   [`workspace/executeCommand`] リクエストをサーバーに送信する。
+   - もちろんクライアントが直接その関数で処理しても良いといえば良いのだが、そう
+     すると VSCode でしか実現されない code action になってしまうため、面倒だがサ
+     ーバーに処理を移譲することが望ましい
+10. サーバーは、[`workspace/executeCommand`] リクエストに含まれるコマンド名を手
+    がかりに、該当するコマンドの処理を実行する。ただし、ここでは直接ファイルを書
+    き換えたりせず [`WorkspaceEdit`][lsp_types::WorkspaceEdit] の配列を作成して
+    [`workspace/applyEdit`][lsp_types::request::ApplyWorkspaceEdit] リクエストを
+    クライアントに送信する
+    - 直接書き換える方式では、ユーザーが保存していない編集内容が強制的に破棄され
+      ることになる
+
+[vscodeapi-contributes.commands]:
+  https://code.visualstudio.com/api/references/contribution-points#contributes.commands
+[lsp_types::Command]:
+  https://docs.rs/lsp-types/latest/lsp_types/struct.Command.html
+[lsp_types::Diagnostic]:
+  https://docs.rs/lsp-types/latest/lsp_types/struct.Diagnostic.html
+[`textDocument/codeAction`]:
+  https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_codeAction
+[`textDocument/publishDiagnostics`]:
+  https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_publishDiagnostics
+[`workspace/executeCommand`]:
+  https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#workspace_executeCommand
+[lsp_types::request::ApplyWorkspaceEdit]:
+  https://docs.rs/lsp-types/latest/lsp_types/request/enum.ApplyWorkspaceEdit.html
+[lsp_types::ServerCapabilities]:
+  https://docs.rs/lsp-types/latest/lsp_types/struct.ServerCapabilities.html
+[lsp_types::TextDocumentSyncCapability]:
+  https://docs.rs/lsp-types/latest/lsp_types/enum.TextDocumentSyncCapability.html
+[lsp_types::CodeActionProviderCapability]:
+  https://docs.rs/lsp-types/latest/lsp_types/enum.CodeActionProviderCapability.html
+[lsp_types::ExecuteCommandOptions]:
+  https://docs.rs/lsp-types/latest/lsp_types/struct.ExecuteCommandOptions.html
+[lsp_types::WorkspaceEdit]:
+  https://docs.rs/lsp-types/latest/lsp_types/struct.WorkspaceEdit.html
