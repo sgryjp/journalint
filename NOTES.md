@@ -126,54 +126,67 @@ message (String) しかないようだったから。
    - [Text Document Sync][lsp_types::TextDocumentSyncCapability]
    - [Code Action Provider][lsp_types::CodeActionProviderCapability]
    - [Execute Command Provider][lsp_types::ExecuteCommandOptions]
-2. サーバーは、`textDocument/didOpen` および `textDocument/didChange` 通知を受信
-   するたびにエラーチェックを行って [`Diagnostic`][lsp_types::Diagnostic] を作成
-   し、[`textDocument/publishDiagnostics`] 通知でクライアントにそれらを報告する
-3. クライアントは、報告された Diagnostic を UI に提示する
-4. ユーザーは、Diagnostic のいずれかを選択する
-5. クライアントは、言語サーバーにファイルの URL、カーソル位置、その位置に該当す
-   る Diagnostic 一覧などを添えた [`textDocument/codeAction`] リクエストをサーバ
-   ーに送信し、Code action の一覧を問い合わせる
-6. サーバーは、指定されたカーソル位置と添付された
+2. サーバーは、[`textDocument/didOpen` 通知][textDocument/didOpen]および
+   [`textDocument/didChange` 通知][textDocument/didChange]を受信するたびにエラー
+   チェックを行って [`Diagnostic`][lsp_types::Diagnostic] を作成し
+   、[`textDocument/publishDiagnostics` 通知][textDocument/publishDiagnostics]で
+   クライアントにそれらを報告する
+3. クライアントは、報告された Diagnostic を UI で提示する。
+   - VSCode の場合、エラーであれば赤い下波線が、警告であればオレンジ色の下波線が
+     、そのエラーまたは警告の対象となる部分に対して引かれる。
+4. クライアントは、ユーザーが Diagnostic のいずれかにマウスカーソルやテキストカ
+   ーソルを合わせると、その位置で使用可能な Code Action の一覧を
+   [`textDocument/codeAction` 要求][textDocument/codeAction] メッセージでサーバ
+   ーから取得する。このメッセージには、ファイルの URL、カーソル位置、その位置に
+   該当する Diagnostic 一覧などが添えられる。
+   - VSCode の場合、「豆電球 (Code Action lightbulb)」を表示して「そこで何らかの
+     Code Action を実行できますよ」と教えてくれる。この UI を実現するために、カ
+     ーソル位置が変更されるたびにサーバーへ一覧を要求するようだ。なお豆電球は設
+     定で無効化できる。
+   - 一般論としては「豆電球」UI は必須ではないため Code Action を実行する操作を
+     したタイミングで使用可能な Code Action 一覧を取得しても良いだろう。
+5. サーバーは、指定されたカーソル位置と添付された
    [`Diagnostic`][lsp_types::Diagnostic] のリストから code を手がかりに、実行可
    能な[コマンド][lsp_types::Command]をリストアップしてクライアントに返送する
-   - なお、ここでの「コマンド」とはユニークな名前が付けられクライアントにサーバ
-     ーが公開している処理で、VSCode 拡張機能でいうところ
-     `vscode.commands.registerCommand` で登録する関数を指す。
-   - なお `registerCommand` を実行しても `package.json` の
-     [contributes.commands][vscodeapi-contributes.commands] でリストアップしなけ
-     ればユーザーには表向き全くアクセスできない状態になる（VSCode のコマンドパレ
-     ットにも登録されないし、キーバインドの割当もできない）。たとえば言語サーバ
-     ーの quick fix を code action として提供する場合、警告・エラーごとに異なる
-     コマンドを大量に作成することになりがちなので、一般的にこれらはユーザーから
-     はアクセスできないようにした方が良いと思われる（コマンドとしてユーザーから
-     見えなくなろうとも、警告やエラーがある位置で表示される豆電球アイコンから
-     code action は実行できる）
-7. クライアントは、サーバーから得た実行可能なコマンドの一覧を UI に提示する
-8. ユーザーは、実行可能なコマンドのうち一つを選択する
-9. クライアントは、選択された実行可能コマンドに関連付けられた関数が呼び出される
-   ので、その中で対応するサーバーのコマンドを指定した
-   [`workspace/executeCommand`] リクエストをサーバーに送信する。
-   - もちろんクライアントが直接その関数で処理しても良いといえば良いのだが、そう
-     すると VSCode でしか実現されない code action になってしまうため、面倒だがサ
-     ーバーに処理を移譲することが望ましい
-10. サーバーは、[`workspace/executeCommand`] リクエストに含まれるコマンド名を手
-    がかりに、該当するコマンドの処理を実行する。ただし、ここでは直接ファイルを書
-    き換えたりせず [`WorkspaceEdit`][lsp_types::WorkspaceEdit] の配列を作成して
-    [`workspace/applyEdit`][lsp_types::request::ApplyWorkspaceEdit] リクエストを
-    クライアントに送信する
-    - 直接書き換える方式では、ユーザーが保存していない編集内容が強制的に破棄され
-      ることになる
+6. クライアントは、サーバーから得た実行可能なコマンドの一覧を UI に提示する
+7. ユーザーは、実行可能なコマンドのうち一つを選択する
+8. クライアントは、選択されたコマンドをサーバーに実行するよう要求する
+   - [`workspace/executeCommand`] リクエストを使用
+   - VSCode の場合、コマンドの名前空間が VSCode および VSCode 専用拡張機能と共有
+     なので、サーバーがクライアントに通達するコマンド名は VSCode や、その他の拡
+     張機能などと重複しないような名前にすることが強く推奨される。この話は LSP と
+     無関係な VSCode の拡張機能でも共通する注意点でもある。それらの場合は
+     `{拡張機能名}.{コマンド名}` といった命名規則にするのが一般的であるようなの
+     で、 LSP でも同様にすれば良いと思う。
+9. サーバーは、[`workspace/executeCommand`] リクエストに含まれるコマンド名を手が
+   かりに、該当するコマンドの処理を実行する。ただし、ここでは直接ファイルを書き
+   換えたりせず [`WorkspaceEdit`][lsp_types::WorkspaceEdit] の配列を作成して
+   [`workspace/applyEdit`][lsp_types::request::ApplyWorkspaceEdit] リクエストを
+   クライアントに送信する
+   - 直接書き換える方式では、ユーザーが保存していない編集内容が強制的に破棄され
+     ることになる
 
-[vscodeapi-contributes.commands]:
-  https://code.visualstudio.com/api/references/contribution-points#contributes.commands
+補足。
+
+- `workspace/execteCommand` で取り扱う「コマンド」は、一意な名前の付いたクライア
+  ントが呼び出せる処理を指す。 多くの VSCode ユーザーはキーボードショートカット
+  を設定するときに見かけていると思う（例: インデントを増やすコマンドの名前は
+  `editor.action.indentLines`）。この「エディタが実行可能なコマンドに一意の名前
+  が付けられており、コマンド名を指定すれば適切な処理を実行できる」という考え方は
+  LSP というプロトコルがエディタ（クライアント）に対して暗に要求している仕様とも
+  言える。
+
 [lsp_types::Command]:
   https://docs.rs/lsp-types/latest/lsp_types/struct.Command.html
 [lsp_types::Diagnostic]:
   https://docs.rs/lsp-types/latest/lsp_types/struct.Diagnostic.html
-[`textDocument/codeAction`]:
+[textDocument/codeAction]:
   https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_codeAction
-[`textDocument/publishDiagnostics`]:
+[textDocument/didChange]:
+  https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_didChange
+[textDocument/didOpen]:
+  https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_didOpen
+[textDocument/publishDiagnostics]:
   https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_publishDiagnostics
 [`workspace/executeCommand`]:
   https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#workspace_executeCommand
