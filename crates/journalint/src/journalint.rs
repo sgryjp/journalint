@@ -5,21 +5,19 @@ use crate::diagnostic::Diagnostic;
 use crate::linemap::LineMap;
 use crate::lint::lint;
 
-pub struct Journalint<'a> {
+pub struct Journalint {
     #[allow(dead_code)]
     filename: Option<String>,
-    content: &'a str,
     diagnostics: Vec<Diagnostic>,
     linemap: LineMap,
 }
 
-impl<'a> Journalint<'a> {
-    fn new(source: &Option<String>, content: &'a str, diagnostics: Vec<Diagnostic>) -> Self {
+impl Journalint {
+    fn new(source: &Option<String>, content: &str, diagnostics: Vec<Diagnostic>) -> Self {
         let source = source.clone();
         let linemap = LineMap::new(content);
         Self {
             filename: source,
-            content,
             diagnostics,
             linemap,
         }
@@ -33,10 +31,10 @@ impl<'a> Journalint<'a> {
         &self.linemap
     }
 
-    pub fn report(&self) {
+    pub fn report(&self, content: &str) {
         self.diagnostics
             .iter()
-            .for_each(|d| _report_diagnostic(self.content, self.filename.as_deref(), d))
+            .for_each(|d| _report_diagnostic(content, self.filename.as_deref(), d))
     }
 }
 

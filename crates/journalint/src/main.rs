@@ -67,7 +67,7 @@ fn cli_main(args: Arguments) -> exitcode::ExitCode {
             }
         }
     } else {
-        journalint.report();
+        journalint.report(&content);
     }
 
     exitcode::OK
