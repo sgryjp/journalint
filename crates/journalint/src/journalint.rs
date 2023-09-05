@@ -5,21 +5,15 @@ use crate::diagnostic::Diagnostic;
 use crate::linemap::LineMap;
 use crate::lint::lint;
 
-pub struct Journalint<'a> {
-    #[allow(dead_code)]
-    filename: Option<String>,
-    content: &'a str,
+pub struct Journalint {
     diagnostics: Vec<Diagnostic>,
     linemap: LineMap,
 }
 
-impl<'a> Journalint<'a> {
-    fn new(source: &Option<String>, content: &'a str, diagnostics: Vec<Diagnostic>) -> Self {
-        let source = source.clone();
+impl Journalint {
+    fn new(content: &str, diagnostics: Vec<Diagnostic>) -> Self {
         let linemap = LineMap::new(content);
         Self {
-            filename: source,
-            content,
             diagnostics,
             linemap,
         }
@@ -33,14 +27,16 @@ impl<'a> Journalint<'a> {
         &self.linemap
     }
 
-    pub fn report(&self) {
+    pub fn report(&self, filename: Option<&str>, content: &str) {
         self.diagnostics
             .iter()
-            .for_each(|d| _report_diagnostic(self.content, self.filename.as_deref(), d))
+            .for_each(|d| _report_diagnostic(content, filename, d))
     }
 }
 
-pub fn parse_and_lint(content: &str, source: Option<String>) -> crate::journalint::Journalint {
+pub fn parse_and_lint(content: &str, source: Option<&str>) -> crate::journalint::Journalint {
+    let source = source.map(|s| s.to_owned());
+
     // Parse
     let (journal, errors) = crate::parse::parse(content);
     let mut diagnostics = errors
@@ -60,7 +56,7 @@ pub fn parse_and_lint(content: &str, source: Option<String>) -> crate::journalin
         diagnostics.append(&mut lint(&journal, source.clone()));
     }
 
-    crate::journalint::Journalint::new(&source, content, diagnostics)
+    crate::journalint::Journalint::new(content, diagnostics)
 }
 
 fn _report_diagnostic(content: &str, filename: Option<&str>, diag: &Diagnostic) {
