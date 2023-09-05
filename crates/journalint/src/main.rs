@@ -59,7 +59,7 @@ fn cli_main(args: Arguments) -> exitcode::ExitCode {
         }
     };
 
-    let journalint = parse_and_lint(content.as_str(), Some(filename));
+    let journalint = parse_and_lint(content.as_str(), Some(&filename));
     if args.fix {
         for d in journalint.diagnostics() {
             if let Err(e) = autofix::fix(d, content.as_str(), path.as_path()) {
@@ -139,7 +139,6 @@ fn run(
         let msg = format!("failed to extract last segment: {}", uri);
         return Err(JournalintError::InvalidUrl(msg));
     };
-    let filename = String::from(filename);
 
     // Parse the content then convert diagnostics into the corresponding LSP type
     let journalint = parse_and_lint(content, Some(filename));

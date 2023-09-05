@@ -38,7 +38,9 @@ impl Journalint {
     }
 }
 
-pub fn parse_and_lint(content: &str, source: Option<String>) -> crate::journalint::Journalint {
+pub fn parse_and_lint(content: &str, source: Option<&str>) -> crate::journalint::Journalint {
+    let source = source.map(|s| s.to_owned());
+
     // Parse
     let (journal, errors) = crate::parse::parse(content);
     let mut diagnostics = errors
