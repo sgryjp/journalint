@@ -67,7 +67,7 @@ fn cli_main(args: Arguments) -> exitcode::ExitCode {
             }
         }
     } else {
-        journalint.report(&content);
+        journalint.report(Some(&filename), &content);
     }
 
     exitcode::OK
@@ -178,7 +178,7 @@ mod snapshot_tests {
             }
             let filename = path.to_string_lossy().to_string();
             let content = read_to_string(path).unwrap();
-            let journalint = parse_and_lint(&content, Some(filename));
+            let journalint = parse_and_lint(&content, Some(&filename));
             let diagnostics: Vec<lsp_types::Diagnostic> = journalint
                 .diagnostics()
                 .iter()

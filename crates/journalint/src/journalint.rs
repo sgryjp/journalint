@@ -6,18 +6,14 @@ use crate::linemap::LineMap;
 use crate::lint::lint;
 
 pub struct Journalint {
-    #[allow(dead_code)]
-    filename: Option<String>,
     diagnostics: Vec<Diagnostic>,
     linemap: LineMap,
 }
 
 impl Journalint {
-    fn new(source: &Option<String>, content: &str, diagnostics: Vec<Diagnostic>) -> Self {
-        let source = source.clone();
+    fn new(content: &str, diagnostics: Vec<Diagnostic>) -> Self {
         let linemap = LineMap::new(content);
         Self {
-            filename: source,
             diagnostics,
             linemap,
         }
@@ -31,10 +27,10 @@ impl Journalint {
         &self.linemap
     }
 
-    pub fn report(&self, content: &str) {
+    pub fn report(&self, filename: Option<&str>, content: &str) {
         self.diagnostics
             .iter()
-            .for_each(|d| _report_diagnostic(content, self.filename.as_deref(), d))
+            .for_each(|d| _report_diagnostic(content, filename, d))
     }
 }
 
@@ -60,7 +56,7 @@ pub fn parse_and_lint(content: &str, source: Option<&str>) -> crate::journalint:
         diagnostics.append(&mut lint(&journal, source.clone()));
     }
 
-    crate::journalint::Journalint::new(&source, content, diagnostics)
+    crate::journalint::Journalint::new(content, diagnostics)
 }
 
 fn _report_diagnostic(content: &str, filename: Option<&str>, diag: &Diagnostic) {
