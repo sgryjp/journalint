@@ -3,7 +3,6 @@ mod autofix;
 mod code;
 mod diagnostic;
 mod errors;
-mod journalint;
 mod linemap;
 mod lint;
 mod parse;
@@ -11,7 +10,13 @@ mod parse;
 use std::env;
 use std::fs::read_to_string;
 use std::path::PathBuf;
+use std::sync::Arc;
 
+use ariadne::Color;
+use ariadne::Label;
+use ariadne::Report;
+use ariadne::ReportKind;
+use ariadne::Source;
 use clap::Parser;
 use env_logger::TimestampPrecision;
 use log::error;
@@ -28,8 +33,10 @@ use lsp_types::TextDocumentSyncKind;
 use lsp_types::Url;
 
 use crate::arg::Arguments;
+use crate::code::Code;
+use crate::diagnostic::Diagnostic;
 use crate::errors::JournalintError;
-use crate::journalint::parse_and_lint;
+use crate::linemap::LineMap;
 
 /// Entry point of journalint CLI.
 fn main() -> Result<(), JournalintError> {
@@ -59,15 +66,17 @@ fn cli_main(args: Arguments) -> exitcode::ExitCode {
         }
     };
 
-    let journalint = parse_and_lint(content.as_str(), Some(&filename));
+    let diagnostics = parse_and_lint(&content, Some(&filename));
     if args.fix {
-        for d in journalint.diagnostics() {
+        for d in diagnostics.iter() {
             if let Err(e) = autofix::fix(d, content.as_str(), path.as_path()) {
                 error!("Autofix failed: {}", e)
             }
         }
     } else {
-        journalint.report(Some(&filename), &content);
+        diagnostics
+            .iter()
+            .for_each(|d| report(&content, Some(&filename), d));
     }
 
     exitcode::OK
@@ -140,13 +149,11 @@ fn run(
         return Err(JournalintError::InvalidUrl(msg));
     };
 
-    // Parse the content then convert diagnostics into the corresponding LSP type
-    let journalint = parse_and_lint(content, Some(filename));
-    let diagnostics = journalint
-        .diagnostics()
+    // Parse the content then convert diagnostics into the ones of corresponding LSP type
+    let diagnostics = parse_and_lint(content, Some(filename))
         .iter()
-        .map(|d| d.to_lsp_types(journalint.linemap()))
-        .collect();
+        .map(|d| d.clone().into())
+        .collect::<Vec<lsp_types::Diagnostic>>();
 
     // Publish them to the client
     let params = PublishDiagnosticsParams::new(uri.clone(), diagnostics, version);
@@ -159,6 +166,51 @@ fn run(
         .map_err(|e| JournalintError::LspCommunicationError(e.to_string()))?;
 
     Ok(())
+}
+
+fn parse_and_lint(content: &str, source: Option<&str>) -> Vec<Diagnostic> {
+    let line_map = Arc::new(LineMap::new(content));
+
+    // Parse
+    let (journal, errors) = parse::parse(content);
+    let mut diagnostics = errors
+        .iter()
+        .map(|e| {
+            Diagnostic::new_warning(
+                e.span(),
+                Code::ParseError,
+                format!("Parse error: {}", e),
+                None,
+                line_map.clone(),
+            )
+        })
+        .collect::<Vec<Diagnostic>>();
+
+    // Lint
+    if let Some(journal) = journal {
+        diagnostics.append(&mut lint::lint(&journal, source, line_map));
+    }
+
+    diagnostics
+}
+
+fn report(content: &str, filename: Option<&str>, diag: &Diagnostic) {
+    let stdin_source_name = "<STDIN>".to_string();
+    let filename = filename.unwrap_or(&stdin_source_name);
+    let start = diag.span().start;
+    let end = diag.span().end;
+    let message = diag.message();
+
+    Report::build(ReportKind::Error, filename, start)
+        .with_message(message)
+        .with_label(
+            Label::new((filename, start..end))
+                .with_color(Color::Red)
+                .with_message(message),
+        )
+        .finish()
+        .eprint((filename, Source::from(content)))
+        .unwrap();
 }
 
 #[cfg(test)]
@@ -178,12 +230,10 @@ mod snapshot_tests {
             }
             let filename = path.to_string_lossy().to_string();
             let content = read_to_string(path).unwrap();
-            let journalint = parse_and_lint(&content, Some(&filename));
-            let diagnostics: Vec<lsp_types::Diagnostic> = journalint
-                .diagnostics()
+            let diagnostics = parse_and_lint(&content, Some(&filename))
                 .iter()
-                .map(|d| d.to_lsp_types(journalint.linemap()))
-                .collect();
+                .map(|d| d.clone().into())
+                .collect::<Vec<lsp_types::Diagnostic>>();
             insta::assert_yaml_snapshot!(path.file_stem().unwrap().to_str().unwrap(), diagnostics);
         }
     }
