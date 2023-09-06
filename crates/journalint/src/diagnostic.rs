@@ -1,4 +1,5 @@
 use core::ops::Range;
+use std::sync::Arc;
 
 use lsp_types::DiagnosticSeverity;
 use lsp_types::NumberOrString;
@@ -12,13 +13,14 @@ static SOURCE_NAME: &str = "journalint";
 ///
 /// This is basically the same as lsp_types::Diagnostic except that this has a field
 /// `span` of type Range<usize>, not a field `range` of type lsp_types::Range.
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug)]
 pub struct Diagnostic {
     span: Range<usize>,
     code: Code,
     severity: DiagnosticSeverity,
     message: String,
     expectation: Option<String>,
+    line_map: Arc<LineMap>,
 }
 
 impl Diagnostic {
@@ -27,13 +29,16 @@ impl Diagnostic {
         code: Code,
         message: String,
         expectation: Option<String>,
+        line_mapper: Arc<LineMap>,
     ) -> Self {
+        let severity = DiagnosticSeverity::WARNING;
         Self {
             span,
             code,
-            severity: DiagnosticSeverity::WARNING,
+            severity,
             message,
             expectation,
+            line_map: line_mapper,
         }
     }
 
@@ -56,19 +61,21 @@ impl Diagnostic {
     pub fn expectation(&self) -> Option<&String> {
         self.expectation.as_ref()
     }
+}
 
-    pub fn to_lsp_types(&self, linemap: &LineMap) -> lsp_types::Diagnostic {
-        let code = self.code().as_str().to_string();
+impl From<Diagnostic> for lsp_types::Diagnostic {
+    fn from(value: Diagnostic) -> Self {
+        let code = value.code().as_str().to_string();
         let range = lsp_types::Range::new(
-            linemap.position_from_offset(self.span().start),
-            linemap.position_from_offset(self.span().end),
+            value.line_map.position_from_offset(value.span().start),
+            value.line_map.position_from_offset(value.span().end),
         );
         lsp_types::Diagnostic::new(
             range,
-            Some(self.severity()),
+            Some(value.severity()),
             Some(NumberOrString::String(code)),
             Some(SOURCE_NAME.to_string()),
-            self.message().to_owned(),
+            value.message().to_owned(),
             None,
             None,
         )

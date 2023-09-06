@@ -145,8 +145,8 @@ fn run(
     let diagnostics = journalint
         .diagnostics()
         .iter()
-        .map(|d| d.to_lsp_types(journalint.linemap()))
-        .collect();
+        .map(|d| d.clone().into())
+        .collect::<Vec<lsp_types::Diagnostic>>();
 
     // Publish them to the client
     let params = PublishDiagnosticsParams::new(uri.clone(), diagnostics, version);
@@ -182,7 +182,7 @@ mod snapshot_tests {
             let diagnostics: Vec<lsp_types::Diagnostic> = journalint
                 .diagnostics()
                 .iter()
-                .map(|d| d.to_lsp_types(journalint.linemap()))
+                .map(|d| d.clone().into())
                 .collect();
             insta::assert_yaml_snapshot!(path.file_stem().unwrap().to_str().unwrap(), diagnostics);
         }

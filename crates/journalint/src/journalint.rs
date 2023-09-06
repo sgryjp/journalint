@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use ariadne::{Color, Label, Report, ReportKind, Source};
 
 use crate::code::Code;
@@ -7,24 +9,15 @@ use crate::lint::lint;
 
 pub struct Journalint {
     diagnostics: Vec<Diagnostic>,
-    linemap: LineMap,
 }
 
 impl Journalint {
-    fn new(content: &str, diagnostics: Vec<Diagnostic>) -> Self {
-        let linemap = LineMap::new(content);
-        Self {
-            diagnostics,
-            linemap,
-        }
+    fn new(diagnostics: Vec<Diagnostic>) -> Self {
+        Self { diagnostics }
     }
 
     pub fn diagnostics(&self) -> &[Diagnostic] {
         &self.diagnostics
-    }
-
-    pub fn linemap(&self) -> &LineMap {
-        &self.linemap
     }
 
     pub fn report(&self, filename: Option<&str>, content: &str) {
@@ -36,6 +29,7 @@ impl Journalint {
 
 pub fn parse_and_lint(content: &str, source: Option<&str>) -> crate::journalint::Journalint {
     let source = source.map(|s| s.to_owned());
+    let line_map = Arc::new(LineMap::new(content));
 
     // Parse
     let (journal, errors) = crate::parse::parse(content);
@@ -47,16 +41,17 @@ pub fn parse_and_lint(content: &str, source: Option<&str>) -> crate::journalint:
                 Code::ParseError,
                 format!("Parse error: {}", e),
                 None,
+                line_map.clone(),
             )
         })
         .collect::<Vec<Diagnostic>>();
 
     // Lint
     if let Some(journal) = journal {
-        diagnostics.append(&mut lint(&journal, source.clone()));
+        diagnostics.append(&mut lint(&journal, source.clone(), line_map));
     }
 
-    crate::journalint::Journalint::new(content, diagnostics)
+    crate::journalint::Journalint::new(diagnostics)
 }
 
 fn _report_diagnostic(content: &str, filename: Option<&str>, diag: &Diagnostic) {

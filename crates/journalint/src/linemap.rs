@@ -2,7 +2,7 @@ use core::cmp::min;
 
 use lsp_types::Position;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct LineMap {
     line_offsets: Vec<usize>,
     content_length: usize,

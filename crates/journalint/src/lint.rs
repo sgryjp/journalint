@@ -1,17 +1,20 @@
 use std::ops::Range;
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::time::Duration;
 
 use chrono::{DateTime, NaiveDate, Utc};
 
 use crate::code::Code;
 use crate::diagnostic::Diagnostic;
+use crate::linemap::LineMap;
 use crate::parse::{Expr, LooseTime};
 
 #[derive(Default)]
 pub struct Linter {
     source: Option<String>,
     diagnostics: Vec<Diagnostic>,
+    line_map: Arc<LineMap>,
 
     fm_date: Option<(NaiveDate, Range<usize>)>,
     fm_start: Option<(LooseTime, Range<usize>)>,
@@ -25,9 +28,10 @@ pub struct Linter {
 }
 
 impl Linter {
-    pub fn new(source: Option<String>) -> Linter {
+    pub fn new(source: Option<String>, line_map: Arc<LineMap>) -> Linter {
         Linter {
             source,
+            line_map,
             ..Default::default()
         }
     }
@@ -55,6 +59,7 @@ impl Linter {
                             expectation.as_str()
                         ),
                         Some(expectation),
+                        self.line_map.clone(),
                     ));
                 }
             }
@@ -82,6 +87,7 @@ impl Linter {
                         Code::InvalidStartTime,
                         format!("Invalid start time: {}", e),
                         None,
+                        self.line_map.clone(),
                     ));
                     None
                 }
@@ -98,6 +104,7 @@ impl Linter {
                         Code::InvalidEndTime,
                         format!("Invalid end time: {}", e),
                         None,
+                        self.line_map.clone(),
                     ));
                     None
                 }
@@ -111,6 +118,7 @@ impl Linter {
                 Code::MissingDate,
                 "Field 'date' is missing".to_string(),
                 None,
+                self.line_map.clone(),
             ));
         }
         if self.fm_start.is_none() {
@@ -119,6 +127,7 @@ impl Linter {
                 Code::MissingStartTime,
                 "Field 'start' is missing".to_string(),
                 None,
+                self.line_map.clone(),
             ));
         }
         if self.fm_end.is_none() {
@@ -127,6 +136,7 @@ impl Linter {
                 Code::MissingEndTime,
                 "Field 'end' is missing".to_string(),
                 None,
+                self.line_map.clone(),
             ));
         }
     }
@@ -159,6 +169,7 @@ impl Linter {
                                 Code::TimeJumped,
                                 format!("Gap found: previous entry's end time was {}", expectation),
                                 Some(expectation),
+                                self.line_map.clone(),
                             ));
                         }
                     }
@@ -170,6 +181,7 @@ impl Linter {
                         Code::InvalidStartTime,
                         format!("Invalid start time: {}", e),
                         None,
+                        self.line_map.clone(),
                     ));
                 }
             };
@@ -188,6 +200,7 @@ impl Linter {
                         Code::InvalidEndTime,
                         format!("Invalid end time: {}", e),
                         None,
+                        self.line_map.clone(),
                     ));
                 }
             }
@@ -207,6 +220,7 @@ impl Linter {
                         start.format("%H:%M"),
                     ),
                     None,
+                    self.line_map.clone(),
                 ));
                 return;
             };
@@ -219,6 +233,7 @@ impl Linter {
                     Code::IncorrectDuration,
                     format!("Incorrect duration: expected {}", expectation),
                     Some(expectation),
+                    self.line_map.clone(),
                 ));
             }
         }
@@ -290,8 +305,8 @@ fn walk(expr: &Expr, visitor: &mut Linter) {
     }
 }
 
-pub fn lint(journal: &Expr, source: Option<String>) -> Vec<Diagnostic> {
-    let mut visitor = Linter::new(source);
+pub fn lint(journal: &Expr, source: Option<String>, line_map: Arc<LineMap>) -> Vec<Diagnostic> {
+    let mut visitor = Linter::new(source, line_map);
     walk(journal, &mut visitor);
     visitor.diagnostics
 }
