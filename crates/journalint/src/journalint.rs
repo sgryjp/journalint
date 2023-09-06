@@ -28,7 +28,6 @@ impl Journalint {
 }
 
 pub fn parse_and_lint(content: &str, source: Option<&str>) -> crate::journalint::Journalint {
-    let source = source.map(|s| s.to_owned());
     let line_map = Arc::new(LineMap::new(content));
 
     // Parse
@@ -48,7 +47,7 @@ pub fn parse_and_lint(content: &str, source: Option<&str>) -> crate::journalint:
 
     // Lint
     if let Some(journal) = journal {
-        diagnostics.append(&mut lint(&journal, source.clone(), line_map));
+        diagnostics.append(&mut lint(&journal, source, line_map));
     }
 
     crate::journalint::Journalint::new(diagnostics)

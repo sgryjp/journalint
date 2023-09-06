@@ -11,8 +11,8 @@ use crate::linemap::LineMap;
 use crate::parse::{Expr, LooseTime};
 
 #[derive(Default)]
-pub struct Linter {
-    source: Option<String>,
+pub struct Linter<'a> {
+    source: Option<&'a str>,
     diagnostics: Vec<Diagnostic>,
     line_map: Arc<LineMap>,
 
@@ -27,8 +27,8 @@ pub struct Linter {
     prev_entry_end: Option<(DateTime<Utc>, Range<usize>)>,
 }
 
-impl Linter {
-    pub fn new(source: Option<String>, line_map: Arc<LineMap>) -> Linter {
+impl<'a> Linter<'a> {
+    pub fn new(source: Option<&'a str>, line_map: Arc<LineMap>) -> Linter {
         Linter {
             source,
             line_map,
@@ -305,7 +305,7 @@ fn walk(expr: &Expr, visitor: &mut Linter) {
     }
 }
 
-pub fn lint(journal: &Expr, source: Option<String>, line_map: Arc<LineMap>) -> Vec<Diagnostic> {
+pub fn lint(journal: &Expr, source: Option<&str>, line_map: Arc<LineMap>) -> Vec<Diagnostic> {
     let mut visitor = Linter::new(source, line_map);
     walk(journal, &mut visitor);
     visitor.diagnostics
