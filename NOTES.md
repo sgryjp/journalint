@@ -34,7 +34,7 @@ message_loop(client):
                 url, range = msg.arguments
                 diagnostic = find_matching_diagnostics_in(service_state)
                 workspace_edit = make_workspace_edit(url, diagnostic)
-                client.send(<textDocument/applyEdit>, [workspace_edit])
+                client.send(<workspace/applyEdit>, [workspace_edit])
 ```
 
 ## 日誌

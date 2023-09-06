@@ -79,6 +79,7 @@ export function activate(context: vscode.ExtensionContext) {
     clientOptions
   );
   client.start();
+
   log.info("Activated journalint-vscode.");
 }
 

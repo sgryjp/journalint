@@ -1,4 +1,4 @@
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum Code {
     ParseError,
     MismatchedDates,
@@ -26,6 +26,24 @@ impl Code {
             Code::TimeJumped => "time-jumped",
             Code::NegativeTimeRange => "negative-time-range",
             Code::IncorrectDuration => "incorrect-duration",
+        }
+    }
+}
+
+impl From<&str> for Code {
+    fn from(value: &str) -> Self {
+        match value {
+            "parse-error" => Code::ParseError,
+            "date-mismatch" => Code::MismatchedDates,
+            "invalid-start-time" => Code::InvalidStartTime,
+            "invalid-end-time" => Code::InvalidEndTime,
+            "missing-date" => Code::MissingDate,
+            "missing-start-time" => Code::MissingStartTime,
+            "missing-end-time" => Code::MissingEndTime,
+            "time-jumped" => Code::TimeJumped,
+            "negative-time-range" => Code::NegativeTimeRange,
+            "incorrect-duration" => Code::IncorrectDuration,
+            _ => panic!(),
         }
     }
 }

@@ -68,8 +68,7 @@ impl LineMap {
         )
     }
 
-    #[allow(dead_code)]
-    fn offset_from_position(&self, position: &Position) -> usize {
+    pub fn offset_from_position(&self, position: &Position) -> usize {
         self._offset_from_position(position.line as usize, position.character as usize)
     }
 
@@ -89,8 +88,8 @@ mod tests {
 
     #[test]
     fn new() {
-        let lm = LineMap::new("a\n亜\r\nc");
-        assert_eq!(lm.line_offsets, vec![0, 2, 5]);
+        let lm = LineMap::new("a\n亜\r\nc\rd");
+        assert_eq!(lm.line_offsets, vec![0, 2, 5, 7]);
     }
 
     #[test]
