@@ -7,27 +7,7 @@ use crate::diagnostic::Diagnostic;
 use crate::linemap::LineMap;
 use crate::lint::lint;
 
-pub struct Journalint {
-    diagnostics: Vec<Diagnostic>,
-}
-
-impl Journalint {
-    fn new(diagnostics: Vec<Diagnostic>) -> Self {
-        Self { diagnostics }
-    }
-
-    pub fn diagnostics(&self) -> &[Diagnostic] {
-        &self.diagnostics
-    }
-
-    pub fn report(&self, filename: Option<&str>, content: &str) {
-        self.diagnostics
-            .iter()
-            .for_each(|d| _report_diagnostic(content, filename, d))
-    }
-}
-
-pub fn parse_and_lint(content: &str, source: Option<&str>) -> crate::journalint::Journalint {
+pub fn parse_and_lint(content: &str, source: Option<&str>) -> Vec<Diagnostic> {
     let line_map = Arc::new(LineMap::new(content));
 
     // Parse
@@ -50,10 +30,10 @@ pub fn parse_and_lint(content: &str, source: Option<&str>) -> crate::journalint:
         diagnostics.append(&mut lint(&journal, source, line_map));
     }
 
-    crate::journalint::Journalint::new(diagnostics)
+    diagnostics
 }
 
-fn _report_diagnostic(content: &str, filename: Option<&str>, diag: &Diagnostic) {
+pub fn report(content: &str, filename: Option<&str>, diag: &Diagnostic) {
     let stdin_source_name = "<STDIN>".to_string();
     let filename = filename.unwrap_or(&stdin_source_name);
     let start = diag.span().start;
