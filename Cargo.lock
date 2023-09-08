@@ -547,6 +547,7 @@ dependencies = [
  "chrono",
  "chumsky",
  "clap",
+ "crossbeam-channel",
  "env_logger",
  "exitcode",
  "insta",

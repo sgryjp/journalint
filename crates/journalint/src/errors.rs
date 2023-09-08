@@ -1,3 +1,6 @@
+use crossbeam_channel::SendError;
+use lsp_server::Message;
+use lsp_server::ProtocolError;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -22,4 +25,16 @@ pub enum JournalintError {
         #[from]
         source: serde_json::error::Error,
     },
+}
+
+impl From<SendError<Message>> for JournalintError {
+    fn from(value: SendError<Message>) -> Self {
+        JournalintError::LspCommunicationError(value.to_string())
+    }
+}
+
+impl From<ProtocolError> for JournalintError {
+    fn from(value: ProtocolError) -> Self {
+        JournalintError::LspCommunicationError(value.to_string())
+    }
 }

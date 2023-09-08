@@ -31,9 +31,7 @@ pub fn service_main() -> Result<(), JournalintError> {
         ..Default::default()
     })
     .unwrap();
-    let init_params = conn
-        .initialize(server_capabilities)
-        .map_err(|e| JournalintError::LspCommunicationError(e.to_string()))?;
+    let init_params = conn.initialize(server_capabilities)?;
     let init_params: InitializeParams = serde_json::from_value(init_params)?;
 
     // Run the message loop
@@ -103,8 +101,7 @@ fn lint_and_publish_diagnostics(
         .send(Message::Notification(lsp_server::Notification {
             method: "textDocument/publishDiagnostics".to_string(),
             params,
-        }))
-        .map_err(|e| JournalintError::LspCommunicationError(e.to_string()))?;
+        }))?;
 
     Ok(())
 }
