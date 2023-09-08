@@ -4,7 +4,42 @@
 
 - minute value of an env of time-range exceeds 99: `- 09:45-23:100`
 
-## 2023-05-04
+## 設計メモ
+
+```plaintext
+message_loop(client):
+    service_state: {
+        "url": {
+            "line_mapper": LineMapper,
+            "diagnostics": [Diagnostic],
+        },
+    }
+
+    for msg in client.recv():
+        if msg is <textDocument/didOpen> or msg is <textDocument/didChange>:
+            lint(msg.url) => line_mapper, diagnostics
+            service_state[msg.url] = {
+                "line_mapper": line_mapper,
+                "diagnostics": diagnostics,
+            }
+
+        elif msg is <textDocument/codeAction>:
+            actions = msg.diagnostics
+                         .map(|d| available_actions_for(d.code))
+                         .flatten()
+            client.send(<textDocument/publishDiagnostics>, actions)
+
+        elif msg is <workspace/executeCommand>:
+            if msg.command == "journalint.autofix":
+                url, range = msg.arguments
+                diagnostic = find_matching_diagnostics_in(service_state)
+                workspace_edit = make_workspace_edit(url, diagnostic)
+                client.send(<textDocument/applyEdit>, [workspace_edit])
+```
+
+## 日誌
+
+### 2023-05-04
 
 大まかな構造を chumsky で実施し、パース失敗したならそのときに出てきたエラーを
 diagnostic として返す。
@@ -13,7 +48,7 @@ diagnostic として返す。
 
 その構造に対して各種の lint を追加で行う。 lint は、基本的にエラー終了しない。
 
-## 2023-07-15
+### 2023-07-15
 
 - 日記ファイルは markdown ではあるが、markdown としてのパースは意図的に行ってい
   ない
@@ -45,7 +80,7 @@ diagnostic として返す。
        │     ╰── Time
        ╰── Time
 
-## 2023-07-18
+### 2023-07-18
 
 リカバリした上での accept は reject の一種とみなされるらしい。よって `A.or(B)`
 のうち A がリカバリした上で accept できるとしても B の評価も行われてしまうようだ
@@ -70,7 +105,7 @@ other_line をリカバリで実装する手があると思われる。ただし
 なお、`chumsky::Parser::or` で実装すると失敗理由が不明になるので
 `chumsky::Parser::or_else` で実装すると良い感じだった。
 
-## 2023-07-30
+### 2023-07-30
 
 比較的マジメに AST っぽいものを作って処理するアプローチに変えたので、Ruff の設計
 を改めて勉強させてもらった。まず文法チェック (lint) は AST を Visitor パターンで
@@ -82,7 +117,7 @@ traverse する中で、ある種別のノードを発見したときに呼ば�
 なので、おそらく素直に該当する Diagnostic から fix を取り出して実行するだけだと
 思う。
 
-## 2023-08-06
+### 2023-08-06
 
 front matter の date, start, end を別々の文法上のノードとして定義してパーサーを
 構成していたが、その実現のために (date or start or end) というパーサーを repeat
@@ -94,7 +129,7 @@ repeat の部分でのエラーということになり分かりにくいエラ�
 front matter のフィールド解釈はフィールドの種別を区別せず行うように変更した方が
 良いかもしれない。
 
-## 2023-08-19
+### 2023-08-19
 
 Quick Fix / Code action の実装を開始する。LSP 仕様で関連するメッセージは
 `textDocument/codeAction`。VSCode で軽く試すと、カーソル移動のたびに
@@ -102,7 +137,7 @@ Quick Fix / Code action の実装を開始する。LSP 仕様で関連するメ�
 、それを無視する実装のままでカーソルを動かしたりすると `$/cancelRequest` の通知
 が飛んでくる。
 
-## 2023-08-27
+### 2023-08-27
 
 Quick Fix を実装するにあたって Diagnostic に Code を割り当てることにした。という
 のも Code action がトリガーされたときにサーバーに飛んでくるメッセージに含められ
@@ -116,7 +151,7 @@ message (String) しかないようだったから。
 た diagnostic から該当するノードを探索し、それを前提に前後の文脈から修正を行って
 シリアライズすることで修正されたコンテンツを生成することになると思う。
 
-## 2023-08-30
+### 2023-08-30
 
 コマンドでの autofix が実装できたので、今度は言語サーバーとして Code action に対
 応していく。以下のように処理の流れが整理できると思う:
@@ -175,6 +210,22 @@ message (String) しかないようだったから。
   が付けられており、コマンド名を指定すれば適切な処理を実行できる」という考え方は
   LSP というプロトコルがエディタ（クライアント）に対して暗に要求している仕様とも
   言える。
+
+## 2023-09-04
+
+Journalint が content、文書の内容全体への「参照」を保持することでサーバーを書き
+にくくなっている。というのも、サーバー稼働時は textDocument/didChange などのメッ
+セージに含まれるファイル内容を参照して Journalint インスタンスを生成するが、その
+インスタンスは追って届くであろう workspace/executeCommand に反応するために保存し
+ておきたい。すると、textDocument/didChange のメッセージパラメータをスタックから
+破棄した後に Journalint インスタンスを使いたい、ということになるためライフタイム
+制約に引っかかってしまう。
+
+そもそも Journalint インスタンスが処理した文書データ全体への参照を持っていなけれ
+ばならないというのは不自然な話。調べると、CLI での report 表示用にファイル名とフ
+ァイル内容を保持していただけだった。そして CLI でのレポート表示を行う文脈では当
+該データが普通にアクセス可能な状態になっている。したがって、これらのデータは
+Journalint インスタンスから削除するのが良いと思われる。
 
 [lsp_types::Command]:
   https://docs.rs/lsp-types/latest/lsp_types/struct.Command.html
