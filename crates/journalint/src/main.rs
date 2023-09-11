@@ -1,6 +1,6 @@
 mod arg;
-mod autofix;
 mod code;
+mod commands;
 mod diagnostic;
 mod errors;
 mod linemap;
@@ -18,13 +18,14 @@ use ariadne::Report;
 use ariadne::ReportKind;
 use ariadne::Source;
 use clap::Parser;
+use diagnostic::Diagnostic;
 use env_logger::TimestampPrecision;
+use log::debug;
 use log::error;
 use service::parse_and_lint;
 use service::service_main;
 
 use crate::arg::Arguments;
-use crate::diagnostic::Diagnostic;
 use crate::errors::JournalintError;
 
 /// Entry point of journalint CLI.
@@ -63,13 +64,15 @@ fn cli_main(args: Arguments) -> exitcode::ExitCode {
     };
 
     // Parse and lint it, then fix or report them
-    let diagnostics = parse_and_lint(&content, Some(&filename));
+    let mut diagnostics = parse_and_lint(&content, Some(&filename));
     if args.fix {
-        for d in diagnostics.iter() {
-            if let Err(e) = autofix::fix(d, content.as_str(), path.as_path()) {
-                error!("Autofix failed: {}", e)
+        // Sort diagnostics in reverse order
+        diagnostics.sort_by(|a, b| b.span().start.cmp(&a.span().start));
+        diagnostics.iter().map(Box::new).for_each(|d| {
+            if let Err(e) = commands::fix(*d, content.as_str(), path.as_path()) {
+                debug!("Autofix failed: {}", e)
             }
-        }
+        });
     } else {
         diagnostics
             .iter()
