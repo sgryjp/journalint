@@ -116,12 +116,17 @@ fn message_loop(conn: &Connection, _init_params: &InitializeParams) -> Result<()
                     // Concatenate list of available commands for each diagnostic at the location
                     let mut all_commands: Vec<Command> = Vec::new();
                     for d in diagnostics.iter() {
+                        // Simply ignore diagnostics from tools other than journalint
+                        // (Every code of journalint is a string which must be parsable into Code)
                         let code = &d.code;
                         let Some(NumberOrString::String(code)) = code else {
-                            error!("Invalid Diagnostic.code: {:?}", d.code);
                             continue;
                         };
-                        let code = Code::from(code.as_str());
+                        let Ok(code) = str::parse::<Code>(code) else {
+                            continue;
+                        };
+
+                        // List up all available code actions for the code
                         let mut commands: Vec<Command> = list_available_code_actions(&code)
                             .unwrap_or_default()
                             .iter()

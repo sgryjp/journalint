@@ -1,3 +1,7 @@
+use core::str::FromStr;
+
+use crate::errors::JournalintError;
+
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum Code {
     ParseError,
@@ -30,20 +34,22 @@ impl Code {
     }
 }
 
-impl From<&str> for Code {
-    fn from(value: &str) -> Self {
-        match value {
-            "parse-error" => Code::ParseError,
-            "date-mismatch" => Code::MismatchedDates,
-            "invalid-start-time" => Code::InvalidStartTime,
-            "invalid-end-time" => Code::InvalidEndTime,
-            "missing-date" => Code::MissingDate,
-            "missing-start-time" => Code::MissingStartTime,
-            "missing-end-time" => Code::MissingEndTime,
-            "time-jumped" => Code::TimeJumped,
-            "negative-time-range" => Code::NegativeTimeRange,
-            "incorrect-duration" => Code::IncorrectDuration,
-            _ => panic!(),
+impl FromStr for Code {
+    type Err = JournalintError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "parse-error" => Ok(Code::ParseError),
+            "date-mismatch" => Ok(Code::MismatchedDates),
+            "invalid-start-time" => Ok(Code::InvalidStartTime),
+            "invalid-end-time" => Ok(Code::InvalidEndTime),
+            "missing-date" => Ok(Code::MissingDate),
+            "missing-start-time" => Ok(Code::MissingStartTime),
+            "missing-end-time" => Ok(Code::MissingEndTime),
+            "time-jumped" => Ok(Code::TimeJumped),
+            "negative-time-range" => Ok(Code::NegativeTimeRange),
+            "incorrect-duration" => Ok(Code::IncorrectDuration),
+            _ => Err(JournalintError::UnknownCode(s.to_string())),
         }
     }
 }
