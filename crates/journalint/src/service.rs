@@ -74,7 +74,7 @@ pub fn service_main() -> Result<(), JournalintError> {
 }
 
 fn message_loop(conn: &Connection, _init_params: &InitializeParams) -> Result<(), JournalintError> {
-    let mut server_state: HashMap<Url, Vec<Diagnostic>> = HashMap::new();
+    let mut state = ServerState::default();
 
     // Receive messages until the connection was closed
     for msg in &conn.receiver {
@@ -88,7 +88,7 @@ fn message_loop(conn: &Connection, _init_params: &InitializeParams) -> Result<()
                     let content = params.text_document.text.as_str();
                     let version = None;
                     let diagnostics = lint_and_publish_diagnostics(conn, &uri, content, version)?;
-                    server_state.insert(uri, diagnostics);
+                    state.insert(uri, diagnostics);
                 } else if msg.method == "textDocument/didChange" {
                     // User modified an existing document. Parse and lint it again.
                     let params: DidChangeTextDocumentParams = serde_json::from_value(msg.params)?;
@@ -100,7 +100,7 @@ fn message_loop(conn: &Connection, _init_params: &InitializeParams) -> Result<()
                         .unwrap_or("");
                     let version = Some(params.text_document.version);
                     let diagnostics = lint_and_publish_diagnostics(conn, &uri, content, version)?;
-                    server_state.insert(uri, diagnostics);
+                    state.insert(uri, diagnostics);
                 }
             }
 
@@ -183,7 +183,7 @@ fn message_loop(conn: &Connection, _init_params: &InitializeParams) -> Result<()
                         serde_json::from_value(params.arguments[1].clone())?;
 
                     // Execute the command
-                    let Some(edit) = command.execute(&server_state, &url, &range) else {
+                    let Some(edit) = command.execute(&state, &url, &range) else {
                         let errmsg = "There was nothing to do".to_string();
                         conn.sender.send(Message::Response(Response::new_err(
                             msg.id.clone(),
