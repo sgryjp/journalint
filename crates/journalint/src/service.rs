@@ -103,59 +103,9 @@ fn message_loop(conn: &Connection, _init_params: &InitializeParams) -> Result<()
                     }
                 } else if msg.method == "workspace/executeCommand" {
                     // User (client) requested to execute a command.
-                    let params: lsp_types::ExecuteCommandParams =
-                        serde_json::from_value(msg.params)?;
-
-                    // Dispatch the requested command
-                    let Some(command) = get_command_by_name(&params.command) else {
-                        let errmsg = format!("Unknown command: {}", params.command.as_str());
-                        conn.sender.send(Message::Response(Response::new_err(
-                            msg.id.clone(),
-                            999, //TODO:
-                            errmsg,
-                        )))?; //TODO: continue
-                        continue;
-                    };
-
-                    // Extract command parameters from the message
-                    if params.arguments.len() != 2 {
-                        let errmsg = format!(
-                            "Command parameters expected to be 2 but {}",
-                            params.arguments.len()
-                        );
-                        conn.sender.send(Message::Response(Response::new_err(
-                            msg.id.clone(),
-                            998, // TODO:
-                            errmsg,
-                        )))?; // TODO: Do not exit
-                        continue;
+                    if let Err(e) = on_workspace_execute_command(&mut state, conn, msg) {
+                        error!("{}", e);
                     }
-                    let url: Url = serde_json::from_value(params.arguments[0].clone())?;
-                    let range: lsp_types::Range =
-                        serde_json::from_value(params.arguments[1].clone())?;
-
-                    // Execute the command
-                    let Some(edit) = command.execute(&state, &url, &range) else {
-                        let errmsg = "There was nothing to do".to_string();
-                        conn.sender.send(Message::Response(Response::new_err(
-                            msg.id.clone(),
-                            997, // TODO:
-                            errmsg,
-                        )))?; // TODO: Do not exit
-                        continue;
-                    };
-
-                    // Request the changes to be executed to the client
-                    debug!("[S] textDocument/applyEdit");
-                    let params = ApplyWorkspaceEditParams {
-                        label: Some(command.title().to_string()),
-                        edit,
-                    };
-                    conn.sender.send(Message::Request(Request::new(
-                        msg.id.clone(),
-                        "workspace/applyEdit".to_string(),
-                        params,
-                    )))?;
                 } else {
                     warn!("Received an unsupported request: {}", msg.method);
                     debug!("# {:?}", msg);
@@ -247,6 +197,65 @@ fn on_text_document_code_action(
     conn.sender.send(Message::Response(Response::new_ok(
         msg.id.clone(),
         all_commands,
+    )))?;
+    Ok(())
+}
+
+fn on_workspace_execute_command(
+    state: &mut ServerState,
+    conn: &Connection,
+    msg: lsp_server::Request,
+) -> Result<(), JournalintError> {
+    let params: lsp_types::ExecuteCommandParams = serde_json::from_value(msg.params)?;
+
+    // Dispatch the requested command
+    let Some(command) = get_command_by_name(&params.command) else {
+        let errmsg = format!("Unknown command: {}", params.command.as_str());
+        conn.sender.send(Message::Response(Response::new_err(
+            msg.id.clone(),
+            999, //TODO:
+            errmsg,
+        )))?;
+        return Err(JournalintError::UnknownCommand(params.command));
+    };
+
+    // Extract command parameters from the message
+    if params.arguments.len() != 2 {
+        let errmsg = format!(
+            "Number of command parameters is expected to be 2 but was {}",
+            params.arguments.len()
+        );
+        conn.sender.send(Message::Response(Response::new_err(
+            msg.id.clone(),
+            998, // TODO:
+            errmsg.clone(),
+        )))?;
+        return Err(JournalintError::UnexpectedArguments(errmsg));
+    }
+    let url: Url = serde_json::from_value(params.arguments[0].clone())?;
+    let range: lsp_types::Range = serde_json::from_value(params.arguments[1].clone())?;
+
+    // Execute the command
+    let Some(edit) = command.execute(&state, &url, &range) else {
+        let errmsg = "There was nothing to do".to_string();
+        conn.sender.send(Message::Response(Response::new_err(
+            msg.id.clone(),
+            997, // TODO:
+            errmsg,
+        )))?;
+        panic!(""); // TODO: This case is not an error from the first time...
+    };
+
+    // Request the changes to be executed to the client
+    debug!("[S] textDocument/applyEdit");
+    let params = ApplyWorkspaceEditParams {
+        label: Some(command.title().to_string()),
+        edit,
+    };
+    conn.sender.send(Message::Request(Request::new(
+        msg.id.clone(),
+        "workspace/applyEdit".to_string(),
+        params,
     )))?;
     Ok(())
 }

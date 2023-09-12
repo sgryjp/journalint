@@ -8,6 +8,12 @@ pub enum JournalintError {
     #[error("Unknown code: {0}")]
     UnknownCode(String),
 
+    #[error("Unknown command: {0}")]
+    UnknownCommand(String),
+
+    #[error("Unexpected arguments: {0}")]
+    UnexpectedArguments(String),
+
     #[error("invalid URL: {0}")]
     InvalidUrl(String),
 
