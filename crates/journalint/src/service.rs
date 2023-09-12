@@ -237,13 +237,7 @@ fn on_workspace_execute_command(
 
     // Execute the command
     let Some(edit) = command.execute(&state, &url, &range) else {
-        let errmsg = "There was nothing to do".to_string();
-        conn.sender.send(Message::Response(Response::new_err(
-            msg.id.clone(),
-            997, // TODO:
-            errmsg,
-        )))?;
-        panic!(""); // TODO: This case is not an error from the first time...
+        return Ok(()); // Do nothing if command does not change the document
     };
 
     // Request the changes to be executed to the client
@@ -257,6 +251,7 @@ fn on_workspace_execute_command(
         "workspace/applyEdit".to_string(),
         params,
     )))?;
+
     Ok(())
 }
 
