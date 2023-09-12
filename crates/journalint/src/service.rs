@@ -83,24 +83,14 @@ fn message_loop(conn: &Connection, _init_params: &InitializeParams) -> Result<()
                 debug!("[R] {}", msg.method);
                 if msg.method == "textDocument/didOpen" {
                     // User opened a new document. Parse and lint the new document.
-                    let params: DidOpenTextDocumentParams = serde_json::from_value(msg.params)?;
-                    let uri = params.text_document.uri;
-                    let content = params.text_document.text.as_str();
-                    let version = None;
-                    let diagnostics = lint_and_publish_diagnostics(conn, &uri, content, version)?;
-                    state.insert(uri, diagnostics);
+                    if let Err(e) = on_text_document_did_open(&mut state, conn, msg) {
+                        error!("{}", e);
+                    }
                 } else if msg.method == "textDocument/didChange" {
                     // User modified an existing document. Parse and lint it again.
-                    let params: DidChangeTextDocumentParams = serde_json::from_value(msg.params)?;
-                    let uri = params.text_document.uri;
-                    let content = params
-                        .content_changes
-                        .last()
-                        .map(|e| e.text.as_str())
-                        .unwrap_or("");
-                    let version = Some(params.text_document.version);
-                    let diagnostics = lint_and_publish_diagnostics(conn, &uri, content, version)?;
-                    state.insert(uri, diagnostics);
+                    if let Err(e) = on_text_document_did_change(&mut state, conn, msg) {
+                        error!("{}", e);
+                    }
                 }
             }
 
@@ -219,6 +209,38 @@ fn message_loop(conn: &Connection, _init_params: &InitializeParams) -> Result<()
             }
         }
     }
+    Ok(())
+}
+
+fn on_text_document_did_open(
+    state: &mut ServerState,
+    conn: &Connection,
+    msg: lsp_server::Notification,
+) -> Result<(), JournalintError> {
+    let params: DidOpenTextDocumentParams = serde_json::from_value(msg.params)?;
+    let uri = params.text_document.uri;
+    let content = params.text_document.text.as_str();
+    let version = None;
+    let diagnostics = lint_and_publish_diagnostics(conn, &uri, content, version)?;
+    state.insert(uri, diagnostics);
+    Ok(())
+}
+
+fn on_text_document_did_change(
+    state: &mut HashMap<Url, Vec<Diagnostic>>,
+    conn: &Connection,
+    msg: lsp_server::Notification,
+) -> Result<(), JournalintError> {
+    let params: DidChangeTextDocumentParams = serde_json::from_value(msg.params)?;
+    let uri = params.text_document.uri;
+    let content = params
+        .content_changes
+        .last()
+        .map(|e| e.text.as_str())
+        .unwrap_or("");
+    let version = Some(params.text_document.version);
+    let diagnostics = lint_and_publish_diagnostics(conn, &uri, content, version)?;
+    state.insert(uri, diagnostics);
     Ok(())
 }
 
