@@ -5,6 +5,9 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum JournalintError {
+    #[error("Unknown code: {0}")]
+    UnknownCode(String),
+
     #[error("invalid URL: {0}")]
     InvalidUrl(String),
 
