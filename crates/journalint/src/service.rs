@@ -98,47 +98,9 @@ fn message_loop(conn: &Connection, _init_params: &InitializeParams) -> Result<()
                 debug!("[R] {}", msg.method);
                 if msg.method == "textDocument/codeAction" {
                     // User (client) requested a list of available code actions at a location.
-                    let params: lsp_types::CodeActionParams = serde_json::from_value(msg.params)?;
-                    let uri = &params.text_document.uri;
-                    let position = params.range;
-                    let diagnostics = &params.context.diagnostics;
-
-                    // Concatenate list of available commands for each diagnostic at the location
-                    let mut all_commands: Vec<Command> = Vec::new();
-                    for d in diagnostics.iter() {
-                        // Simply ignore diagnostics from tools other than journalint
-                        // (Every code of journalint is a string which must be parsable into Code)
-                        let code = &d.code;
-                        let Some(NumberOrString::String(code)) = code else {
-                            continue;
-                        };
-                        let Ok(code) = str::parse::<Code>(code) else {
-                            continue;
-                        };
-
-                        // List up all available code actions for the code
-                        let mut commands: Vec<Command> = list_available_code_actions(&code)
-                            .unwrap_or_default()
-                            .iter()
-                            .map(|fix| {
-                                Command::new(
-                                    fix.title().to_string(),   // Title string presented to users
-                                    fix.command().to_string(), // List of commands (contribution points)
-                                    Some(vec![
-                                        serde_json::to_value(uri).unwrap(),
-                                        serde_json::to_value(position).unwrap(),
-                                    ]),
-                                )
-                            })
-                            .collect();
-                        all_commands.append(&mut commands);
+                    if let Err(e) = on_text_document_code_action(&mut state, conn, msg) {
+                        error!("{}", e);
                     }
-
-                    // Respond with the collected available commands
-                    conn.sender.send(Message::Response(Response::new_ok(
-                        msg.id.clone(),
-                        all_commands,
-                    )))?; //TODO DO not exit
                 } else if msg.method == "workspace/executeCommand" {
                     // User (client) requested to execute a command.
                     let params: lsp_types::ExecuteCommandParams =
@@ -241,6 +203,51 @@ fn on_text_document_did_change(
     let version = Some(params.text_document.version);
     let diagnostics = lint_and_publish_diagnostics(conn, &uri, content, version)?;
     state.insert(uri, diagnostics);
+    Ok(())
+}
+
+fn on_text_document_code_action(
+    _state: &mut ServerState,
+    conn: &Connection,
+    msg: lsp_server::Request,
+) -> Result<(), JournalintError> {
+    let params: lsp_types::CodeActionParams = serde_json::from_value(msg.params)?;
+    let uri = &params.text_document.uri;
+    let position = params.range;
+    let diagnostics = &params.context.diagnostics;
+    let mut all_commands: Vec<Command> = Vec::new();
+    for d in diagnostics.iter() {
+        // Simply ignore diagnostics from tools other than journalint
+        // (Every code of journalint is a string which must be parsable into Code)
+        let code = &d.code;
+        let Some(NumberOrString::String(code)) = code else {
+            continue;
+        };
+        let Ok(code) = str::parse::<Code>(code) else {
+            continue;
+        };
+
+        // List up all available code actions for the code
+        let mut commands: Vec<Command> = list_available_code_actions(&code)
+            .unwrap_or_default()
+            .iter()
+            .map(|fix| {
+                Command::new(
+                    fix.title().to_string(),   // Title string presented to users
+                    fix.command().to_string(), // List of commands (contribution points)
+                    Some(vec![
+                        serde_json::to_value(uri).unwrap(),
+                        serde_json::to_value(position).unwrap(),
+                    ]),
+                )
+            })
+            .collect();
+        all_commands.append(&mut commands);
+    }
+    conn.sender.send(Message::Response(Response::new_ok(
+        msg.id.clone(),
+        all_commands,
+    )))?;
     Ok(())
 }
 
