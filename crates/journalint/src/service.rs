@@ -35,7 +35,10 @@ use crate::linemap::LineMap;
 use crate::lint::lint;
 use crate::parse::parse;
 
-pub type ServerState = HashMap<Url, Vec<Diagnostic>>;
+#[derive(Default)]
+pub struct ServerState {
+    pub diagnostics: HashMap<Url, Vec<Diagnostic>>,
+}
 
 pub fn service_main() -> Result<(), JournalintError> {
     info!("Starting journalint language server...");
@@ -134,12 +137,12 @@ fn on_text_document_did_open(
     let content = params.text_document.text.as_str();
     let version = None;
     let diagnostics = lint_and_publish_diagnostics(conn, &uri, content, version)?;
-    state.insert(uri, diagnostics);
+    state.diagnostics.insert(uri, diagnostics);
     Ok(())
 }
 
 fn on_text_document_did_change(
-    state: &mut HashMap<Url, Vec<Diagnostic>>,
+    state: &mut ServerState,
     conn: &Connection,
     msg: lsp_server::Notification,
 ) -> Result<(), JournalintError> {
@@ -152,7 +155,7 @@ fn on_text_document_did_change(
         .unwrap_or("");
     let version = Some(params.text_document.version);
     let diagnostics = lint_and_publish_diagnostics(conn, &uri, content, version)?;
-    state.insert(uri, diagnostics);
+    state.diagnostics.insert(uri, diagnostics);
     Ok(())
 }
 

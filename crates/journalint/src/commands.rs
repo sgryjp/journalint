@@ -47,7 +47,7 @@ impl Command for RecalculateDuration {
         range: &lsp_types::Range,
     ) -> Option<WorkspaceEdit> {
         // Find a diagnostic at the specified location with appropriate code
-        let Some(diagnostic) = state.get(url).and_then(|diagnostic| {
+        let Some(diagnostic) = state.diagnostics.get(url).and_then(|diagnostic| {
             diagnostic
                 .iter()
                 .find(|d| d.is_in_lsp_range(range) && *d.code() == Code::IncorrectDuration)
