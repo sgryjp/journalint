@@ -8,6 +8,7 @@ use log::warn;
 use lsp_server::Connection;
 use lsp_server::Message;
 use lsp_server::Request;
+use lsp_server::RequestId;
 use lsp_server::Response;
 use lsp_types::ApplyWorkspaceEditParams;
 use lsp_types::CodeActionKind;
@@ -38,6 +39,8 @@ use crate::parse::parse;
 #[derive(Default)]
 pub struct ServerState {
     pub diagnostics: HashMap<Url, Vec<Diagnostic>>,
+    pub sent_requests: Vec<Request>,
+    pub msg_counter: i32,
 }
 
 pub fn service_main() -> Result<(), JournalintError> {
@@ -116,10 +119,26 @@ fn message_loop(conn: &Connection, _init_params: &InitializeParams) -> Result<()
             }
 
             Message::Response(msg) => {
-                if let Some(error) = msg.error {
-                    error!("[R] Error response: {:?}", error);
-                } else {
-                    warn!("[R] Unexpected response: {:?}", msg);
+                // Find the request matching this response
+                let index = state.sent_requests.iter().enumerate().find_map(|(i, req)| {
+                    if req.id == msg.id {
+                        Some(i)
+                    } else {
+                        None
+                    }
+                });
+
+                // Forget the matching request if found
+                if let Some(index) = index {
+                    state.sent_requests.swap_remove(index);
+                }
+
+                // Write log message
+                if let Some(result) = &msg.result {
+                    info!("[R:{}] {:?}", msg.id, result);
+                }
+                if let Some(error) = &msg.error {
+                    error!("[R:{}] {:?}", msg.id, error);
                 }
             }
         }
@@ -239,22 +258,29 @@ fn on_workspace_execute_command(
     let range: lsp_types::Range = serde_json::from_value(params.arguments[1].clone())?;
 
     // Execute the command
-    let Some(edit) = command.execute(&state, &url, &range) else {
+    let Some(edit) = command.execute(state, &url, &range) else {
         return Ok(()); // Do nothing if command does not change the document
     };
 
     // Request the changes to be executed to the client
-    debug!("[S] textDocument/applyEdit");
+    state.msg_counter += 1;
+    if state.msg_counter < 0 {
+        state.msg_counter = 0;
+    }
+    info!("[S:{}] textDocument/applyEdit", state.msg_counter);
     let params = ApplyWorkspaceEditParams {
         label: Some(command.title().to_string()),
         edit,
     };
-    conn.sender.send(Message::Request(Request::new(
-        msg.id.clone(),
+    let request = Request::new(
+        RequestId::from(state.msg_counter),
         "workspace/applyEdit".to_string(),
         params,
-    )))?;
+    );
+    conn.sender.send(Message::Request(request.clone()))?;
 
+    // Remember the request until a corresponding response arrives
+    state.sent_requests.push(request);
     Ok(())
 }
 
