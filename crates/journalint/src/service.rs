@@ -86,7 +86,7 @@ fn message_loop(conn: &Connection, _init_params: &InitializeParams) -> Result<()
     for msg in &conn.receiver {
         match msg {
             Message::Notification(msg) => {
-                debug!("[R] {}", msg.method);
+                info!("[R] {}", msg.method);
                 if msg.method == "textDocument/didOpen" {
                     // User opened a new document. Parse and lint the new document.
                     if let Err(e) = on_text_document_did_open(&mut state, conn, msg) {
@@ -101,7 +101,7 @@ fn message_loop(conn: &Connection, _init_params: &InitializeParams) -> Result<()
             }
 
             Message::Request(msg) => {
-                debug!("[R] {}", msg.method);
+                info!("[R:{}] {}", msg.id, msg.method);
                 if msg.method == "textDocument/codeAction" {
                     // User (client) requested a list of available code actions at a location.
                     if let Err(e) = on_text_document_code_action(&mut state, conn, msg) {
