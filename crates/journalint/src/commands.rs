@@ -74,7 +74,7 @@ impl Command for ReplaceWithPreviousEndTime {
         range: &lsp_types::Range,
     ) -> Option<WorkspaceEdit> {
         state
-            .find_diagnostic(url, range, Code::IncorrectDuration)
+            .find_diagnostic(url, range, Code::TimeJumped)
             .and_then(|d| d.fix(url))
     }
 }
