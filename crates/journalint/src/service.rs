@@ -230,10 +230,10 @@ fn on_text_document_code_action(
         let mut commands: Vec<Command> = list_available_code_actions(&code)
             .unwrap_or_default()
             .iter()
-            .map(|fix| {
+            .map(|command| {
                 Command::new(
-                    fix.title().to_string(),   // Title string presented to users
-                    fix.command().to_string(), // List of commands (contribution points)
+                    command.title().to_string(),   // Title string presented to users
+                    command.command().to_string(), // List of commands (contribution points)
                     Some(vec![
                         serde_json::to_value(uri).unwrap(),
                         serde_json::to_value(position).unwrap(),
