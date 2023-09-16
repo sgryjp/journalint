@@ -1,6 +1,7 @@
 use std::fs::write;
 use std::path::Path;
 
+use log::warn;
 use lsp_types::{Url, WorkspaceEdit};
 
 use crate::code::Code;
@@ -48,9 +49,14 @@ impl Command for RecalculateDuration {
         url: &Url,
         range: &lsp_types::Range,
     ) -> Option<WorkspaceEdit> {
-        state
-            .find_diagnostic(url, range, Code::IncorrectDuration)
-            .and_then(|d| d.fix(url))
+        let Some(diagnostic) = state.find_diagnostic(url, range, Code::IncorrectDuration) else {
+            warn!(
+                "No corresponding diagnostic found on fixing {}",
+                Code::IncorrectDuration.as_str()
+            );
+            return None;
+        };
+        diagnostic.fix(url)
     }
 }
 
@@ -73,9 +79,14 @@ impl Command for ReplaceWithPreviousEndTime {
         url: &Url,
         range: &lsp_types::Range,
     ) -> Option<WorkspaceEdit> {
-        state
-            .find_diagnostic(url, range, Code::TimeJumped)
-            .and_then(|d| d.fix(url))
+        let Some(diagnostic) = state.find_diagnostic(url, range, Code::TimeJumped) else {
+            warn!(
+                "No corresponding diagnostic found on fixing {}",
+                Code::TimeJumped.as_str()
+            );
+            return None;
+        };
+        diagnostic.fix(url)
     }
 }
 
