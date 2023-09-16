@@ -40,7 +40,14 @@ use crate::parse::parse;
 pub struct ServerState {
     pub diagnostics: HashMap<Url, Vec<Diagnostic>>,
     pub sent_requests: Vec<Request>,
-    pub msg_counter: i32,
+    _msgid_counter: u16,
+}
+
+impl ServerState {
+    fn next_request_id(&mut self) -> RequestId {
+        self._msgid_counter = self._msgid_counter.wrapping_add(1);
+        RequestId::from(self._msgid_counter as i32)
+    }
 }
 
 pub fn service_main() -> Result<(), JournalintError> {
@@ -263,17 +270,14 @@ fn on_workspace_execute_command(
     };
 
     // Request the changes to be executed to the client
-    state.msg_counter += 1;
-    if state.msg_counter < 0 {
-        state.msg_counter = 0;
-    }
-    info!("[S:{}] textDocument/applyEdit", state.msg_counter);
+    let request_id = state.next_request_id();
+    info!("[S:{}] textDocument/applyEdit", request_id);
     let params = ApplyWorkspaceEditParams {
         label: Some(command.title().to_string()),
         edit,
     };
     let request = Request::new(
-        RequestId::from(state.msg_counter),
+        RequestId::from(request_id),
         "workspace/applyEdit".to_string(),
         params,
     );
