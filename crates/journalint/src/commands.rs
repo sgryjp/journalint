@@ -48,7 +48,9 @@ impl Command for RecalculateDuration {
         url: &Url,
         range: &lsp_types::Range,
     ) -> Option<WorkspaceEdit> {
-        find_diagnostic(state, url, range, Code::IncorrectDuration).and_then(|d| d.fix(url))
+        state
+            .find_diagnostic(url, range, Code::IncorrectDuration)
+            .and_then(|d| d.fix(url))
     }
 }
 
@@ -71,7 +73,9 @@ impl Command for ReplaceWithPreviousEndTime {
         url: &Url,
         range: &lsp_types::Range,
     ) -> Option<WorkspaceEdit> {
-        find_diagnostic(state, url, range, Code::IncorrectDuration).and_then(|d| d.fix(url))
+        state
+            .find_diagnostic(url, range, Code::IncorrectDuration)
+            .and_then(|d| d.fix(url))
     }
 }
 
@@ -97,20 +101,6 @@ pub fn get_command_by_name(name: &str) -> Option<Box<dyn Command>> {
         REPLACE_WITH_PREVIOUS_END_TIME => Some(Box::new(ReplaceWithPreviousEndTime {})),
         _ => None,
     }
-}
-
-/// Find a diagnostic at the specified location with appropriate code.
-fn find_diagnostic<'a>(
-    state: &'a ServerState,
-    url: &Url,
-    range: &lsp_types::Range,
-    code: crate::code::Code,
-) -> Option<&'a Diagnostic> {
-    state.diagnostics.get(url).and_then(|diagnostic| {
-        diagnostic
-            .iter()
-            .find(|d| d.is_in_lsp_range(range) && *d.code() == code)
-    })
 }
 
 pub fn fix(diagnostic: &Diagnostic, content: &str, path: &Path) -> Result<(), JournalintError> {

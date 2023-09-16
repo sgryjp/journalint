@@ -51,6 +51,20 @@ impl ServerState {
         self._msgid_counter = self._msgid_counter.wrapping_add(1);
         RequestId::from(self._msgid_counter as i32)
     }
+
+    /// Find a diagnostic at the specified location with appropriate code.
+    pub fn find_diagnostic(
+        &self,
+        url: &Url,
+        range: &lsp_types::Range,
+        code: Code,
+    ) -> Option<&Diagnostic> {
+        self.diagnostics.get(url).and_then(|diagnostic| {
+            diagnostic
+                .iter()
+                .find(|d| d.is_in_lsp_range(range) && *d.code() == code)
+        })
+    }
 }
 
 pub fn service_main() -> Result<(), JournalintError> {
