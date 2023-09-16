@@ -1,8 +1,12 @@
 use core::ops::Range;
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use lsp_types::DiagnosticSeverity;
 use lsp_types::NumberOrString;
+use lsp_types::TextEdit;
+use lsp_types::Url;
+use lsp_types::WorkspaceEdit;
 
 use crate::code::Code;
 use crate::linemap::LineMap;
@@ -60,6 +64,19 @@ impl Diagnostic {
 
     pub fn expectation(&self) -> Option<&String> {
         self.expectation.as_ref()
+    }
+
+    /// Try creating a WorkspaceEdit to fix the problem.
+    pub fn fix(&self, url: &Url) -> Option<WorkspaceEdit> {
+        // Create an edit data in the file to fix the issue
+        let Some(new_text) = self.expectation() else {
+            return None;
+        };
+        let edit = TextEdit::new(self.lsp_range(), new_text.clone());
+
+        // Compose a "workspace edit" from it
+        let edits = HashMap::from([(url.clone(), vec![edit])]);
+        Some(WorkspaceEdit::new(edits))
     }
 
     // --- helper methods ---

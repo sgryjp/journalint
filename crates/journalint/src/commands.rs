@@ -1,8 +1,7 @@
-use std::collections::HashMap;
 use std::fs::write;
 use std::path::Path;
 
-use lsp_types::{TextEdit, Url, WorkspaceEdit};
+use lsp_types::{Url, WorkspaceEdit};
 
 use crate::code::Code;
 use crate::diagnostic::Diagnostic;
@@ -49,10 +48,7 @@ impl Command for RecalculateDuration {
         url: &Url,
         range: &lsp_types::Range,
     ) -> Option<WorkspaceEdit> {
-        let Some(diagnostic) = find_diagnostic(state, url, range, Code::IncorrectDuration) else {
-            return None;
-        };
-        fix_diagnostic(diagnostic, url)
+        find_diagnostic(state, url, range, Code::IncorrectDuration).and_then(|d| d.fix(url))
     }
 }
 
@@ -75,10 +71,7 @@ impl Command for ReplaceWithPreviousEndTime {
         url: &Url,
         range: &lsp_types::Range,
     ) -> Option<WorkspaceEdit> {
-        let Some(diagnostic) = find_diagnostic(state, url, range, Code::TimeJumped) else {
-            return None;
-        };
-        fix_diagnostic(diagnostic, url)
+        find_diagnostic(state, url, range, Code::IncorrectDuration).and_then(|d| d.fix(url))
     }
 }
 
@@ -118,18 +111,6 @@ fn find_diagnostic<'a>(
             .iter()
             .find(|d| d.is_in_lsp_range(range) && *d.code() == code)
     })
-}
-
-fn fix_diagnostic(diagnostic: &Diagnostic, url: &Url) -> Option<WorkspaceEdit> {
-    // Create an edit data in the file to fix the issue
-    let Some(new_text) = diagnostic.expectation() else {
-        return None;
-    };
-    let edit = TextEdit::new(diagnostic.lsp_range(), new_text.clone());
-
-    // Compose a "workspace edit" from it
-    let edits = HashMap::from([(url.clone(), vec![edit])]);
-    Some(WorkspaceEdit::new(edits))
 }
 
 pub fn fix(diagnostic: &Diagnostic, content: &str, path: &Path) -> Result<(), JournalintError> {
