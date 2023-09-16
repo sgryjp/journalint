@@ -29,7 +29,7 @@ use lsp_types::Url;
 use crate::code::Code;
 use crate::commands::get_command_by_name;
 use crate::commands::list_available_code_actions;
-use crate::commands::RECALCULATE_DURATION;
+use crate::commands::ALL_COMMANDS;
 use crate::diagnostic::Diagnostic;
 use crate::errors::JournalintError;
 use crate::linemap::LineMap;
@@ -70,7 +70,10 @@ pub fn service_main() -> Result<(), JournalintError> {
             resolve_provider: Some(false),
         })),
         execute_command_provider: Some(ExecuteCommandOptions {
-            commands: vec![RECALCULATE_DURATION.to_string()],
+            commands: ALL_COMMANDS
+                .iter()
+                .map(|s| s.to_string())
+                .collect::<Vec<String>>(),
             work_done_progress_options: lsp_types::WorkDoneProgressOptions {
                 work_done_progress: Some(false),
             },

@@ -10,6 +10,7 @@ use crate::errors::JournalintError;
 use crate::service::ServerState;
 
 pub const RECALCULATE_DURATION: &str = "journalint.recalculateDuration";
+pub const ALL_COMMANDS: [&str; 1] = [RECALCULATE_DURATION];
 
 pub trait Command {
     fn title(&self) -> &str;
