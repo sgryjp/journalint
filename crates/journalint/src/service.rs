@@ -276,11 +276,7 @@ fn on_workspace_execute_command(
         label: Some(command.title().to_string()),
         edit,
     };
-    let request = Request::new(
-        RequestId::from(request_id),
-        "workspace/applyEdit".to_string(),
-        params,
-    );
+    let request = Request::new(request_id, "workspace/applyEdit".to_string(), params);
     conn.sender.send(Message::Request(request.clone()))?;
 
     // Remember the request until a corresponding response arrives
