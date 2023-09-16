@@ -36,6 +36,9 @@ use crate::linemap::LineMap;
 use crate::lint::lint;
 use crate::parse::parse;
 
+const E_UNKNOWN_COMMAND: i32 = 1;
+const E_INVALID_ARGUMENTS: i32 = 2;
+
 #[derive(Default)]
 pub struct ServerState {
     pub diagnostics: HashMap<Url, Vec<Diagnostic>>,
@@ -242,10 +245,10 @@ fn on_workspace_execute_command(
         let errmsg = format!("Unknown command: {}", params.command.as_str());
         conn.sender.send(Message::Response(Response::new_err(
             msg.id.clone(),
-            999, //TODO:
-            errmsg,
+            E_UNKNOWN_COMMAND,
+            errmsg.clone(),
         )))?;
-        return Err(JournalintError::UnknownCommand(params.command));
+        return Err(JournalintError::UnknownCommand(errmsg));
     };
 
     // Extract command parameters from the message
@@ -256,7 +259,7 @@ fn on_workspace_execute_command(
         );
         conn.sender.send(Message::Response(Response::new_err(
             msg.id.clone(),
-            998, // TODO:
+            E_INVALID_ARGUMENTS,
             errmsg.clone(),
         )))?;
         return Err(JournalintError::UnexpectedArguments(errmsg));
