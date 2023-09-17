@@ -49,7 +49,7 @@ impl Command for RecalculateDuration {
         url: &Url,
         range: &lsp_types::Range,
     ) -> Option<WorkspaceEdit> {
-        let Some(diagnostic) = state.find_diagnostic(url, range, Code::IncorrectDuration) else {
+        let Some(diagnostic) = state.find_diagnostic(url, range, &Code::IncorrectDuration) else {
             warn!(
                 "No corresponding diagnostic found on fixing {}",
                 Code::IncorrectDuration.as_str()
@@ -79,7 +79,7 @@ impl Command for ReplaceWithPreviousEndTime {
         url: &Url,
         range: &lsp_types::Range,
     ) -> Option<WorkspaceEdit> {
-        let Some(diagnostic) = state.find_diagnostic(url, range, Code::TimeJumped) else {
+        let Some(diagnostic) = state.find_diagnostic(url, range, &Code::TimeJumped) else {
             warn!(
                 "No corresponding diagnostic found on fixing {}",
                 Code::TimeJumped.as_str()
@@ -92,6 +92,7 @@ impl Command for ReplaceWithPreviousEndTime {
 
 // -----------------------------------------------------------------------------
 pub fn list_available_code_actions(code: &Code) -> Option<Vec<Box<dyn Command>>> {
+    #[allow(clippy::match_same_arms)]
     match code {
         Code::ParseError => None,
         Code::MismatchedDates => None,

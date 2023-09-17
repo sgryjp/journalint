@@ -43,13 +43,13 @@ const E_INVALID_ARGUMENTS: i32 = 2;
 pub struct ServerState {
     pub diagnostics: HashMap<Url, Vec<Diagnostic>>,
     pub sent_requests: Vec<Request>,
-    _msgid_counter: u16,
+    msgid_counter: u16,
 }
 
 impl ServerState {
     fn next_request_id(&mut self) -> RequestId {
-        self._msgid_counter = self._msgid_counter.wrapping_add(1);
-        RequestId::from(self._msgid_counter as i32)
+        self.msgid_counter = self.msgid_counter.wrapping_add(1);
+        RequestId::from(i32::from(self.msgid_counter))
     }
 
     /// Find a diagnostic at the specified location with appropriate code.
@@ -57,17 +57,17 @@ impl ServerState {
         &self,
         url: &Url,
         range: &lsp_types::Range,
-        code: Code,
+        code: &Code,
     ) -> Option<&Diagnostic> {
         self.diagnostics.get(url).and_then(|diagnostic| {
             diagnostic
                 .iter()
-                .find(|d| d.is_in_lsp_range(range) && *d.code() == code)
+                .find(|d| d.is_in_lsp_range(range) && *d.code() == *code)
         })
     }
 }
 
-pub fn service_main() -> Result<(), JournalintError> {
+pub fn main() -> Result<(), JournalintError> {
     info!("Starting journalint language server...");
 
     // Initialize connection
@@ -86,7 +86,7 @@ pub fn service_main() -> Result<(), JournalintError> {
         execute_command_provider: Some(ExecuteCommandOptions {
             commands: ALL_COMMANDS
                 .iter()
-                .map(|s| s.to_string())
+                .map(ToString::to_string)
                 .collect::<Vec<String>>(),
             work_done_progress_options: lsp_types::WorkDoneProgressOptions {
                 work_done_progress: Some(false),
@@ -99,14 +99,14 @@ pub fn service_main() -> Result<(), JournalintError> {
     let init_params: InitializeParams = serde_json::from_value(init_params)?;
 
     // Run the message loop
-    message_loop(&conn, &init_params)?;
+    message_loop(&conn, &init_params);
     io_threads.join()?;
 
     info!("Shutting down journalint language server.");
     Ok(())
 }
 
-fn message_loop(conn: &Connection, _init_params: &InitializeParams) -> Result<(), JournalintError> {
+fn message_loop(conn: &Connection, _init_params: &InitializeParams) {
     let mut state = ServerState::default();
 
     // Receive messages until the connection was closed
@@ -170,7 +170,6 @@ fn message_loop(conn: &Connection, _init_params: &InitializeParams) -> Result<()
             }
         }
     }
-    Ok(())
 }
 
 fn on_text_document_did_open(
@@ -197,8 +196,7 @@ fn on_text_document_did_change(
     let content = params
         .content_changes
         .last()
-        .map(|e| e.text.as_str())
-        .unwrap_or("");
+        .map_or("", |e| e.text.as_str());
     let version = Some(params.text_document.version);
     let diagnostics = lint_and_publish_diagnostics(conn, &uri, content, version)?;
     state.diagnostics.insert(uri, diagnostics);
@@ -215,7 +213,7 @@ fn on_text_document_code_action(
     let position = params.range;
     let diagnostics = &params.context.diagnostics;
     let mut all_commands: Vec<Command> = Vec::new();
-    for d in diagnostics.iter() {
+    for d in diagnostics {
         // Simply ignore diagnostics from tools other than journalint
         // (Every code of journalint is a string which must be parsable into Code)
         let code = &d.code;
@@ -312,11 +310,11 @@ fn lint_and_publish_diagnostics(
 ) -> Result<Vec<Diagnostic>, JournalintError> {
     // Extract filename in the given URL
     let Some(segments) = uri.path_segments() else {
-        let msg = format!("failed to split into segments: {}", uri);
+        let msg = format!("failed to split into segments: {uri}");
         return Err(JournalintError::InvalidUrl(msg));
     };
     let Some(filename) = segments.into_iter().last() else {
-        let msg = format!("failed to extract last segment: {}", uri);
+        let msg = format!("failed to extract last segment: {uri}");
         return Err(JournalintError::InvalidUrl(msg));
     };
 
@@ -354,7 +352,7 @@ pub fn parse_and_lint(content: &str, source: Option<&str>) -> Vec<Diagnostic> {
             Diagnostic::new_warning(
                 e.span(),
                 Code::ParseError,
-                format!("Parse error: {}", e),
+                format!("Parse error: {e}"),
                 None,
                 line_map.clone(),
             )

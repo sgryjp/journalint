@@ -76,10 +76,10 @@ impl LooseTime {
         LooseTime(value.into())
     }
 
-    pub fn to_datetime(&self, date: &NaiveDate) -> Result<DateTime<Utc>, JournalintError> {
+    pub fn to_datetime(&self, date: NaiveDate) -> Result<DateTime<Utc>, JournalintError> {
         match NaiveTime::parse_from_str(self.0.as_str(), "%H:%M") {
             Ok(t) => {
-                let datetime = NaiveDateTime::new(*date, t);
+                let datetime = NaiveDateTime::new(date, t);
                 Ok(DateTime::from_utc(datetime, Utc))
             }
             Err(e) => {
@@ -111,10 +111,9 @@ impl LooseTime {
                 }
                 let num_days = h / 24;
                 let time = NaiveTime::from_hms_opt(h - num_days * 24, m, 0).unwrap();
-                let Some(date) = date.checked_add_days(Days::new(num_days as u64)) else {
+                let Some(date) = date.checked_add_days(Days::new(u64::from(num_days))) else {
                     return Err(JournalintError::ParseError(format!(
-                        "failed to calculate one date ahead of '{}'",
-                        date
+                        "failed to calculate one date ahead of '{date}'"
                     )));
                 };
                 let datetime = NaiveDateTime::new(date, time);
@@ -221,11 +220,11 @@ fn front_matter() -> impl Parser<char, Expr, Error = Simple<char>> {
 }
 
 fn _time() -> impl Parser<char, String, Error = Simple<char>> {
-    filter(|c: &char| c.is_ascii_digit())
+    filter(char::is_ascii_digit)
         .repeated()
         .at_least(1)
         .chain(just(':'))
-        .chain::<char, _, _>(filter(|c: &char| c.is_ascii_digit()).repeated().at_least(1))
+        .chain::<char, _, _>(filter(char::is_ascii_digit).repeated().at_least(1))
         .collect::<String>()
 }
 
@@ -357,7 +356,7 @@ mod tests {
         let date = NaiveDate::from_ymd_opt(year, month, day).unwrap();
 
         assert!(matches!(
-            LooseTime::new(input).to_datetime(&date),
+            LooseTime::new(input).to_datetime(date),
             Err(JournalintError::ParseError(..))
         ));
     }
@@ -371,7 +370,7 @@ mod tests {
 
         assert_eq!(
             LooseTime::new(input)
-                .to_datetime(&date)
+                .to_datetime(date)
                 .map(|d| d.fixed_offset())
                 .ok(),
             DateTime::parse_from_rfc3339(want).ok()

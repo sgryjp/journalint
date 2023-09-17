@@ -22,8 +22,6 @@ use diagnostic::Diagnostic;
 use env_logger::TimestampPrecision;
 use log::debug;
 use log::error;
-use service::parse_and_lint;
-use service::service_main;
 
 use crate::arg::Arguments;
 use crate::errors::JournalintError;
@@ -40,7 +38,7 @@ fn main() -> Result<(), JournalintError> {
 
     // Start the service or the CLI
     if args.stdio {
-        service_main()
+        service::main()
     } else {
         let rc = cli_main(args);
         std::process::exit(rc);
@@ -64,13 +62,13 @@ fn cli_main(args: Arguments) -> exitcode::ExitCode {
     };
 
     // Parse and lint it, then fix or report them
-    let mut diagnostics = parse_and_lint(&content, Some(&filename));
+    let mut diagnostics = service::parse_and_lint(&content, Some(&filename));
     if args.fix {
         // Sort diagnostics in reverse order
         diagnostics.sort_by(|a, b| b.span().start.cmp(&a.span().start));
         diagnostics.iter().map(Box::new).for_each(|d| {
             if let Err(e) = commands::fix(*d, content.as_str(), path.as_path()) {
-                debug!("Autofix failed: {}", e)
+                debug!("Autofix failed: {e}");
             }
         });
     } else {
@@ -119,7 +117,7 @@ mod snapshot_tests {
             }
             let filename = path.to_string_lossy().to_string();
             let content = read_to_string(path).unwrap();
-            let diagnostics = parse_and_lint(&content, Some(&filename))
+            let diagnostics = service::parse_and_lint(&content, Some(&filename))
                 .iter()
                 .map(|d| d.clone().into())
                 .collect::<Vec<lsp_types::Diagnostic>>();

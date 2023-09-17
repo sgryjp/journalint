@@ -15,8 +15,8 @@ static SOURCE_NAME: &str = "journalint";
 
 /// Internal diagnostic data structure.
 ///
-/// This is basically the same as lsp_types::Diagnostic except that this has a field
-/// `span` of type Range<usize>, not a field `range` of type lsp_types::Range.
+/// This is basically the same as `lsp_types::Diagnostic` except that this has a field
+/// `span` of type `Range<usize>`, not a field `range` of type `lsp_types::Range`.
 #[derive(Clone, Debug)]
 pub struct Diagnostic {
     span: Range<usize>,
@@ -66,7 +66,7 @@ impl Diagnostic {
         self.expectation.as_ref()
     }
 
-    /// Try creating a WorkspaceEdit to fix the problem.
+    /// Try creating a `WorkspaceEdit` to fix the problem.
     pub fn fix(&self, url: &Url) -> Option<WorkspaceEdit> {
         // Create an edit data in the file to fix the issue
         let Some(new_text) = self.expectation() else {
@@ -88,8 +88,8 @@ impl Diagnostic {
     }
 
     pub fn is_in_lsp_range(&self, range: &lsp_types::Range) -> bool {
-        let start = self.line_map.offset_from_position(&range.start);
-        let end = self.line_map.offset_from_position(&range.end);
+        let start = self.line_map.offset_from_position(range.start);
+        let end = self.line_map.offset_from_position(range.end);
         self.span.contains(&start) && self.span.contains(&end)
     }
 }
