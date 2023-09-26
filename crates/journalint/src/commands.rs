@@ -11,7 +11,12 @@ use crate::service::ServerState;
 
 pub const RECALCULATE_DURATION: &str = "journalint.recalculateDuration";
 pub const REPLACE_WITH_PREVIOUS_END_TIME: &str = "journalint.replaceWithPreviousEndTime";
-pub const ALL_COMMANDS: [&str; 2] = [RECALCULATE_DURATION, REPLACE_WITH_PREVIOUS_END_TIME];
+pub const USE_DATE_IN_FILENAME: &str = "journalint.useDateInFilename";
+pub const ALL_COMMANDS: [&str; 3] = [
+    RECALCULATE_DURATION,
+    REPLACE_WITH_PREVIOUS_END_TIME,
+    USE_DATE_IN_FILENAME,
+];
 
 pub trait Command {
     fn title(&self) -> &str;
@@ -91,11 +96,41 @@ impl Command for ReplaceWithPreviousEndTime {
 }
 
 // -----------------------------------------------------------------------------
+#[derive(Debug)]
+pub struct UseDateInFilename {}
+
+impl Command for UseDateInFilename {
+    fn title(&self) -> &str {
+        "Use date embedded in the filename"
+    }
+
+    fn command(&self) -> &str {
+        USE_DATE_IN_FILENAME
+    }
+
+    fn execute(
+        &self,
+        state: &ServerState,
+        url: &Url,
+        range: &lsp_types::Range,
+    ) -> Option<WorkspaceEdit> {
+        let Some(diagnostic) = state.find_diagnostic(url, range, &Code::MismatchedDates) else {
+            warn!(
+                "No corresponding diagnostic found on fixing {}",
+                Code::MismatchedDates.as_str()
+            );
+            return None;
+        };
+        diagnostic.fix(url)
+    }
+}
+
+// -----------------------------------------------------------------------------
 pub fn list_available_code_actions(code: &Code) -> Option<Vec<Box<dyn Command>>> {
     #[allow(clippy::match_same_arms)]
     match code {
         Code::ParseError => None,
-        Code::MismatchedDates => None,
+        Code::MismatchedDates => Some(vec![Box::new(UseDateInFilename {})]),
         Code::InvalidStartTime => None,
         Code::InvalidEndTime => None,
         Code::MissingDate => None,
@@ -111,6 +146,7 @@ pub fn get_command_by_name(name: &str) -> Option<Box<dyn Command>> {
     match name {
         RECALCULATE_DURATION => Some(Box::new(RecalculateDuration {})),
         REPLACE_WITH_PREVIOUS_END_TIME => Some(Box::new(ReplaceWithPreviousEndTime {})),
+        USE_DATE_IN_FILENAME => Some(Box::new(UseDateInFilename {})),
         _ => None,
     }
 }
