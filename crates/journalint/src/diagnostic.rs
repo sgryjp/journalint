@@ -90,7 +90,7 @@ impl Diagnostic {
     pub fn is_in_lsp_range(&self, range: &lsp_types::Range) -> bool {
         let start = self.line_map.offset_from_position(range.start);
         let end = self.line_map.offset_from_position(range.end);
-        self.span.contains(&start) && self.span.contains(&end)
+        self.span.start <= start && end <= self.span.end
     }
 }
 
