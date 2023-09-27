@@ -61,6 +61,7 @@ build-vsix-windows:
     node_target: "win32-x64"
     rust_target: "x86_64-pc-windows-msvc"
   script:
+    - Import-Module $env:ChocolateyInstall\helpers\chocolateyProfile.psm1
     - choco install nodejs-lts -y
     - refreshenv
     - "'node', 'npm' | Get-Command"
