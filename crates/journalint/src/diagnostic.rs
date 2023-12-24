@@ -24,6 +24,7 @@ pub struct Diagnostic {
     severity: DiagnosticSeverity,
     message: String,
     expectation: Option<String>,
+    related_informations: Option<Vec<DiagnosticRelatedInformation>>,
     line_map: Arc<LineMap>,
 }
 
@@ -33,6 +34,7 @@ impl Diagnostic {
         code: Code,
         message: String,
         expectation: Option<String>,
+        related_informations: Option<Vec<DiagnosticRelatedInformation>>,
         line_mapper: Arc<LineMap>,
     ) -> Self {
         let severity = DiagnosticSeverity::WARNING;
@@ -42,6 +44,7 @@ impl Diagnostic {
             severity,
             message,
             expectation,
+            related_informations,
             line_map: line_mapper,
         }
     }
@@ -107,8 +110,43 @@ impl From<Diagnostic> for lsp_types::Diagnostic {
             Some(NumberOrString::String(code)),
             Some(SOURCE_NAME.to_string()),
             value.message().to_owned(),
-            None,
+            value
+                .related_informations
+                .map(|v| v.iter().map(|ri| ri.clone().into()).collect()),
             None,
         )
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct DiagnosticRelatedInformation {
+    uri: Url,
+    range: Range<usize>,
+    message: String,
+    line_map: Arc<LineMap>,
+}
+
+impl DiagnosticRelatedInformation {
+    pub fn new(uri: Url, range: Range<usize>, message: String, line_map: Arc<LineMap>) -> Self {
+        Self {
+            uri,
+            range,
+            message,
+            line_map,
+        }
+    }
+}
+
+impl From<DiagnosticRelatedInformation> for lsp_types::DiagnosticRelatedInformation {
+    fn from(value: DiagnosticRelatedInformation) -> Self {
+        let start = value.line_map.position_from_offset(value.range.start);
+        let end = value.line_map.position_from_offset(value.range.end);
+        lsp_types::DiagnosticRelatedInformation {
+            location: lsp_types::Location {
+                uri: value.uri,
+                range: lsp_types::Range { start, end },
+            },
+            message: value.message,
+        }
     }
 }

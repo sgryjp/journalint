@@ -3,11 +3,11 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
-use chrono::{DateTime, NaiveDate, Utc};
+use chrono::{DateTime, NaiveDate, Timelike, Utc};
 use lsp_types::Url;
 
 use crate::code::Code;
-use crate::diagnostic::Diagnostic;
+use crate::diagnostic::{Diagnostic, DiagnosticRelatedInformation};
 use crate::linemap::LineMap;
 use crate::parse::{Expr, LooseTime};
 
@@ -65,6 +65,7 @@ impl<'a> Linter<'a> {
                             expectation.as_str()
                         ),
                         Some(expectation),
+                        None,
                         self.line_map.clone(),
                     ));
                 }
@@ -93,6 +94,7 @@ impl<'a> Linter<'a> {
                         Code::InvalidStartTime,
                         format!("Invalid start time: {e}"),
                         None,
+                        None,
                         self.line_map.clone(),
                     ));
                     None
@@ -110,6 +112,7 @@ impl<'a> Linter<'a> {
                         Code::InvalidEndTime,
                         format!("Invalid end time: {e}"),
                         None,
+                        None,
                         self.line_map.clone(),
                     ));
                     None
@@ -124,6 +127,7 @@ impl<'a> Linter<'a> {
                 Code::MissingDate,
                 "Field 'date' is missing".to_string(),
                 None,
+                None,
                 self.line_map.clone(),
             ));
         }
@@ -133,6 +137,7 @@ impl<'a> Linter<'a> {
                 Code::MissingStartTime,
                 "Field 'start' is missing".to_string(),
                 None,
+                None,
                 self.line_map.clone(),
             ));
         }
@@ -141,6 +146,7 @@ impl<'a> Linter<'a> {
                 span.clone(),
                 Code::MissingEndTime,
                 "Field 'end' is missing".to_string(),
+                None,
                 None,
                 self.line_map.clone(),
             ));
@@ -167,14 +173,24 @@ impl<'a> Linter<'a> {
                     self.entry_start = Some((start_dt, span.clone()));
 
                     // Check if start time matches the end of the previous entry
-                    if let Some((prev_end_dt, _)) = self.prev_entry_end {
-                        if start_dt != prev_end_dt {
+                    if let Some((prev_end_dt, prev_end_range)) = self.prev_entry_end.as_ref() {
+                        if start_dt != *prev_end_dt {
                             let expectation = prev_end_dt.format("%H:%M").to_string();
                             self.diagnostics.push(Diagnostic::new_warning(
                                 span.clone(),
                                 Code::TimeJumped,
-                                format!("Gap found: previous entry's end time was {expectation}"),
+                                format!("The start time does not match the previous entry's end time, which is {expectation}"),
                                 Some(expectation),
+                                Some(vec![DiagnosticRelatedInformation::new(
+                                    self.source.clone(),
+                                    prev_end_range.clone(),
+                                    format!(
+                                        "Previous entry's end time is {:02}:{:02}",
+                                        prev_end_dt.hour(),
+                                        prev_end_dt.minute()
+                                    ),
+                                    self.line_map.clone(),
+                                )]),
                                 self.line_map.clone(),
                             ));
                         }
@@ -186,6 +202,7 @@ impl<'a> Linter<'a> {
                         span.clone(),
                         Code::InvalidStartTime,
                         format!("Invalid start time: {e}"),
+                        None,
                         None,
                         self.line_map.clone(),
                     ));
@@ -205,6 +222,7 @@ impl<'a> Linter<'a> {
                         span.clone(),
                         Code::InvalidEndTime,
                         format!("Invalid end time: {e}"),
+                        None,
                         None,
                         self.line_map.clone(),
                     ));
@@ -226,6 +244,7 @@ impl<'a> Linter<'a> {
                         start.format("%H:%M"),
                     ),
                     None,
+                    None,
                     self.line_map.clone(),
                 ));
                 return;
@@ -239,6 +258,7 @@ impl<'a> Linter<'a> {
                     Code::IncorrectDuration,
                     format!("Incorrect duration: expected {expectation}"),
                     Some(expectation),
+                    None,
                     self.line_map.clone(),
                 ));
             }

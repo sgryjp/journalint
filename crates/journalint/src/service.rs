@@ -344,6 +344,7 @@ pub fn parse_and_lint(content: &str, url: &Url) -> Vec<Diagnostic> {
                 Code::ParseError,
                 format!("Parse error: {e}"),
                 None,
+                None,
                 line_map.clone(),
             )
         })
