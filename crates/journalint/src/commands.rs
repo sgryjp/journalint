@@ -127,7 +127,6 @@ impl Command for UseDateInFilename {
 
 // -----------------------------------------------------------------------------
 pub fn list_available_code_actions(code: &Code) -> Option<Vec<Box<dyn Command>>> {
-    #[allow(clippy::match_same_arms)]
     match code {
         Code::ParseError => None,
         Code::MismatchedDates => Some(vec![Box::new(UseDateInFilename {})]),

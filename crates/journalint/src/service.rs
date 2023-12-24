@@ -304,26 +304,16 @@ fn on_workspace_execute_command(
 
 fn lint_and_publish_diagnostics(
     conn: &Connection,
-    uri: &Url,
+    url: &Url,
     content: &str,
     version: Option<i32>,
 ) -> Result<Vec<Diagnostic>, JournalintError> {
-    // Extract filename in the given URL
-    let Some(segments) = uri.path_segments() else {
-        let msg = format!("failed to split into segments: {uri}");
-        return Err(JournalintError::InvalidUrl(msg));
-    };
-    let Some(filename) = segments.into_iter().last() else {
-        let msg = format!("failed to extract last segment: {uri}");
-        return Err(JournalintError::InvalidUrl(msg));
-    };
-
     // Parse and lint the content
-    let diagnostics = parse_and_lint(content, Some(filename));
+    let diagnostics = parse_and_lint(content, url);
 
     // Publish them to the client
     let params = PublishDiagnosticsParams::new(
-        uri.clone(),
+        url.clone(),
         diagnostics
             .iter()
             .map(|d| d.clone().into())
@@ -341,7 +331,7 @@ fn lint_and_publish_diagnostics(
 }
 
 // TODO: Let the CLI start a service and communicate with it so that it does not need to to call this function
-pub fn parse_and_lint(content: &str, source: Option<&str>) -> Vec<Diagnostic> {
+pub fn parse_and_lint(content: &str, url: &Url) -> Vec<Diagnostic> {
     let line_map = Arc::new(LineMap::new(content));
 
     // Parse
@@ -354,6 +344,7 @@ pub fn parse_and_lint(content: &str, source: Option<&str>) -> Vec<Diagnostic> {
                 Code::ParseError,
                 format!("Parse error: {e}"),
                 None,
+                None,
                 line_map.clone(),
             )
         })
@@ -361,7 +352,7 @@ pub fn parse_and_lint(content: &str, source: Option<&str>) -> Vec<Diagnostic> {
 
     // Lint
     if let Some(journal) = journal {
-        diagnostics.append(&mut lint(&journal, source, line_map));
+        diagnostics.append(&mut lint(&journal, url, line_map));
     }
 
     diagnostics

@@ -3,16 +3,16 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
-use chrono::{DateTime, NaiveDate, Utc};
+use chrono::{DateTime, NaiveDate, Timelike, Utc};
+use lsp_types::Url;
 
 use crate::code::Code;
-use crate::diagnostic::Diagnostic;
+use crate::diagnostic::{Diagnostic, DiagnosticRelatedInformation};
 use crate::linemap::LineMap;
 use crate::parse::{Expr, LooseTime};
 
-#[derive(Default)]
 pub struct Linter<'a> {
-    source: Option<&'a str>,
+    source: &'a Url,
     diagnostics: Vec<Diagnostic>,
     line_map: Arc<LineMap>,
 
@@ -28,11 +28,21 @@ pub struct Linter<'a> {
 }
 
 impl<'a> Linter<'a> {
-    pub fn new(source: Option<&'a str>, line_map: Arc<LineMap>) -> Linter {
+    pub fn new(source: &Url, line_map: Arc<LineMap>) -> Linter {
         Linter {
             source,
+            diagnostics: vec![],
             line_map,
-            ..Default::default()
+
+            fm_date: None,
+            fm_start: None,
+            fm_start_datetime: None,
+            fm_end: None,
+            fm_end_datetime: None,
+
+            entry_start: None,
+            entry_end: None,
+            prev_entry_end: None,
         }
     }
 
@@ -40,15 +50,11 @@ impl<'a> Linter<'a> {
         self.fm_date = Some((date, span.clone()));
 
         // Check the date value matches the one in the file name
-        if let Some(source) = &self.source {
-            let source = PathBuf::from(source);
-            let Some(date_in_filename) = source.file_stem() else {
-                return;
-            };
-            let Some(date_in_filename) = date_in_filename.to_str() else {
-                return;
-            };
-            if let Ok(date_in_filename) = NaiveDate::parse_from_str(date_in_filename, "%Y-%m-%d") {
+        if let Some(stem) = PathBuf::from(self.source.path())
+            .file_stem()
+            .and_then(|s| s.to_str())
+        {
+            if let Ok(date_in_filename) = NaiveDate::parse_from_str(stem, "%Y-%m-%d") {
                 if date_in_filename != date {
                     let expectation = date_in_filename.format("%Y-%m-%d").to_string();
                     self.diagnostics.push(Diagnostic::new_warning(
@@ -59,6 +65,7 @@ impl<'a> Linter<'a> {
                             expectation.as_str()
                         ),
                         Some(expectation),
+                        None,
                         self.line_map.clone(),
                     ));
                 }
@@ -87,6 +94,7 @@ impl<'a> Linter<'a> {
                         Code::InvalidStartTime,
                         format!("Invalid start time: {e}"),
                         None,
+                        None,
                         self.line_map.clone(),
                     ));
                     None
@@ -104,6 +112,7 @@ impl<'a> Linter<'a> {
                         Code::InvalidEndTime,
                         format!("Invalid end time: {e}"),
                         None,
+                        None,
                         self.line_map.clone(),
                     ));
                     None
@@ -118,6 +127,7 @@ impl<'a> Linter<'a> {
                 Code::MissingDate,
                 "Field 'date' is missing".to_string(),
                 None,
+                None,
                 self.line_map.clone(),
             ));
         }
@@ -127,6 +137,7 @@ impl<'a> Linter<'a> {
                 Code::MissingStartTime,
                 "Field 'start' is missing".to_string(),
                 None,
+                None,
                 self.line_map.clone(),
             ));
         }
@@ -135,6 +146,7 @@ impl<'a> Linter<'a> {
                 span.clone(),
                 Code::MissingEndTime,
                 "Field 'end' is missing".to_string(),
+                None,
                 None,
                 self.line_map.clone(),
             ));
@@ -161,14 +173,24 @@ impl<'a> Linter<'a> {
                     self.entry_start = Some((start_dt, span.clone()));
 
                     // Check if start time matches the end of the previous entry
-                    if let Some((prev_end_dt, _)) = self.prev_entry_end {
-                        if start_dt != prev_end_dt {
+                    if let Some((prev_end_dt, prev_end_range)) = self.prev_entry_end.as_ref() {
+                        if start_dt != *prev_end_dt {
                             let expectation = prev_end_dt.format("%H:%M").to_string();
                             self.diagnostics.push(Diagnostic::new_warning(
                                 span.clone(),
                                 Code::TimeJumped,
-                                format!("Gap found: previous entry's end time was {expectation}"),
+                                format!("The start time does not match the previous entry's end time, which is {expectation}"),
                                 Some(expectation),
+                                Some(vec![DiagnosticRelatedInformation::new(
+                                    self.source.clone(),
+                                    prev_end_range.clone(),
+                                    format!(
+                                        "Previous entry's end time is {:02}:{:02}",
+                                        prev_end_dt.hour(),
+                                        prev_end_dt.minute()
+                                    ),
+                                    self.line_map.clone(),
+                                )]),
                                 self.line_map.clone(),
                             ));
                         }
@@ -180,6 +202,7 @@ impl<'a> Linter<'a> {
                         span.clone(),
                         Code::InvalidStartTime,
                         format!("Invalid start time: {e}"),
+                        None,
                         None,
                         self.line_map.clone(),
                     ));
@@ -199,6 +222,7 @@ impl<'a> Linter<'a> {
                         span.clone(),
                         Code::InvalidEndTime,
                         format!("Invalid end time: {e}"),
+                        None,
                         None,
                         self.line_map.clone(),
                     ));
@@ -220,6 +244,7 @@ impl<'a> Linter<'a> {
                         start.format("%H:%M"),
                     ),
                     None,
+                    None,
                     self.line_map.clone(),
                 ));
                 return;
@@ -233,6 +258,7 @@ impl<'a> Linter<'a> {
                     Code::IncorrectDuration,
                     format!("Incorrect duration: expected {expectation}"),
                     Some(expectation),
+                    None,
                     self.line_map.clone(),
                 ));
             }
@@ -305,8 +331,8 @@ fn walk(expr: &Expr, visitor: &mut Linter) {
     }
 }
 
-pub fn lint(journal: &Expr, source: Option<&str>, line_map: Arc<LineMap>) -> Vec<Diagnostic> {
-    let mut visitor = Linter::new(source, line_map);
+pub fn lint(journal: &Expr, url: &Url, line_map: Arc<LineMap>) -> Vec<Diagnostic> {
+    let mut visitor = Linter::new(url, line_map);
     walk(journal, &mut visitor);
     visitor.diagnostics
 }

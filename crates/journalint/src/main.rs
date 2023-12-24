@@ -22,6 +22,7 @@ use diagnostic::Diagnostic;
 use env_logger::TimestampPrecision;
 use log::debug;
 use log::error;
+use lsp_types::Url;
 
 use crate::arg::Arguments;
 use crate::errors::JournalintError;
@@ -62,7 +63,11 @@ fn cli_main(args: Arguments) -> exitcode::ExitCode {
     };
 
     // Parse and lint it, then fix or report them
-    let mut diagnostics = service::parse_and_lint(&content, Some(&filename));
+    let Ok(url) = Url::from_file_path(path.clone()) else {
+        error!("Failed to compose URL from path: {:?}", path.clone());
+        return 1;
+    };
+    let mut diagnostics = service::parse_and_lint(&content, &url);
     if args.fix {
         // Sort diagnostics in reverse order
         diagnostics.sort_by(|a, b| b.span().start.cmp(&a.span().start));
@@ -109,15 +114,18 @@ mod snapshot_tests {
     #[test]
     fn test() {
         for entry in fs::read_dir("src/snapshots").unwrap() {
-            let entry = entry.unwrap();
-            let path_buf = entry.path();
-            let path = path_buf.as_path();
+            let path = entry.and_then(|ent| ent.path().canonicalize()).unwrap();
+            let path = path.as_path();
             if path.extension() != Some(OsStr::new("md")) {
                 continue;
             }
-            let filename = path.to_string_lossy().to_string();
-            let content = read_to_string(path).unwrap();
-            let diagnostics = service::parse_and_lint(&content, Some(&filename))
+            let url = &Url::from_file_path(path)
+                .expect(&format!("failed to compose a URL from path: {:?}", path));
+            let content = match read_to_string(path) {
+                Ok(content) => content,
+                Err(err) => panic!("failed to read a file: {{path: {:?}, err:{}}}", path, err),
+            };
+            let diagnostics = service::parse_and_lint(&content, &url)
                 .iter()
                 .map(|d| d.clone().into())
                 .collect::<Vec<lsp_types::Diagnostic>>();
