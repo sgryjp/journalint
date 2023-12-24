@@ -4,15 +4,15 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use chrono::{DateTime, NaiveDate, Utc};
+use lsp_types::Url;
 
 use crate::code::Code;
 use crate::diagnostic::Diagnostic;
 use crate::linemap::LineMap;
 use crate::parse::{Expr, LooseTime};
 
-#[derive(Default)]
 pub struct Linter<'a> {
-    source: Option<&'a str>,
+    source: &'a Url,
     diagnostics: Vec<Diagnostic>,
     line_map: Arc<LineMap>,
 
@@ -28,11 +28,21 @@ pub struct Linter<'a> {
 }
 
 impl<'a> Linter<'a> {
-    pub fn new(source: Option<&'a str>, line_map: Arc<LineMap>) -> Linter {
+    pub fn new(source: &Url, line_map: Arc<LineMap>) -> Linter {
         Linter {
             source,
+            diagnostics: vec![],
             line_map,
-            ..Default::default()
+
+            fm_date: None,
+            fm_start: None,
+            fm_start_datetime: None,
+            fm_end: None,
+            fm_end_datetime: None,
+
+            entry_start: None,
+            entry_end: None,
+            prev_entry_end: None,
         }
     }
 
@@ -40,15 +50,11 @@ impl<'a> Linter<'a> {
         self.fm_date = Some((date, span.clone()));
 
         // Check the date value matches the one in the file name
-        if let Some(source) = &self.source {
-            let source = PathBuf::from(source);
-            let Some(date_in_filename) = source.file_stem() else {
-                return;
-            };
-            let Some(date_in_filename) = date_in_filename.to_str() else {
-                return;
-            };
-            if let Ok(date_in_filename) = NaiveDate::parse_from_str(date_in_filename, "%Y-%m-%d") {
+        if let Some(stem) = PathBuf::from(self.source.path())
+            .file_stem()
+            .and_then(|s| s.to_str())
+        {
+            if let Ok(date_in_filename) = NaiveDate::parse_from_str(stem, "%Y-%m-%d") {
                 if date_in_filename != date {
                     let expectation = date_in_filename.format("%Y-%m-%d").to_string();
                     self.diagnostics.push(Diagnostic::new_warning(
@@ -305,8 +311,8 @@ fn walk(expr: &Expr, visitor: &mut Linter) {
     }
 }
 
-pub fn lint(journal: &Expr, source: Option<&str>, line_map: Arc<LineMap>) -> Vec<Diagnostic> {
-    let mut visitor = Linter::new(source, line_map);
+pub fn lint(journal: &Expr, url: &Url, line_map: Arc<LineMap>) -> Vec<Diagnostic> {
+    let mut visitor = Linter::new(url, line_map);
     walk(journal, &mut visitor);
     visitor.diagnostics
 }
