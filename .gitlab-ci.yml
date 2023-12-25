@@ -4,15 +4,25 @@
     - windows-1809
 
 stages:
+  - test
   - build_crates
   - build_vsix
-  - test
 
 default:
   artifacts:
     untracked: false
     when: on_success
     expire_in: 30 days
+
+# -----------------------------------------------------------------------------
+
+test-crates:
+  stage: test
+  image: rust:latest
+  script:
+    - cargo test
+
+# -----------------------------------------------------------------------------
 
 build-crates-linux:
   stage: build_crates
@@ -70,9 +80,3 @@ build-vsix-windows:
   artifacts:
     paths:
       - "tools/journalint-vscode/*.vsix"
-
-test-crates:
-  stage: test
-  image: rust:latest
-  script:
-    - cargo test
