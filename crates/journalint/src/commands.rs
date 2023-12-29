@@ -130,9 +130,9 @@ pub fn list_available_code_actions(code: &Code) -> Option<Vec<Box<dyn Command>>>
     match code {
         Code::ParseError => None,
         Code::MismatchedDates => Some(vec![Box::new(UseDateInFilename {})]),
-        Code::InvalidStartTime => None,
+        Code::InvalidStartTime => None, // TODO: Add a fix that replaces the value with the current time
         Code::InvalidEndTime => None,
-        Code::MissingDate => None,
+        Code::MissingDate => None, // TODO: Add a fix that inserts date field with the current day
         Code::MissingStartTime => None,
         Code::MissingEndTime => None,
         Code::TimeJumped => Some(vec![Box::new(ReplaceWithPreviousEndTime {})]),
