@@ -16,6 +16,7 @@ use lsp_types::CodeActionOptions;
 use lsp_types::CodeActionProviderCapability;
 use lsp_types::Command;
 use lsp_types::DidChangeTextDocumentParams;
+use lsp_types::DidCloseTextDocumentParams;
 use lsp_types::DidOpenTextDocumentParams;
 use lsp_types::ExecuteCommandOptions;
 use lsp_types::InitializeParams;
@@ -124,6 +125,11 @@ fn message_loop(conn: &Connection, _init_params: &InitializeParams) {
                     if let Err(e) = on_text_document_did_change(&mut state, conn, msg) {
                         error!("{}", e);
                     }
+                } else if msg.method == "textDocument/didClose" {
+                    // User closed a document. Clear diagnostics for the document.
+                    if let Err(e) = on_text_document_did_close(&mut state, conn, msg) {
+                        error!("{}", e);
+                    }
                 }
             }
 
@@ -200,6 +206,28 @@ fn on_text_document_did_change(
     let version = Some(params.text_document.version);
     let diagnostics = lint_and_publish_diagnostics(conn, &uri, content, version)?;
     state.diagnostics.insert(uri, diagnostics);
+    Ok(())
+}
+
+fn on_text_document_did_close(
+    state: &mut ServerState,
+    conn: &Connection,
+    msg: lsp_server::Notification,
+) -> Result<(), JournalintError> {
+    let params: DidCloseTextDocumentParams = serde_json::from_value(msg.params)?;
+    let url = params.text_document.uri;
+
+    // Notify client to remove the diaggnostics for the document
+    let params = PublishDiagnosticsParams::new(url.clone(), vec![], None);
+    let params = serde_json::to_value(params)?;
+    conn.sender
+        .send(Message::Notification(lsp_server::Notification {
+            method: "textDocument/publishDiagnostics".to_string(),
+            params,
+        }))?;
+
+    // Remove them from the server state
+    let _ = state.diagnostics.remove(&url);
     Ok(())
 }
 
