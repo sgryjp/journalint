@@ -28,9 +28,8 @@ use lsp_types::TextDocumentSyncKind;
 use lsp_types::Url;
 
 use crate::code::Code;
-use crate::commands::get_command_by_name;
-use crate::commands::list_available_code_actions;
-use crate::commands::ALL_COMMANDS;
+use crate::commands::Command as _;
+use crate::commands::ALL_AUTOFIX_COMMANDS;
 use crate::diagnostic::Diagnostic;
 use crate::errors::JournalintError;
 use crate::linemap::LineMap;
@@ -85,9 +84,9 @@ pub fn main() -> Result<(), JournalintError> {
             resolve_provider: Some(false),
         })),
         execute_command_provider: Some(ExecuteCommandOptions {
-            commands: ALL_COMMANDS
+            commands: ALL_AUTOFIX_COMMANDS
                 .iter()
-                .map(ToString::to_string)
+                .map(|cmd| cmd.command().to_string())
                 .collect::<Vec<String>>(),
             work_done_progress_options: lsp_types::WorkDoneProgressOptions {
                 work_done_progress: Some(false),
@@ -252,14 +251,14 @@ fn on_text_document_code_action(
             continue;
         };
 
-        // List up all available code actions for the code
-        let mut commands: Vec<Command> = list_available_code_actions(&code)
-            .unwrap_or_default()
+        // List up all available code actions (auto-fix only as of now) for the code
+        let mut commands: Vec<Command> = ALL_AUTOFIX_COMMANDS
             .iter()
-            .map(|command| {
-                Command::new(
-                    command.title().to_string(),   // Title string presented to users
-                    command.command().to_string(), // List of commands (contribution points)
+            .filter(|cmd| cmd.fixable_codes() == code)
+            .map(|cmd| {
+                lsp_types::Command::new(
+                    cmd.title().to_string(),
+                    cmd.command().to_string(),
                     Some(vec![
                         serde_json::to_value(uri).unwrap(),
                         serde_json::to_value(position).unwrap(),
@@ -284,7 +283,10 @@ fn on_workspace_execute_command(
     let params: lsp_types::ExecuteCommandParams = serde_json::from_value(msg.params)?;
 
     // Dispatch the requested command
-    let Some(command) = get_command_by_name(&params.command) else {
+    let Some(command) = ALL_AUTOFIX_COMMANDS
+        .iter()
+        .find_map(|cmd| (cmd.command() == &params.command).then_some(cmd))
+    else {
         let errmsg = format!("Unknown command: {}", params.command.as_str());
         conn.sender.send(Message::Response(Response::new_err(
             msg.id.clone(),
@@ -311,7 +313,7 @@ fn on_workspace_execute_command(
     let range: lsp_types::Range = serde_json::from_value(params.arguments[1].clone())?;
 
     // Execute the command
-    let Some(edit) = command.execute(state, &url, &range) else {
+    let Some(edit) = command.execute(state, &url, &range)? else {
         return Ok(()); // Do nothing if command does not change the document
     };
 

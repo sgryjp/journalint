@@ -1,32 +1,39 @@
+use std::collections::HashMap;
 use std::fs::write;
 use std::path::Path;
 
-use log::warn;
-use lsp_types::{Url, WorkspaceEdit};
+use lsp_types::{TextEdit, Url, WorkspaceEdit};
+use once_cell::sync::Lazy;
 
 use crate::code::Code;
 use crate::diagnostic::Diagnostic;
 use crate::errors::JournalintError;
 use crate::service::ServerState;
 
-pub const RECALCULATE_DURATION: &str = "journalint.recalculateDuration";
-pub const REPLACE_WITH_PREVIOUS_END_TIME: &str = "journalint.replaceWithPreviousEndTime";
-pub const USE_DATE_IN_FILENAME: &str = "journalint.useDateInFilename";
-pub const ALL_COMMANDS: [&str; 3] = [
-    RECALCULATE_DURATION,
-    REPLACE_WITH_PREVIOUS_END_TIME,
-    USE_DATE_IN_FILENAME,
-];
-
+/// Command of journalint.
+///
+/// Currently I only think of auto-fix commands so this must be unsuitable for other kinds of
+/// commands.
 pub trait Command {
+    /// Get short description of this command which is meant to be used in UI.
     fn title(&self) -> &str;
+
+    /// Get machine-readable identifier of this command.
     fn command(&self) -> &str;
+
+    /// Get a diagnostic code which is fixable by this command.
+    fn fixable_codes(&self) -> Code;
+
+    /// Executes this command.
+    ///
+    /// In case of fix commands, the result is the change set to be applied to the document.
+    /// Note that it will be `Ok(None)` if there is nothing to do.
     fn execute(
         &self,
         state: &ServerState,
         url: &Url,
         range: &lsp_types::Range,
-    ) -> Option<WorkspaceEdit>;
+    ) -> Result<Option<WorkspaceEdit>, JournalintError>;
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -35,17 +42,49 @@ pub struct CommandParams {
     range: lsp_types::Range,
 }
 
-// -----------------------------------------------------------------------------
-#[derive(Debug)]
-pub struct RecalculateDuration {}
+/// Auto-fix command.
+pub enum AutofixCommand {
+    RecalculateDuration,
+    ReplaceWithPreviousEndTime,
+    UseDateInFilename,
+}
 
-impl Command for RecalculateDuration {
+/// A global static array of all auto-fix commands.
+pub static ALL_AUTOFIX_COMMANDS: Lazy<Vec<AutofixCommand>> = Lazy::new(|| {
+    vec![
+        AutofixCommand::RecalculateDuration,
+        AutofixCommand::ReplaceWithPreviousEndTime,
+        AutofixCommand::UseDateInFilename,
+    ]
+});
+
+impl Command for AutofixCommand {
     fn title(&self) -> &str {
-        "Recalculate duration by the interval between start and end time"
+        match self {
+            AutofixCommand::RecalculateDuration => {
+                "Recalculate duration by the interval between start and end time"
+            }
+            AutofixCommand::ReplaceWithPreviousEndTime => {
+                "Replace with the previous entry's end time"
+            }
+            AutofixCommand::UseDateInFilename => "Use date embedded in the filename",
+        }
     }
 
     fn command(&self) -> &str {
-        RECALCULATE_DURATION
+        match self {
+            AutofixCommand::RecalculateDuration => "journalint.recalculateDuration",
+            AutofixCommand::ReplaceWithPreviousEndTime => "journalint.replaceWithPreviousEndTime",
+            AutofixCommand::UseDateInFilename => "journalint.useDateInFilename",
+        }
+    }
+
+    fn fixable_codes(&self) -> Code {
+        match self {
+            AutofixCommand::RecalculateDuration => Code::IncorrectDuration,
+            AutofixCommand::ReplaceWithPreviousEndTime => Code::TimeJumped,
+            AutofixCommand::UseDateInFilename => Code::MismatchedDates,
+        }
     }
 
     fn execute(
@@ -53,102 +92,12 @@ impl Command for RecalculateDuration {
         state: &ServerState,
         url: &Url,
         range: &lsp_types::Range,
-    ) -> Option<WorkspaceEdit> {
-        let Some(diagnostic) = state.find_diagnostic(url, range, &Code::IncorrectDuration) else {
-            warn!(
-                "No corresponding diagnostic found on fixing {}",
-                Code::IncorrectDuration.as_str()
-            );
-            return None;
-        };
-        diagnostic.fix(url)
+    ) -> Result<Option<WorkspaceEdit>, JournalintError> {
+        execute_fix(self, state, url, range)
     }
 }
 
 // -----------------------------------------------------------------------------
-#[derive(Debug)]
-pub struct ReplaceWithPreviousEndTime {}
-
-impl Command for ReplaceWithPreviousEndTime {
-    fn title(&self) -> &str {
-        "Replace with the previous entry's end time"
-    }
-
-    fn command(&self) -> &str {
-        REPLACE_WITH_PREVIOUS_END_TIME
-    }
-
-    fn execute(
-        &self,
-        state: &ServerState,
-        url: &Url,
-        range: &lsp_types::Range,
-    ) -> Option<WorkspaceEdit> {
-        let Some(diagnostic) = state.find_diagnostic(url, range, &Code::TimeJumped) else {
-            warn!(
-                "No corresponding diagnostic found on fixing {}",
-                Code::TimeJumped.as_str()
-            );
-            return None;
-        };
-        diagnostic.fix(url)
-    }
-}
-
-// -----------------------------------------------------------------------------
-#[derive(Debug)]
-pub struct UseDateInFilename {}
-
-impl Command for UseDateInFilename {
-    fn title(&self) -> &str {
-        "Use date embedded in the filename"
-    }
-
-    fn command(&self) -> &str {
-        USE_DATE_IN_FILENAME
-    }
-
-    fn execute(
-        &self,
-        state: &ServerState,
-        url: &Url,
-        range: &lsp_types::Range,
-    ) -> Option<WorkspaceEdit> {
-        let Some(diagnostic) = state.find_diagnostic(url, range, &Code::MismatchedDates) else {
-            warn!(
-                "No corresponding diagnostic found on fixing {}",
-                Code::MismatchedDates.as_str()
-            );
-            return None;
-        };
-        diagnostic.fix(url)
-    }
-}
-
-// -----------------------------------------------------------------------------
-pub fn list_available_code_actions(code: &Code) -> Option<Vec<Box<dyn Command>>> {
-    match code {
-        Code::ParseError => None,
-        Code::MismatchedDates => Some(vec![Box::new(UseDateInFilename {})]),
-        Code::InvalidStartTime => None, // TODO: Add a fix that replaces the value with the current time
-        Code::InvalidEndTime => None,
-        Code::MissingDate => None, // TODO: Add a fix that inserts date field with the current day
-        Code::MissingStartTime => None,
-        Code::MissingEndTime => None,
-        Code::TimeJumped => Some(vec![Box::new(ReplaceWithPreviousEndTime {})]),
-        Code::NegativeTimeRange => None,
-        Code::IncorrectDuration => Some(vec![Box::new(RecalculateDuration {})]),
-    }
-}
-
-pub fn get_command_by_name(name: &str) -> Option<Box<dyn Command>> {
-    match name {
-        RECALCULATE_DURATION => Some(Box::new(RecalculateDuration {})),
-        REPLACE_WITH_PREVIOUS_END_TIME => Some(Box::new(ReplaceWithPreviousEndTime {})),
-        USE_DATE_IN_FILENAME => Some(Box::new(UseDateInFilename {})),
-        _ => None,
-    }
-}
 
 pub fn fix(diagnostic: &Diagnostic, content: &str, path: &Path) -> Result<(), JournalintError> {
     // TODO: Move somewhere else
@@ -163,4 +112,32 @@ pub fn fix(diagnostic: &Diagnostic, content: &str, path: &Path) -> Result<(), Jo
         write(path, buf)?;
     };
     Ok(())
+}
+
+fn execute_fix(
+    command: &dyn Command,
+    state: &ServerState,
+    url: &Url,
+    range: &lsp_types::Range,
+) -> Result<Option<WorkspaceEdit>, JournalintError> {
+    // Find matching diagnostic object
+    let code = command.fixable_codes();
+    let diagnostic = state
+    .find_diagnostic(url, range, &code)
+    .ok_or_else(|| {
+        JournalintError::UnexpectedError(format!(
+            "No corresponding diagnostic found to fix: {{command: {}, url: {url}, range: {range:?}, code: {code}}}",
+            command.command()
+        ))
+    })?;
+
+    // Create an edit data in the file to fix the issue
+    let Some(new_text) = diagnostic.expectation() else {
+        return Ok(None);
+    };
+    let edit = TextEdit::new(diagnostic.lsp_range(), new_text.clone());
+
+    // Compose a "workspace edit" from it
+    let edits = HashMap::from([(url.clone(), vec![edit])]);
+    Ok(Some(WorkspaceEdit::new(edits)))
 }

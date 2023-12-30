@@ -16,6 +16,12 @@ pub enum Code {
     IncorrectDuration,
 }
 
+impl std::fmt::Display for Code {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
 impl Code {
     pub fn as_str(&self) -> &str {
         match self {

@@ -5,6 +5,9 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum JournalintError {
+    #[error("UNEXPECTED ERROR: {0}")]
+    UnexpectedError(String),
+
     #[error("Unknown code: {0}")]
     UnknownCode(String),
 
