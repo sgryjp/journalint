@@ -29,8 +29,8 @@ try {
         throw
     }
 
-    Write-Host -ForegroundColor Yellow "+ npm exec --yes -- @vscode/vsce@latest -- package --target $env:node_target"
-    npm exec --yes -- @vscode/vsce@latest -- package --target $env:node_target
+    Write-Host -ForegroundColor Yellow "+ vsce package --target $env:node_target"
+    vsce package --target $env:node_target
     if ($LASTEXITCODE -ne 0) {
         throw
     }
