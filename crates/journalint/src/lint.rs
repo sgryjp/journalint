@@ -1,3 +1,6 @@
+//! Provides lint logic.
+//!
+//! See module `ast` for AST related features, and module `parse` for parsing logic.
 use std::ops::Range;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -6,10 +9,10 @@ use std::time::Duration;
 use chrono::{DateTime, NaiveDate, Timelike, Utc};
 use lsp_types::Url;
 
+use crate::ast::{Expr, LooseTime};
 use crate::code::Code;
 use crate::diagnostic::{Diagnostic, DiagnosticRelatedInformation};
 use crate::linemap::LineMap;
-use crate::parse::{Expr, LooseTime};
 
 pub struct Linter<'a> {
     source: &'a Url,
