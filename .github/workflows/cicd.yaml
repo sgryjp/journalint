@@ -34,6 +34,9 @@ jobs:
         with:
           node-version: 20
 
+      - name: Install vsce command globally
+        run: npm install -g @vscode/vsce
+
       - name: Build
         run: scripts/${{ matrix.job.script }}
 
