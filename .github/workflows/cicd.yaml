@@ -30,9 +30,10 @@ jobs:
 
     - name: Build
       id: build
-      run: |
-        cargo build --release --target=${{ matrix.job.target }}
-        tar -cvfJ journalint-${{ matrix.job.target }}.tar.xz target/${{ matrix.job.target }}/release/journalint{{ matrix.job.suffix }}
+      run: cargo build --release --target=${{ matrix.job.target }}
+
+    - name: Archive
+      run: tar -cvfJ journalint-${{ matrix.job.target }}.tar.xz target/${{ matrix.job.target }}/release/journalint{{ matrix.job.suffix }}
 
     - name: Upload artifact
       uses: actions/upload-artifact@master
