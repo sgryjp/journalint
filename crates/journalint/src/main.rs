@@ -11,6 +11,7 @@ mod service;
 use std::env;
 use std::fs::read_to_string;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use ariadne::Color;
 use ariadne::Label;
@@ -18,15 +19,19 @@ use ariadne::Report;
 use ariadne::ReportKind;
 use ariadne::Source;
 use clap::Parser;
+use code::Code;
 use diagnostic::Diagnostic;
 use env_logger::TimestampPrecision;
 use errors::CliError;
+use linemap::LineMap;
 use log::debug;
 use log::error;
 use lsp_types::Url;
 
 use crate::arg::Arguments;
 use crate::errors::JournalintError;
+use crate::lint::lint;
+use crate::parse::parse;
 
 /// Entry point of journalint CLI.
 fn main() -> Result<(), JournalintError> {
@@ -60,22 +65,44 @@ fn cli_main(args: Arguments) -> Result<(), CliError> {
     let filename = args.filename.ok_or(
         CliError::new(exitcode::USAGE).with_message("FILENAME must be specified.".to_string()),
     )?;
-
-    // Load the content
     let path = PathBuf::from(&filename).canonicalize().map_err(|e| {
         CliError::new(exitcode::IOERR).with_message(format!(
             "Failed to canonicalize the filename {filename:?}: {e:?}"
         ))
     })?;
+    let url = Url::from_file_path(path.clone()).map_err(|_| {
+        CliError::new(1).with_message(format!("Failed to compose URL from path {:?}", &path))
+    })?;
+
+    // Load the content
     let content = read_to_string(&path).map_err(|e| {
         CliError::new(exitcode::IOERR).with_message(format!("Failed to read {filename:?}: {e:?}"))
     })?;
 
-    // Parse and lint it, then fix or report them
-    let url = Url::from_file_path(path.clone()).map_err(|_| {
-        CliError::new(1).with_message(format!("Failed to compose URL from path {:?}", &path))
-    })?;
-    let mut diagnostics = service::parse_and_lint(&content, &url);
+    // Calculate mapping between line-column indices and offset indices
+    let line_map = Arc::new(LineMap::new(&content));
+
+    // Parse
+    let (journal, errors) = parse(&content);
+    let mut diagnostics = errors
+        .iter()
+        .map(|e| {
+            Diagnostic::new_warning(
+                e.span(),
+                Code::ParseError,
+                format!("Parse error: {e}"),
+                None,
+                None,
+                line_map.clone(),
+            )
+        })
+        .collect::<Vec<Diagnostic>>();
+
+    // Lint
+    if let Some(journal) = journal {
+        diagnostics.append(&mut lint(&journal, &url, line_map));
+    }
+
     if args.fix {
         // Sort diagnostics in reverse order
         diagnostics.sort_by(|a, b| b.span().start.cmp(&a.span().start));
@@ -119,6 +146,31 @@ mod snapshot_tests {
 
     use super::*;
 
+    fn parse_and_lint(url: &Url, content: &str) -> Vec<Diagnostic> {
+        let line_map = Arc::new(LineMap::new(&content));
+
+        let (journal, errors) = parse(&content);
+        let mut diagnostics = errors
+            .iter()
+            .map(|e| {
+                Diagnostic::new_warning(
+                    e.span(),
+                    Code::ParseError,
+                    format!("Parse error: {e}"),
+                    None,
+                    None,
+                    line_map.clone(),
+                )
+            })
+            .collect::<Vec<Diagnostic>>();
+
+        if let Some(journal) = journal {
+            diagnostics.append(&mut lint(&journal, &url, line_map));
+        };
+
+        diagnostics
+    }
+
     #[test]
     fn test() {
         for entry in fs::read_dir("src/snapshots").unwrap() {
@@ -133,7 +185,8 @@ mod snapshot_tests {
                 Ok(content) => content,
                 Err(err) => panic!("failed to read a file: {{path: {:?}, err:{}}}", path, err),
             };
-            let diagnostics = service::parse_and_lint(&content, &url)
+
+            let diagnostics = parse_and_lint(&url, &content)
                 .iter()
                 .map(|d| d.clone().into())
                 .collect::<Vec<lsp_types::Diagnostic>>();

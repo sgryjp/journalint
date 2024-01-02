@@ -338,30 +338,7 @@ fn lint_and_publish_diagnostics(
     content: &str,
     version: Option<i32>,
 ) -> Result<Vec<Diagnostic>, JournalintError> {
-    // Parse and lint the content
-    let diagnostics = parse_and_lint(content, url);
-
-    // Publish them to the client
-    let params = PublishDiagnosticsParams::new(
-        url.clone(),
-        diagnostics
-            .iter()
-            .map(|d| d.clone().into())
-            .collect::<Vec<lsp_types::Diagnostic>>(),
-        version,
-    );
-    let params = serde_json::to_value(params)?;
-    conn.sender
-        .send(Message::Notification(lsp_server::Notification {
-            method: "textDocument/publishDiagnostics".to_string(),
-            params,
-        }))?;
-
-    Ok(diagnostics)
-}
-
-// TODO: Let the CLI start a service and communicate with it so that it does not need to to call this function
-pub fn parse_and_lint(content: &str, url: &Url) -> Vec<Diagnostic> {
+    // Calculate mapping between line-column indices and offset indices
     let line_map = Arc::new(LineMap::new(content));
 
     // Parse
@@ -385,5 +362,21 @@ pub fn parse_and_lint(content: &str, url: &Url) -> Vec<Diagnostic> {
         diagnostics.append(&mut lint(&journal, url, line_map));
     }
 
-    diagnostics
+    // Publish them to the client
+    let params = PublishDiagnosticsParams::new(
+        url.clone(),
+        diagnostics
+            .iter()
+            .map(|d| d.clone().into())
+            .collect::<Vec<lsp_types::Diagnostic>>(),
+        version,
+    );
+    let params = serde_json::to_value(params)?;
+    conn.sender
+        .send(Message::Notification(lsp_server::Notification {
+            method: "textDocument/publishDiagnostics".to_string(),
+            params,
+        }))?;
+
+    Ok(diagnostics)
 }
