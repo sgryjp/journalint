@@ -7,7 +7,7 @@ on:
     branches:
       - main
     tags:
-      - '*'
+      - "*"
 
 jobs:
   build:
@@ -17,25 +17,26 @@ jobs:
       fail-fast: false
       matrix:
         job:
+          # prettier-ignore
           - { target: x86_64-pc-windows-msvc,   os: windows-2019, suffix: ".exe" }
           - { target: x86_64-unknown-linux-gnu, os: ubuntu-20.04, suffix: ""     }
     steps:
-    - name: Checkout source code
-      uses: actions/checkout@v4
+      - name: Checkout source code
+        uses: actions/checkout@v4
 
-    - name: Install Rust toolchain
-      uses: dtolnay/rust-toolchain@stable
-      with:
-        targets: ${{ matrix.job.target }}
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.job.target }}
 
-    - name: Build
-      id: build
-      run: cargo build --release --target=${{ matrix.job.target }}
+      - name: Build
+        id: build
+        run: cargo build --release --target=${{ matrix.job.target }}
 
-    - name: Archive
-      run: tar -cvfJ journalint-${{ matrix.job.target }}.tar.xz target/${{ matrix.job.target }}/release/journalint{{ matrix.job.suffix }}
+      - name: Archive
+        run: tar -cvfJ journalint-${{ matrix.job.target }}.tar.xz target/${{ matrix.job.target }}/release/journalint{{ matrix.job.suffix }}
 
-    - name: Upload artifact
-      uses: actions/upload-artifact@master
-      with:
-        path: journalint-*.tar.xz
+      - name: Upload artifact
+        uses: actions/upload-artifact@master
+        with:
+          path: journalint-*.tar.xz
