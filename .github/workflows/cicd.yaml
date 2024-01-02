@@ -7,7 +7,7 @@ on:
     branches:
       - main
     tags:
-      - '*'
+      - "*"
 
 jobs:
   build:
@@ -17,24 +17,33 @@ jobs:
       fail-fast: false
       matrix:
         job:
-          - { target: x86_64-pc-windows-msvc,   os: windows-2019, suffix: ".exe" }
-          - { target: x86_64-unknown-linux-gnu, os: ubuntu-20.04, suffix: ""     }
+          # prettier-ignore
+          - { target: x86_64-pc-windows-msvc,   os: windows-latest, script: makedist.ps1 }
+          - { target: x86_64-unknown-linux-gnu, os: ubuntu-latest,  script: makedist.sh  }
     steps:
-    - name: Checkout source code
-      uses: actions/checkout@v4
+      - name: Checkout source code
+        uses: actions/checkout@v4
 
-    - name: Install Rust toolchain
-      uses: dtolnay/rust-toolchain@stable
-      with:
-        targets: ${{ matrix.job.target }}
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.job.target }}
 
-    - name: Build
-      id: build
-      run: |
-        cargo build --release --target=${{ matrix.job.target }}
-        tar -cvfJ journalint-${{ matrix.job.target }}.tar.xz target/${{ matrix.job.target }}/release/journalint{{ matrix.job.suffix }}
+      - name: Install Node.js toolchain
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
 
-    - name: Upload artifact
-      uses: actions/upload-artifact@master
-      with:
-        path: journalint-*.tar.xz
+      - name: Install vsce command globally
+        run: npm install -g @vscode/vsce
+
+      - name: Build
+        run: |
+          scripts/${{ matrix.job.script }}
+          ls dist
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifacts-${{ matrix.job.target }}
+          path: dist/*
