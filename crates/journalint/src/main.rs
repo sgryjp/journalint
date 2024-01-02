@@ -11,7 +11,6 @@ mod service;
 use std::env;
 use std::fs::read_to_string;
 use std::path::PathBuf;
-use std::sync::Arc;
 
 use ariadne::Color;
 use ariadne::Label;
@@ -19,11 +18,9 @@ use ariadne::Report;
 use ariadne::ReportKind;
 use ariadne::Source;
 use clap::Parser;
-use code::Code;
 use diagnostic::Diagnostic;
 use env_logger::TimestampPrecision;
 use errors::CliError;
-use linemap::LineMap;
 use log::debug;
 use log::error;
 use lsp_types::Url;
@@ -79,24 +76,8 @@ fn cli_main(args: Arguments) -> Result<(), CliError> {
         CliError::new(exitcode::IOERR).with_message(format!("Failed to read {filename:?}: {e:?}"))
     })?;
 
-    // Calculate mapping between line-column indices and offset indices
-    let line_map = Arc::new(LineMap::new(&content));
-
     // Parse
-    let (journal, errors) = parse(&content);
-    let mut diagnostics = errors
-        .iter()
-        .map(|e| {
-            Diagnostic::new_warning(
-                e.span(),
-                Code::ParseError,
-                format!("Parse error: {e}"),
-                None,
-                None,
-                line_map.clone(),
-            )
-        })
-        .collect::<Vec<Diagnostic>>();
+    let (journal, mut diagnostics, line_map) = parse(&content);
 
     // Lint
     if let Some(journal) = journal {
@@ -147,23 +128,7 @@ mod snapshot_tests {
     use super::*;
 
     fn parse_and_lint(url: &Url, content: &str) -> Vec<Diagnostic> {
-        let line_map = Arc::new(LineMap::new(&content));
-
-        let (journal, errors) = parse(&content);
-        let mut diagnostics = errors
-            .iter()
-            .map(|e| {
-                Diagnostic::new_warning(
-                    e.span(),
-                    Code::ParseError,
-                    format!("Parse error: {e}"),
-                    None,
-                    None,
-                    line_map.clone(),
-                )
-            })
-            .collect::<Vec<Diagnostic>>();
-
+        let (journal, mut diagnostics, line_map) = parse(&content);
         if let Some(journal) = journal {
             diagnostics.append(&mut lint(&journal, &url, line_map));
         };

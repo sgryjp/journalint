@@ -1,11 +1,15 @@
 use std::ops::Range;
+use std::sync::Arc;
 use std::time::Duration;
 
 use chrono::{DateTime, Days, NaiveDate, NaiveDateTime, NaiveTime, Utc};
 use chumsky::prelude::*;
 use chumsky::text::newline;
 
+use crate::code::Code;
+use crate::diagnostic::Diagnostic;
 use crate::errors::JournalintError;
+use crate::linemap::LineMap;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Expr {
@@ -330,8 +334,29 @@ fn wsp() -> impl Parser<char, String, Error = Simple<char>> {
 }
 
 // ----------------------------------------------------------------------------
-pub fn parse(content: &str) -> (Option<Expr>, Vec<Simple<char>>) {
-    journal().parse_recovery(content)
+pub fn parse(content: &str) -> (Option<Expr>, Vec<Diagnostic>, Arc<LineMap>) {
+    // Parse the content
+    let (journal, errors) = journal().parse_recovery(content);
+
+    // Calculate mapping between line-column indices and offset indices
+    let line_map = Arc::new(LineMap::new(content));
+
+    // Convert the parse errors into crate specific type
+    let diagnostics = errors
+        .iter()
+        .map(|e| {
+            Diagnostic::new_warning(
+                e.span(),
+                Code::ParseError,
+                format!("Parse error: {e}"),
+                None,
+                None,
+                line_map.clone(),
+            )
+        })
+        .collect::<Vec<Diagnostic>>();
+
+    (journal, diagnostics, line_map)
 }
 
 // ----------------------------------------------------------------------------

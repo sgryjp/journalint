@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::sync::Arc;
 
 use log::debug;
 use log::error;
@@ -32,7 +31,6 @@ use crate::commands::Command as _;
 use crate::commands::ALL_AUTOFIX_COMMANDS;
 use crate::diagnostic::Diagnostic;
 use crate::errors::JournalintError;
-use crate::linemap::LineMap;
 use crate::lint::lint;
 use crate::parse::parse;
 
@@ -338,24 +336,8 @@ fn lint_and_publish_diagnostics(
     content: &str,
     version: Option<i32>,
 ) -> Result<Vec<Diagnostic>, JournalintError> {
-    // Calculate mapping between line-column indices and offset indices
-    let line_map = Arc::new(LineMap::new(content));
-
     // Parse
-    let (journal, errors) = parse(content);
-    let mut diagnostics = errors
-        .iter()
-        .map(|e| {
-            Diagnostic::new_warning(
-                e.span(),
-                Code::ParseError,
-                format!("Parse error: {e}"),
-                None,
-                None,
-                line_map.clone(),
-            )
-        })
-        .collect::<Vec<Diagnostic>>();
+    let (journal, mut diagnostics, line_map) = parse(content);
 
     // Lint
     if let Some(journal) = journal {
