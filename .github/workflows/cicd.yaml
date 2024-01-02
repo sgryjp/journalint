@@ -29,9 +29,10 @@ jobs:
         with:
           targets: ${{ matrix.job.target }}
 
-      - uses: actions/setup-node@v3
+      - name: Install Node.js toolchain
+        uses: actions/setup-node@v3
         with:
-          node-version: lts
+          node-version: 20
 
       - name: Build
         run: scripts/${{ matrix.job.script }}
