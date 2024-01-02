@@ -43,6 +43,7 @@ jobs:
           ls dist
 
       - name: Upload artifact
-        uses: actions/upload-artifact@master
+        uses: actions/upload-artifact@v4
         with:
+          name: artifacts-${{ matrix.job.target }}
           path: dist/*
