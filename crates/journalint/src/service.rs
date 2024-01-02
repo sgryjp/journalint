@@ -285,7 +285,7 @@ fn on_workspace_execute_command(
     // Dispatch the requested command
     let Some(command) = ALL_AUTOFIX_COMMANDS
         .iter()
-        .find_map(|cmd| (cmd.command() == &params.command).then_some(cmd))
+        .find(|cmd| cmd.command() == params.command.as_str())
     else {
         let errmsg = format!("Unknown command: {}", params.command.as_str());
         conn.sender.send(Message::Response(Response::new_err(
