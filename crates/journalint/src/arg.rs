@@ -1,5 +1,7 @@
 use clap::Parser;
 
+use crate::export::ExportFormat;
+
 #[derive(Parser, Debug)]
 #[command(author, version, about)]
 pub struct Arguments {
@@ -9,6 +11,9 @@ pub struct Arguments {
     /// Fix found problems.
     #[arg(short, long)]
     pub fix: bool,
+
+    #[arg(short, long, value_name = "FORMAT")]
+    pub export: Option<ExportFormat>,
 
     /// Start as a language server.
     #[arg(long)]

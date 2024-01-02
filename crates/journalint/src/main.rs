@@ -3,6 +3,7 @@ mod code;
 mod commands;
 mod diagnostic;
 mod errors;
+mod export;
 mod linemap;
 mod lint;
 mod parse;
@@ -21,6 +22,7 @@ use clap::Parser;
 use diagnostic::Diagnostic;
 use env_logger::TimestampPrecision;
 use errors::CliError;
+use export::ExportFormat;
 use log::debug;
 use log::error;
 use lsp_types::Url;
@@ -78,24 +80,37 @@ fn cli_main(args: Arguments) -> Result<(), CliError> {
 
     // Parse
     let (journal, mut diagnostics, line_map) = parse(&content);
-
-    // Lint
-    if let Some(journal) = journal {
-        diagnostics.append(&mut lint(&journal, &url, line_map));
-    }
-
-    if args.fix {
-        // Sort diagnostics in reverse order
-        diagnostics.sort_by(|a, b| b.span().start.cmp(&a.span().start));
-        diagnostics.iter().map(Box::new).for_each(|d| {
-            if let Err(e) = commands::fix(*d, content.as_str(), path.as_path()) {
-                debug!("Autofix failed: {e}");
+    if let Some(fmt) = args.export {
+        match fmt {
+            ExportFormat::Json => {
+                panic!("NOT IMPLEMENTED YET")
             }
-        });
+            ExportFormat::Csv => {
+                panic!("NOT IMPLEMENTED YET")
+            }
+        }
     } else {
-        diagnostics
-            .iter()
-            .for_each(|d| report(&content, Some(&filename), d));
+        // Lint the parsed content unless parsing itself failed
+        if let Some(journal) = journal {
+            diagnostics.append(&mut lint(&journal, &url, line_map));
+        }
+
+        if args.fix {
+            // Sort diagnostics in reverse order
+            diagnostics.sort_by(|a, b| b.span().start.cmp(&a.span().start));
+
+            // Fix one by one, from the last to the first
+            diagnostics.iter().map(Box::new).for_each(|d| {
+                if let Err(e) = commands::fix(*d, content.as_str(), path.as_path()) {
+                    debug!("Autofix failed: {e}");
+                }
+            });
+        } else {
+            // Report the diagnostics to user
+            diagnostics
+                .iter()
+                .for_each(|d| report(&content, Some(&filename), d));
+        }
     }
 
     Ok(())
