@@ -8,10 +8,7 @@ if ! command -v vsce >/dev/null; then
     exit 1
 fi
 
-cleanup() {
-    cd $orig_cwd && exit 1
-}
-trap cleanup EXIT
+trap 'cd $orig_cwd' EXIT
 
 # -----------------------------------------------------------------------------
 set -ex
