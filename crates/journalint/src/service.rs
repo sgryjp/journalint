@@ -84,7 +84,7 @@ pub fn main() -> Result<(), JournalintError> {
         execute_command_provider: Some(ExecuteCommandOptions {
             commands: ALL_AUTOFIX_COMMANDS
                 .iter()
-                .map(|cmd| cmd.command().to_string())
+                .map(|cmd| cmd.id().to_string())
                 .collect::<Vec<String>>(),
             work_done_progress_options: lsp_types::WorkDoneProgressOptions {
                 work_done_progress: Some(false),
@@ -256,7 +256,7 @@ fn on_text_document_code_action(
             .map(|cmd| {
                 lsp_types::Command::new(
                     cmd.title().to_string(),
-                    cmd.command().to_string(),
+                    cmd.id().to_string(),
                     Some(vec![
                         serde_json::to_value(uri).unwrap(),
                         serde_json::to_value(position).unwrap(),
@@ -283,7 +283,7 @@ fn on_workspace_execute_command(
     // Dispatch the requested command
     let Some(command) = ALL_AUTOFIX_COMMANDS
         .iter()
-        .find(|cmd| cmd.command() == params.command.as_str())
+        .find(|cmd| cmd.id() == params.command.as_str())
     else {
         let errmsg = format!("Unknown command: {}", params.command.as_str());
         conn.sender.send(Message::Response(Response::new_err(

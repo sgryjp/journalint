@@ -19,7 +19,7 @@ pub trait Command {
     fn title(&self) -> &str;
 
     /// Get machine-readable identifier of this command.
-    fn command(&self) -> &str;
+    fn id(&self) -> &str;
 
     /// Get a diagnostic code which is fixable by this command.
     fn fixable_codes(&self) -> Code;
@@ -71,7 +71,7 @@ impl Command for AutofixCommand {
         }
     }
 
-    fn command(&self) -> &str {
+    fn id(&self) -> &str {
         match self {
             AutofixCommand::RecalculateDuration => "journalint.recalculateDuration",
             AutofixCommand::ReplaceWithPreviousEndTime => "journalint.replaceWithPreviousEndTime",
@@ -127,7 +127,7 @@ fn execute_fix(
     .ok_or_else(|| {
         JournalintError::UnexpectedError(format!(
             "No corresponding diagnostic found to fix: {{command: {}, url: {url}, range: {range:?}, code: {code}}}",
-            command.command()
+            command.id()
         ))
     })?;
 
