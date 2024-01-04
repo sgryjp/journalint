@@ -20,6 +20,7 @@ use ariadne::Source;
 use clap::Parser;
 use diagnostic::Diagnostic;
 use env_logger::TimestampPrecision;
+use errors::CliError;
 use log::debug;
 use log::error;
 use lsp_types::Url;
@@ -41,32 +42,35 @@ fn main() -> Result<(), JournalintError> {
     if args.stdio {
         service::main()
     } else {
-        let rc = cli_main(args);
-        std::process::exit(rc);
+        let exit_status = match cli_main(args) {
+            Ok(()) => exitcode::OK,
+            Err(e) => {
+                if let Some(msg) = e.message() {
+                    error!("{}", msg);
+                };
+                e.exit_status()
+            }
+        };
+        std::process::exit(exit_status);
     }
 }
 
-fn cli_main(args: Arguments) -> exitcode::ExitCode {
+fn cli_main(args: Arguments) -> Result<(), CliError> {
     // Make sure a filename was given
-    let Some(filename) = args.filename else {
-        return exitcode::USAGE;
-    };
+    let filename = args.filename.ok_or(
+        CliError::new(exitcode::USAGE).with_message("FILENAME must be specified.".to_string()),
+    )?;
 
     // Load the content
     let path = PathBuf::from(&filename);
-    let content = match read_to_string(&path) {
-        Ok(content) => content,
-        Err(e) => {
-            error!("Failed to read {}: {}", filename, e);
-            return exitcode::IOERR;
-        }
-    };
+    let content = read_to_string(&path).map_err(|e| {
+        CliError::new(exitcode::IOERR).with_message(format!("Failed to read {filename:?}: {e:?}"))
+    })?;
 
     // Parse and lint it, then fix or report them
-    let Ok(url) = Url::from_file_path(path.clone()) else {
-        error!("Failed to compose URL from path: {:?}", path.clone());
-        return 1;
-    };
+    let url = Url::from_file_path(path.clone()).map_err(|_| {
+        CliError::new(1).with_message(format!("Failed to compose URL from path {:?}", &path))
+    })?;
     let mut diagnostics = service::parse_and_lint(&content, &url);
     if args.fix {
         // Sort diagnostics in reverse order
@@ -82,7 +86,7 @@ fn cli_main(args: Arguments) -> exitcode::ExitCode {
             .for_each(|d| report(&content, Some(&filename), d));
     }
 
-    exitcode::OK
+    Ok(())
 }
 
 /// Write a human readable report of a diagnostic

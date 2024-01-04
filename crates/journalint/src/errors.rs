@@ -3,6 +3,41 @@ use lsp_server::Message;
 use lsp_server::ProtocolError;
 use thiserror::Error;
 
+// ----------------------------------------------------------------------------
+
+/// Error for CLI main function.
+#[derive(Default)]
+pub struct CliError {
+    exit_status: i32,
+    message: Option<String>,
+}
+
+impl CliError {
+    pub fn new(exit_status: i32) -> Self {
+        Self {
+            exit_status,
+            message: None,
+        }
+    }
+
+    pub fn with_message(&self, message: String) -> Self {
+        Self {
+            message: Some(message),
+            ..*self
+        }
+    }
+
+    pub fn exit_status(&self) -> i32 {
+        self.exit_status
+    }
+
+    pub fn message(&self) -> Option<&String> {
+        self.message.as_ref()
+    }
+}
+
+// ----------------------------------------------------------------------------
+
 #[derive(Error, Debug)]
 pub enum JournalintError {
     #[error("UNEXPECTED ERROR: {0}")]
