@@ -1,8 +1,10 @@
 mod arg;
+mod ast;
 mod code;
 mod commands;
 mod diagnostic;
 mod errors;
+mod export;
 mod linemap;
 mod lint;
 mod parse;
@@ -27,6 +29,8 @@ use lsp_types::Url;
 
 use crate::arg::Arguments;
 use crate::errors::JournalintError;
+use crate::lint::lint;
+use crate::parse::parse;
 
 /// Entry point of journalint CLI.
 fn main() -> Result<(), JournalintError> {
@@ -60,34 +64,52 @@ fn cli_main(args: Arguments) -> Result<(), CliError> {
     let filename = args.filename.ok_or(
         CliError::new(exitcode::USAGE).with_message("FILENAME must be specified.".to_string()),
     )?;
-
-    // Load the content
     let path = PathBuf::from(&filename).canonicalize().map_err(|e| {
         CliError::new(exitcode::IOERR).with_message(format!(
             "Failed to canonicalize the filename {filename:?}: {e:?}"
         ))
     })?;
+    let url = Url::from_file_path(path.clone()).map_err(|_| {
+        CliError::new(1).with_message(format!("Failed to compose URL from path {:?}", &path))
+    })?;
+
+    // Load the content
     let content = read_to_string(&path).map_err(|e| {
         CliError::new(exitcode::IOERR).with_message(format!("Failed to read {filename:?}: {e:?}"))
     })?;
 
-    // Parse and lint it, then fix or report them
-    let url = Url::from_file_path(path.clone()).map_err(|_| {
-        CliError::new(1).with_message(format!("Failed to compose URL from path {:?}", &path))
-    })?;
-    let mut diagnostics = service::parse_and_lint(&content, &url);
+    // Parse the content and lint the AST unless parsing itself failed
+    let (journal, mut diagnostics, line_map) = parse(&content);
+    if let Some(journal) = journal.as_ref() {
+        diagnostics.append(&mut lint(journal, &url, line_map));
+    }
+
+    // Execute specified task against the AST and diagnostics
     if args.fix {
         // Sort diagnostics in reverse order
         diagnostics.sort_by(|a, b| b.span().start.cmp(&a.span().start));
+
+        // Fix one by one, from the last to the first
         diagnostics.iter().map(Box::new).for_each(|d| {
             if let Err(e) = commands::fix(*d, content.as_str(), path.as_path()) {
                 debug!("Autofix failed: {e}");
             }
         });
     } else {
+        // Write diagnostic report to stderr
         diagnostics
             .iter()
             .for_each(|d| report(&content, Some(&filename), d));
+
+        // Export parsed data to stdout
+        if let Some(fmt) = args.export {
+            if let Some(journal) = journal {
+                let mut writer = std::io::stdout();
+                crate::export::export(fmt, journal, &mut writer).map_err(|e| {
+                    CliError::new(3).with_message(format!("Failed to export data: {:?}", e))
+                })?;
+            }
+        }
     }
 
     Ok(())
@@ -119,6 +141,15 @@ mod snapshot_tests {
 
     use super::*;
 
+    fn parse_and_lint(url: &Url, content: &str) -> Vec<Diagnostic> {
+        let (journal, mut diagnostics, line_map) = parse(&content);
+        if let Some(journal) = journal {
+            diagnostics.append(&mut lint(&journal, &url, line_map));
+        };
+
+        diagnostics
+    }
+
     #[test]
     fn test() {
         for entry in fs::read_dir("src/snapshots").unwrap() {
@@ -133,7 +164,8 @@ mod snapshot_tests {
                 Ok(content) => content,
                 Err(err) => panic!("failed to read a file: {{path: {:?}, err:{}}}", path, err),
             };
-            let diagnostics = service::parse_and_lint(&content, &url)
+
+            let diagnostics = parse_and_lint(&url, &content)
                 .iter()
                 .map(|d| d.clone().into())
                 .collect::<Vec<lsp_types::Diagnostic>>();

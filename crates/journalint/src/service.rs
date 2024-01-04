@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::sync::Arc;
 
 use log::debug;
 use log::error;
@@ -32,7 +31,6 @@ use crate::commands::Command as _;
 use crate::commands::ALL_AUTOFIX_COMMANDS;
 use crate::diagnostic::Diagnostic;
 use crate::errors::JournalintError;
-use crate::linemap::LineMap;
 use crate::lint::lint;
 use crate::parse::parse;
 
@@ -338,8 +336,13 @@ fn lint_and_publish_diagnostics(
     content: &str,
     version: Option<i32>,
 ) -> Result<Vec<Diagnostic>, JournalintError> {
-    // Parse and lint the content
-    let diagnostics = parse_and_lint(content, url);
+    // Parse
+    let (journal, mut diagnostics, line_map) = parse(content);
+
+    // Lint
+    if let Some(journal) = journal {
+        diagnostics.append(&mut lint(&journal, url, line_map));
+    }
 
     // Publish them to the client
     let params = PublishDiagnosticsParams::new(
@@ -358,32 +361,4 @@ fn lint_and_publish_diagnostics(
         }))?;
 
     Ok(diagnostics)
-}
-
-// TODO: Let the CLI start a service and communicate with it so that it does not need to to call this function
-pub fn parse_and_lint(content: &str, url: &Url) -> Vec<Diagnostic> {
-    let line_map = Arc::new(LineMap::new(content));
-
-    // Parse
-    let (journal, errors) = parse(content);
-    let mut diagnostics = errors
-        .iter()
-        .map(|e| {
-            Diagnostic::new_warning(
-                e.span(),
-                Code::ParseError,
-                format!("Parse error: {e}"),
-                None,
-                None,
-                line_map.clone(),
-            )
-        })
-        .collect::<Vec<Diagnostic>>();
-
-    // Lint
-    if let Some(journal) = journal {
-        diagnostics.append(&mut lint(&journal, url, line_map));
-    }
-
-    diagnostics
 }

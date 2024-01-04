@@ -1,3 +1,6 @@
+//! Provides lint logic.
+//!
+//! See module `ast` for AST related features, and module `parse` for parsing logic.
 use std::ops::Range;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -6,10 +9,10 @@ use std::time::Duration;
 use chrono::{DateTime, NaiveDate, Timelike, Utc};
 use lsp_types::Url;
 
+use crate::ast::{walk, Expr, LooseTime, Visitor};
 use crate::code::Code;
 use crate::diagnostic::{Diagnostic, DiagnosticRelatedInformation};
 use crate::linemap::LineMap;
-use crate::parse::{Expr, LooseTime};
 
 pub struct Linter<'a> {
     source: &'a Url,
@@ -45,9 +48,12 @@ impl<'a> Linter<'a> {
             prev_entry_end: None,
         }
     }
+}
 
-    fn on_visit_fm_date(&mut self, date: NaiveDate, span: &Range<usize>) {
-        self.fm_date = Some((date, span.clone()));
+impl Visitor for Linter<'_> {
+    fn on_visit_fm_date(&mut self, value: &NaiveDate, span: &Range<usize>) {
+        let value = *value;
+        self.fm_date = Some((value, span.clone()));
 
         // Check the date value matches the one in the file name
         if let Some(stem) = PathBuf::from(self.source.path())
@@ -55,7 +61,7 @@ impl<'a> Linter<'a> {
             .and_then(|s| s.to_str())
         {
             if let Ok(date_in_filename) = NaiveDate::parse_from_str(stem, "%Y-%m-%d") {
-                if date_in_filename != date {
+                if date_in_filename != value {
                     let expectation = date_in_filename.format("%Y-%m-%d").to_string();
                     self.diagnostics.push(Diagnostic::new_warning(
                         span.clone(),
@@ -73,12 +79,12 @@ impl<'a> Linter<'a> {
         }
     }
 
-    fn on_visit_fm_start(&mut self, start_time: &LooseTime, span: &Range<usize>) {
-        self.fm_start = Some((start_time.clone(), span.clone()));
+    fn on_visit_fm_start(&mut self, value: &LooseTime, span: &Range<usize>) {
+        self.fm_start = Some((value.clone(), span.clone()));
     }
 
-    fn on_visit_fm_end(&mut self, end_time: &LooseTime, span: &Range<usize>) {
-        self.fm_end = Some((end_time.clone(), span.clone()));
+    fn on_visit_fm_end(&mut self, value: &LooseTime, span: &Range<usize>) {
+        self.fm_end = Some((value.clone(), span.clone()));
     }
 
     fn on_leave_fm(&mut self, _date: &Expr, _start: &Expr, _end: &Expr, span: &Range<usize>) {
@@ -153,7 +159,7 @@ impl<'a> Linter<'a> {
         }
     }
 
-    fn on_leave_entry(
+    fn on_visit_entry(
         &mut self,
         _start_time: &Expr,
         _end_time: &Expr,
@@ -162,13 +168,11 @@ impl<'a> Linter<'a> {
         _activity: &Expr,
         _span: &Range<usize>,
     ) {
-        self.entry_start = None;
-        self.prev_entry_end = self.entry_end.take();
     }
 
-    fn on_visit_start_time(&mut self, start_time: &LooseTime, span: &Range<usize>) {
+    fn on_visit_start_time(&mut self, value: &LooseTime, span: &Range<usize>) {
         if let Some((date, _)) = self.fm_date {
-            match start_time.to_datetime(date) {
+            match value.to_datetime(date) {
                 Ok(start_dt) => {
                     self.entry_start = Some((start_dt, span.clone()));
 
@@ -211,9 +215,9 @@ impl<'a> Linter<'a> {
         }
     }
 
-    fn on_visit_end_time(&mut self, end_time: &LooseTime, span: &Range<usize>) {
+    fn on_visit_end_time(&mut self, value: &LooseTime, span: &Range<usize>) {
         if let Some((date, _)) = self.fm_date {
-            match end_time.to_datetime(date) {
+            match value.to_datetime(date) {
                 Ok(d) => {
                     self.entry_end = Some((d, span.clone()));
                 }
@@ -231,7 +235,7 @@ impl<'a> Linter<'a> {
         }
     }
 
-    fn on_visit_duration(&mut self, duration: &Duration, span: &Range<usize>) {
+    fn on_visit_duration(&mut self, value: &Duration, span: &Range<usize>) {
         if let (Some((start, _)), Some((end, end_span))) =
             (self.entry_start.as_ref(), self.entry_end.as_ref())
         {
@@ -249,7 +253,7 @@ impl<'a> Linter<'a> {
                 ));
                 return;
             };
-            let written = duration;
+            let written = value;
             if calculated != *written {
                 let expectation = calculated.as_secs_f64() / 3600.0;
                 let expectation = format!("{expectation:1.2}");
@@ -264,70 +268,22 @@ impl<'a> Linter<'a> {
             }
         }
     }
-}
 
-fn walk(expr: &Expr, visitor: &mut Linter) {
-    match expr {
-        Expr::FrontMatterDate { value, span } => {
-            visitor.on_visit_fm_date(*value, span);
-        }
-        Expr::FrontMatterStartTime { value, span } => {
-            visitor.on_visit_fm_start(value, span);
-        }
-        Expr::FrontMatterEndTime { value, span } => {
-            visitor.on_visit_fm_end(value, span);
-        }
-        Expr::FrontMatter {
-            date,
-            start,
-            end,
-            span,
-        } => {
-            walk(date, visitor);
-            walk(start, visitor);
-            walk(end, visitor);
-            visitor.on_leave_fm(date, start, end, span);
-        }
-        Expr::StartTime { value, span } => {
-            visitor.on_visit_start_time(value, span);
-        }
-        Expr::EndTime { value, span } => {
-            visitor.on_visit_end_time(value, span);
-        }
-        Expr::Duration { value, span } => {
-            visitor.on_visit_duration(value, span);
-        }
-        // Expr::Code { value, span } => todo!(),
-        // Expr::Activity { value, span } => todo!(),
-        Expr::Entry {
-            start,
-            end,
-            codes,
-            duration,
-            activity,
-            span,
-        } => {
-            walk(start, visitor);
-            walk(end, visitor);
-            for code in codes {
-                walk(code, visitor);
-            }
-            walk(duration, visitor);
-            walk(activity, visitor);
-            visitor.on_leave_entry(start, end, codes, duration, activity, span);
-        }
-        Expr::Journal {
-            front_matter,
-            lines,
-        } => {
-            walk(front_matter, visitor);
-            for line in lines {
-                walk(line, visitor);
-            }
-        }
-        // Expr::Error { reason, span } => todo!(),
-        // Expr::NonTargetLine => todo!(),
-        _ => (),
+    fn on_visit_code(&mut self, _value: &str, _span: &Range<usize>) {}
+
+    fn on_visit_activity(&mut self, _value: &str, _span: &Range<usize>) {}
+
+    fn on_leave_entry(
+        &mut self,
+        _start_time: &Expr,
+        _end_time: &Expr,
+        _codes: &[Expr],
+        _duration: &Expr,
+        _activity: &Expr,
+        _span: &Range<usize>,
+    ) {
+        self.entry_start = None;
+        self.prev_entry_end = self.entry_end.take();
     }
 }
 
