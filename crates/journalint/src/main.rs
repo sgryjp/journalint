@@ -62,7 +62,11 @@ fn cli_main(args: Arguments) -> Result<(), CliError> {
     )?;
 
     // Load the content
-    let path = PathBuf::from(&filename);
+    let path = PathBuf::from(&filename).canonicalize().map_err(|e| {
+        CliError::new(exitcode::IOERR).with_message(format!(
+            "Failed to canonicalize the filename {filename:?}: {e:?}"
+        ))
+    })?;
     let content = read_to_string(&path).map_err(|e| {
         CliError::new(exitcode::IOERR).with_message(format!("Failed to read {filename:?}: {e:?}"))
     })?;
