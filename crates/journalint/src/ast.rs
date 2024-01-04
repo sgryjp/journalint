@@ -126,56 +126,96 @@ impl LooseTime {
 }
 
 pub trait Visitor {
-    fn on_visit_fm_date(&mut self, value: &NaiveDate, span: &Range<usize>);
-    fn on_visit_fm_start(&mut self, value: &LooseTime, span: &Range<usize>);
-    fn on_visit_fm_end(&mut self, value: &LooseTime, span: &Range<usize>);
-    fn on_leave_fm(&mut self, date: &Expr, start: &Expr, end: &Expr, span: &Range<usize>);
-    fn on_visit_entry(&mut self, span: &Range<usize>);
-    fn on_visit_start_time(&mut self, value: &LooseTime, span: &Range<usize>);
-    fn on_visit_end_time(&mut self, value: &LooseTime, span: &Range<usize>);
-    fn on_visit_duration(&mut self, value: &Duration, span: &Range<usize>);
-    fn on_visit_code(&mut self, value: &str, span: &Range<usize>);
-    fn on_visit_activity(&mut self, value: &str, span: &Range<usize>);
-    fn on_leave_entry(&mut self, span: &Range<usize>);
+    #[warn(unused_results)]
+    fn on_visit_fm_date(
+        &mut self,
+        value: &NaiveDate,
+        span: &Range<usize>,
+    ) -> Result<(), JournalintError>;
+
+    #[warn(unused_results)]
+    fn on_visit_fm_start(
+        &mut self,
+        value: &LooseTime,
+        span: &Range<usize>,
+    ) -> Result<(), JournalintError>;
+
+    #[warn(unused_results)]
+    fn on_visit_fm_end(
+        &mut self,
+        value: &LooseTime,
+        span: &Range<usize>,
+    ) -> Result<(), JournalintError>;
+
+    #[warn(unused_results)]
+    fn on_leave_fm(
+        &mut self,
+        date: &Expr,
+        start: &Expr,
+        end: &Expr,
+        span: &Range<usize>,
+    ) -> Result<(), JournalintError>;
+
+    #[warn(unused_results)]
+    fn on_visit_entry(&mut self, span: &Range<usize>) -> Result<(), JournalintError>;
+
+    #[warn(unused_results)]
+    fn on_visit_start_time(
+        &mut self,
+        value: &LooseTime,
+        span: &Range<usize>,
+    ) -> Result<(), JournalintError>;
+
+    #[warn(unused_results)]
+    fn on_visit_end_time(
+        &mut self,
+        value: &LooseTime,
+        span: &Range<usize>,
+    ) -> Result<(), JournalintError>;
+
+    #[warn(unused_results)]
+    fn on_visit_duration(
+        &mut self,
+        value: &Duration,
+        span: &Range<usize>,
+    ) -> Result<(), JournalintError>;
+
+    #[warn(unused_results)]
+    fn on_visit_code(&mut self, value: &str, span: &Range<usize>) -> Result<(), JournalintError>;
+
+    #[warn(unused_results)]
+    fn on_visit_activity(
+        &mut self,
+        value: &str,
+        span: &Range<usize>,
+    ) -> Result<(), JournalintError>;
+
+    #[warn(unused_results)]
+    fn on_leave_entry(&mut self, span: &Range<usize>) -> Result<(), JournalintError>;
 }
 
-pub fn walk(expr: &Expr, visitor: &mut impl Visitor) {
+#[warn(unused_results)]
+pub fn walk(expr: &Expr, visitor: &mut impl Visitor) -> Result<(), JournalintError> {
     match expr {
-        Expr::FrontMatterDate { value, span } => {
-            visitor.on_visit_fm_date(value, span);
-        }
-        Expr::FrontMatterStartTime { value, span } => {
-            visitor.on_visit_fm_start(value, span);
-        }
-        Expr::FrontMatterEndTime { value, span } => {
-            visitor.on_visit_fm_end(value, span);
-        }
+        Expr::FrontMatterDate { value, span } => visitor.on_visit_fm_date(value, span),
+        Expr::FrontMatterStartTime { value, span } => visitor.on_visit_fm_start(value, span),
+        Expr::FrontMatterEndTime { value, span } => visitor.on_visit_fm_end(value, span),
         Expr::FrontMatter {
             date,
             start,
             end,
             span,
         } => {
-            walk(date, visitor);
-            walk(start, visitor);
-            walk(end, visitor);
-            visitor.on_leave_fm(date, start, end, span);
+            walk(date, visitor)?;
+            walk(start, visitor)?;
+            walk(end, visitor)?;
+            visitor.on_leave_fm(date, start, end, span)
         }
-        Expr::StartTime { value, span } => {
-            visitor.on_visit_start_time(value, span);
-        }
-        Expr::EndTime { value, span } => {
-            visitor.on_visit_end_time(value, span);
-        }
-        Expr::Duration { value, span } => {
-            visitor.on_visit_duration(value, span);
-        }
-        Expr::Code { value, span } => {
-            visitor.on_visit_code(value, span);
-        }
-        Expr::Activity { value, span } => {
-            visitor.on_visit_activity(value, span);
-        }
+        Expr::StartTime { value, span } => visitor.on_visit_start_time(value, span),
+        Expr::EndTime { value, span } => visitor.on_visit_end_time(value, span),
+        Expr::Duration { value, span } => visitor.on_visit_duration(value, span),
+        Expr::Code { value, span } => visitor.on_visit_code(value, span),
+        Expr::Activity { value, span } => visitor.on_visit_activity(value, span),
         Expr::Entry {
             start,
             end,
@@ -184,26 +224,27 @@ pub fn walk(expr: &Expr, visitor: &mut impl Visitor) {
             activity,
             span,
         } => {
-            visitor.on_visit_entry(span);
-            walk(start, visitor);
-            walk(end, visitor);
+            visitor.on_visit_entry(span)?;
+            walk(start, visitor)?;
+            walk(end, visitor)?;
             for code in codes {
-                walk(code, visitor);
+                walk(code, visitor)?;
             }
-            walk(duration, visitor);
-            walk(activity, visitor);
-            visitor.on_leave_entry(span);
+            walk(duration, visitor)?;
+            walk(activity, visitor)?;
+            visitor.on_leave_entry(span)
         }
         Expr::Journal {
             front_matter,
             lines,
         } => {
-            walk(front_matter, visitor);
+            walk(front_matter, visitor)?;
             for line in lines {
-                walk(line, visitor);
+                walk(line, visitor)?;
             }
+            Ok(())
         }
-        Expr::Error { reason: _, span: _ } => (),
-        Expr::NonTargetLine => (),
+        Expr::Error { reason: _, span: _ } => Ok(()),
+        Expr::NonTargetLine => Ok(()),
     }
 }

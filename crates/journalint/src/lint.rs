@@ -12,6 +12,7 @@ use lsp_types::Url;
 use crate::ast::{walk, Expr, LooseTime, Visitor};
 use crate::code::Code;
 use crate::diagnostic::{Diagnostic, DiagnosticRelatedInformation};
+use crate::errors::JournalintError;
 use crate::linemap::LineMap;
 
 pub struct Linter<'a> {
@@ -285,20 +286,41 @@ impl<'a> Linter<'a> {
 }
 
 impl Visitor for Linter<'_> {
-    fn on_visit_fm_date(&mut self, value: &NaiveDate, span: &Range<usize>) {
+    fn on_visit_fm_date(
+        &mut self,
+        value: &NaiveDate,
+        span: &Range<usize>,
+    ) -> Result<(), JournalintError> {
         self.fm_date = Some((*value, span.clone()));
-        self.check_fm_date_matches_filename(value, span)
+        self.check_fm_date_matches_filename(value, span);
+        Ok(())
     }
 
-    fn on_visit_fm_start(&mut self, value: &LooseTime, span: &Range<usize>) {
+    fn on_visit_fm_start(
+        &mut self,
+        value: &LooseTime,
+        span: &Range<usize>,
+    ) -> Result<(), JournalintError> {
         self.fm_start = Some((value.clone(), span.clone()));
+        Ok(())
     }
 
-    fn on_visit_fm_end(&mut self, value: &LooseTime, span: &Range<usize>) {
+    fn on_visit_fm_end(
+        &mut self,
+        value: &LooseTime,
+        span: &Range<usize>,
+    ) -> Result<(), JournalintError> {
         self.fm_end = Some((value.clone(), span.clone()));
+        Ok(())
     }
 
-    fn on_leave_fm(&mut self, _date: &Expr, _start: &Expr, _end: &Expr, span: &Range<usize>) {
+    fn on_leave_fm(
+        &mut self,
+        _date: &Expr,
+        _start: &Expr,
+        _end: &Expr,
+        span: &Range<usize>,
+    ) -> Result<(), JournalintError> {
         // Calculate exact time of start and end
         self.fm_start_datetime = self.check_fm_start_is_valid();
         self.fm_end_datetime = self.check_fm_end_is_valid();
@@ -307,40 +329,72 @@ impl Visitor for Linter<'_> {
         self.check_fm_date_exists(span);
         self.check_fm_start_exists(span);
         self.check_fm_end_exists(span);
+
+        Ok(())
     }
 
-    fn on_visit_entry(&mut self, _span: &Range<usize>) {}
+    fn on_visit_entry(&mut self, _span: &Range<usize>) -> Result<(), JournalintError> {
+        Ok(())
+    }
 
-    fn on_visit_start_time(&mut self, value: &LooseTime, span: &Range<usize>) {
+    fn on_visit_start_time(
+        &mut self,
+        value: &LooseTime,
+        span: &Range<usize>,
+    ) -> Result<(), JournalintError> {
         if let Some(start_dt) = self.check_start_time(value, span) {
             self.entry_start = Some((start_dt, span.clone()));
             self.check_prev_end_equals_next_start(start_dt, span);
         }
+        Ok(())
     }
 
-    fn on_visit_end_time(&mut self, value: &LooseTime, span: &Range<usize>) {
+    fn on_visit_end_time(
+        &mut self,
+        value: &LooseTime,
+        span: &Range<usize>,
+    ) -> Result<(), JournalintError> {
         if let Some(dt) = self.check_end_time(value, span) {
             self.entry_end = Some((dt, span.clone()));
         }
+        Ok(())
     }
 
-    fn on_visit_duration(&mut self, value: &Duration, span: &Range<usize>) {
+    fn on_visit_duration(
+        &mut self,
+        value: &Duration,
+        span: &Range<usize>,
+    ) -> Result<(), JournalintError> {
         self.check_end_time_exceeds_start_time();
         self.check_duration_matches_end_minus_start(value, span);
+        Ok(())
     }
 
-    fn on_visit_code(&mut self, _value: &str, _span: &Range<usize>) {}
+    fn on_visit_code(&mut self, _value: &str, _span: &Range<usize>) -> Result<(), JournalintError> {
+        Ok(())
+    }
 
-    fn on_visit_activity(&mut self, _value: &str, _span: &Range<usize>) {}
+    fn on_visit_activity(
+        &mut self,
+        _value: &str,
+        _span: &Range<usize>,
+    ) -> Result<(), JournalintError> {
+        Ok(())
+    }
 
-    fn on_leave_entry(&mut self, _span: &Range<usize>) {
+    fn on_leave_entry(&mut self, _span: &Range<usize>) -> Result<(), JournalintError> {
         self.entry_start = None;
         self.prev_entry_end = self.entry_end.take();
+        Ok(())
     }
 }
 
-pub fn lint(journal: &Expr, url: &Url, line_map: Arc<LineMap>) -> Vec<Diagnostic> {
+pub fn lint(
+    journal: &Expr,
+    url: &Url,
+    line_map: Arc<LineMap>,
+) -> Result<Vec<Diagnostic>, JournalintError> {
     let mut visitor = Linter::new(url, line_map);
-    walk(journal, &mut visitor);
-    visitor.diagnostics
+    walk(journal, &mut visitor)?;
+    Ok(visitor.diagnostics)
 }

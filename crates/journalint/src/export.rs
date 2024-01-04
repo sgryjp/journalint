@@ -41,7 +41,11 @@ struct Exporter<'a> {
 }
 
 impl<'a> Exporter<'a> {
-    fn run(fmt: ExportFormat, journal: ast::Expr, writer: &'a mut impl Write) {
+    fn run(
+        fmt: ExportFormat,
+        journal: ast::Expr,
+        writer: &'a mut impl Write,
+    ) -> Result<(), JournalintError> {
         let mut this = Self {
             fmt,
             writer,
@@ -52,18 +56,35 @@ impl<'a> Exporter<'a> {
             curr_codes: Vec::new(),
             curr_activity: None,
         };
-        ast::walk(&journal, &mut this);
+        ast::walk(&journal, &mut this)
     }
 }
 
 impl<'a> ast::Visitor for Exporter<'a> {
-    fn on_visit_fm_date(&mut self, value: &NaiveDate, _span: &Range<usize>) {
+    fn on_visit_fm_date(
+        &mut self,
+        value: &NaiveDate,
+        _span: &Range<usize>,
+    ) -> Result<(), JournalintError> {
         self.date = Some(*value);
+        Ok(())
     }
 
-    fn on_visit_fm_start(&mut self, _value: &ast::LooseTime, _span: &Range<usize>) {}
+    fn on_visit_fm_start(
+        &mut self,
+        _value: &ast::LooseTime,
+        _span: &Range<usize>,
+    ) -> Result<(), JournalintError> {
+        Ok(())
+    }
 
-    fn on_visit_fm_end(&mut self, _value: &ast::LooseTime, _span: &Range<usize>) {}
+    fn on_visit_fm_end(
+        &mut self,
+        _value: &ast::LooseTime,
+        _span: &Range<usize>,
+    ) -> Result<(), JournalintError> {
+        Ok(())
+    }
 
     fn on_leave_fm(
         &mut self,
@@ -71,50 +92,76 @@ impl<'a> ast::Visitor for Exporter<'a> {
         _start: &ast::Expr,
         _end: &ast::Expr,
         _span: &Range<usize>,
-    ) {
+    ) -> Result<(), JournalintError> {
+        Ok(())
     }
 
-    fn on_visit_entry(&mut self, _span: &Range<usize>) {
+    fn on_visit_entry(&mut self, _span: &Range<usize>) -> Result<(), JournalintError> {
         self.curr_start_time = None;
         self.curr_end_time = None;
         self.curr_duration = None;
         self.curr_codes.clear();
         self.curr_activity = None;
+        Ok(())
     }
 
-    fn on_visit_start_time(&mut self, value: &ast::LooseTime, _span: &Range<usize>) {
+    fn on_visit_start_time(
+        &mut self,
+        value: &ast::LooseTime,
+        _span: &Range<usize>,
+    ) -> Result<(), JournalintError> {
         self.curr_start_time = self.date.and_then(|d| value.to_datetime(d).ok());
+        Ok(())
     }
 
-    fn on_visit_end_time(&mut self, value: &ast::LooseTime, _span: &Range<usize>) {
+    fn on_visit_end_time(
+        &mut self,
+        value: &ast::LooseTime,
+        _span: &Range<usize>,
+    ) -> Result<(), JournalintError> {
         self.curr_end_time = self.date.and_then(|d| value.to_datetime(d).ok());
+        Ok(())
     }
 
-    fn on_visit_duration(&mut self, value: &Duration, _span: &Range<usize>) {
+    fn on_visit_duration(
+        &mut self,
+        value: &Duration,
+        _span: &Range<usize>,
+    ) -> Result<(), JournalintError> {
         self.curr_duration = Some(*value);
+        Ok(())
     }
 
-    fn on_visit_code(&mut self, value: &str, _span: &Range<usize>) {
+    fn on_visit_code(&mut self, value: &str, _span: &Range<usize>) -> Result<(), JournalintError> {
         self.curr_codes.push(String::from(value));
+        Ok(())
     }
 
-    fn on_visit_activity(&mut self, value: &str, _span: &Range<usize>) {
+    fn on_visit_activity(
+        &mut self,
+        value: &str,
+        _span: &Range<usize>,
+    ) -> Result<(), JournalintError> {
         self.curr_activity = Some(String::from(value));
+        Ok(())
     }
 
-    fn on_leave_entry(&mut self, _span: &Range<usize>) {
+    fn on_leave_entry(&mut self, _span: &Range<usize>) -> Result<(), JournalintError> {
+        // Skip exporting the entry if any of the components were invalid
         let Some(start_time) = self.curr_start_time else {
-            return;
+            return Ok(());
         };
         let Some(end_time) = self.curr_end_time else {
-            return;
+            return Ok(());
         };
         let Some(duration) = self.curr_duration else {
-            return;
+            return Ok(());
         };
         let Some(activity) = self.curr_activity.as_ref() else {
-            return;
+            return Ok(());
         };
+
+        // Create a struct for serialization purpose
         let entry = JournalEntry {
             start_time,
             end_time,
@@ -122,19 +169,19 @@ impl<'a> ast::Visitor for Exporter<'a> {
             codes: self.curr_codes.clone(),
             activity: activity.clone(),
         };
+
+        // Serialize
         let bytes = match self.fmt {
-            ExportFormat::Json => serde_json::to_vec(&entry)
-                .expect("### CREATING VEC[U8] FOR A JOURNAL ENTRY FAILED ###"),
+            ExportFormat::Json => serde_json::to_vec(&entry).map_err(JournalintError::from)?,
             ExportFormat::Csv => todo!(), // TODO: Implement
         };
-        let mut _nbytes_written = self
-            .writer
-            .write(bytes.as_slice())
-            .expect("### WRITING A JOURNAL ENTRY FAILED ###");
-        _nbytes_written += self
-            .writer
-            .write("\n".as_bytes())
-            .expect("### WRITING AN EOL CODE FAILED ###");
+        self.writer
+            .write_all(bytes.as_slice())
+            .map_err(JournalintError::from)?;
+        self.writer
+            .write_all("\n".as_bytes())
+            .map_err(JournalintError::from)?;
+        Ok(())
     }
 }
 
@@ -143,6 +190,5 @@ pub fn export(
     journal: ast::Expr,
     writer: &mut impl Write,
 ) -> Result<(), JournalintError> {
-    Exporter::run(fmt, journal, writer);
-    Ok(()) // TODO: Change visitor method signature so that they can report err
+    Exporter::run(fmt, journal, writer)
 }

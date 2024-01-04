@@ -341,7 +341,8 @@ fn lint_and_publish_diagnostics(
 
     // Lint
     if let Some(journal) = journal {
-        diagnostics.append(&mut lint(&journal, url, line_map));
+        let mut d = lint(&journal, url, line_map)?;
+        diagnostics.append(&mut d);
     }
 
     // Publish them to the client

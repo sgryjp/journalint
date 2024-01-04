@@ -81,7 +81,9 @@ fn cli_main(args: Arguments) -> Result<(), CliError> {
     // Parse the content and lint the AST unless parsing itself failed
     let (journal, mut diagnostics, line_map) = parse(&content);
     if let Some(journal) = journal.as_ref() {
-        diagnostics.append(&mut lint(journal, &url, line_map));
+        let mut d = lint(journal, &url, line_map)
+            .map_err(|e| CliError::new(1).with_message(format!("Failed on linting: {e:?}")))?;
+        diagnostics.append(&mut d);
     }
 
     // Execute specified task against the AST and diagnostics
@@ -144,7 +146,8 @@ mod snapshot_tests {
     fn parse_and_lint(url: &Url, content: &str) -> Vec<Diagnostic> {
         let (journal, mut diagnostics, line_map) = parse(&content);
         if let Some(journal) = journal {
-            diagnostics.append(&mut lint(&journal, &url, line_map));
+            let mut d = lint(&journal, &url, line_map).expect("FAILED TO LINT");
+            diagnostics.append(&mut d);
         };
 
         diagnostics
