@@ -23,7 +23,6 @@ use clap::Parser;
 use diagnostic::Diagnostic;
 use env_logger::TimestampPrecision;
 use errors::CliError;
-use export::ExportFormat;
 use log::debug;
 use log::error;
 use lsp_types::Url;
@@ -79,38 +78,37 @@ fn cli_main(args: Arguments) -> Result<(), CliError> {
         CliError::new(exitcode::IOERR).with_message(format!("Failed to read {filename:?}: {e:?}"))
     })?;
 
-    // Parse
+    // Parse the content and lint the AST unless parsing itself failed
     let (journal, mut diagnostics, line_map) = parse(&content);
-    if let Some(fmt) = args.export {
-        match fmt {
-            ExportFormat::Json => {
-                panic!("NOT IMPLEMENTED YET")
+    if let Some(journal) = journal.as_ref() {
+        diagnostics.append(&mut lint(journal, &url, line_map));
+    }
+
+    // Execute specified task against the AST and diagnostics
+    if args.fix {
+        // Sort diagnostics in reverse order
+        diagnostics.sort_by(|a, b| b.span().start.cmp(&a.span().start));
+
+        // Fix one by one, from the last to the first
+        diagnostics.iter().map(Box::new).for_each(|d| {
+            if let Err(e) = commands::fix(*d, content.as_str(), path.as_path()) {
+                debug!("Autofix failed: {e}");
             }
-            ExportFormat::Csv => {
-                panic!("NOT IMPLEMENTED YET")
-            }
-        }
+        });
     } else {
-        // Lint the parsed content unless parsing itself failed
-        if let Some(journal) = journal {
-            diagnostics.append(&mut lint(&journal, &url, line_map));
-        }
+        // Write diagnostic report to stderr
+        diagnostics
+            .iter()
+            .for_each(|d| report(&content, Some(&filename), d));
 
-        if args.fix {
-            // Sort diagnostics in reverse order
-            diagnostics.sort_by(|a, b| b.span().start.cmp(&a.span().start));
-
-            // Fix one by one, from the last to the first
-            diagnostics.iter().map(Box::new).for_each(|d| {
-                if let Err(e) = commands::fix(*d, content.as_str(), path.as_path()) {
-                    debug!("Autofix failed: {e}");
-                }
-            });
-        } else {
-            // Report the diagnostics to user
-            diagnostics
-                .iter()
-                .for_each(|d| report(&content, Some(&filename), d));
+        // Export parsed data to stdout
+        if let Some(fmt) = args.export {
+            if let Some(journal) = journal {
+                let mut writer = std::io::stdout();
+                crate::export::export(fmt, journal, &mut writer).map_err(|e| {
+                    CliError::new(3).with_message(format!("Failed to export data: {:?}", e))
+                })?;
+            }
         }
     }
 
