@@ -314,13 +314,7 @@ impl Visitor for Linter<'_> {
         Ok(())
     }
 
-    fn on_leave_fm(
-        &mut self,
-        _date: &Expr,
-        _start: &Expr,
-        _end: &Expr,
-        span: &Range<usize>,
-    ) -> Result<(), JournalintError> {
+    fn on_leave_fm(&mut self, span: &Range<usize>) -> Result<(), JournalintError> {
         // Calculate exact time of start and end
         self.fm_start_datetime = self.check_fm_start_is_valid();
         self.fm_end_datetime = self.check_fm_end_is_valid();

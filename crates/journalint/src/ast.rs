@@ -148,13 +148,7 @@ pub trait Visitor {
     ) -> Result<(), JournalintError>;
 
     #[warn(unused_results)]
-    fn on_leave_fm(
-        &mut self,
-        date: &Expr,
-        start: &Expr,
-        end: &Expr,
-        span: &Range<usize>,
-    ) -> Result<(), JournalintError>;
+    fn on_leave_fm(&mut self, span: &Range<usize>) -> Result<(), JournalintError>;
 
     #[warn(unused_results)]
     fn on_visit_entry(&mut self, span: &Range<usize>) -> Result<(), JournalintError>;
@@ -209,7 +203,7 @@ pub fn walk(expr: &Expr, visitor: &mut impl Visitor) -> Result<(), JournalintErr
             walk(date, visitor)?;
             walk(start, visitor)?;
             walk(end, visitor)?;
-            visitor.on_leave_fm(date, start, end, span)
+            visitor.on_leave_fm(span)
         }
         Expr::StartTime { value, span } => visitor.on_visit_start_time(value, span),
         Expr::EndTime { value, span } => visitor.on_visit_end_time(value, span),

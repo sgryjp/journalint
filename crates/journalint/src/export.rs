@@ -86,13 +86,7 @@ impl<'a> ast::Visitor for Exporter<'a> {
         Ok(())
     }
 
-    fn on_leave_fm(
-        &mut self,
-        _date: &ast::Expr,
-        _start: &ast::Expr,
-        _end: &ast::Expr,
-        _span: &Range<usize>,
-    ) -> Result<(), JournalintError> {
+    fn on_leave_fm(&mut self, _span: &Range<usize>) -> Result<(), JournalintError> {
         Ok(())
     }
 
