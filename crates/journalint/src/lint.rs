@@ -159,16 +159,7 @@ impl Visitor for Linter<'_> {
         }
     }
 
-    fn on_visit_entry(
-        &mut self,
-        _start_time: &Expr,
-        _end_time: &Expr,
-        _codes: &[Expr],
-        _duration: &Expr,
-        _activity: &Expr,
-        _span: &Range<usize>,
-    ) {
-    }
+    fn on_visit_entry(&mut self, _span: &Range<usize>) {}
 
     fn on_visit_start_time(&mut self, value: &LooseTime, span: &Range<usize>) {
         if let Some((date, _)) = self.fm_date {
@@ -273,15 +264,7 @@ impl Visitor for Linter<'_> {
 
     fn on_visit_activity(&mut self, _value: &str, _span: &Range<usize>) {}
 
-    fn on_leave_entry(
-        &mut self,
-        _start_time: &Expr,
-        _end_time: &Expr,
-        _codes: &[Expr],
-        _duration: &Expr,
-        _activity: &Expr,
-        _span: &Range<usize>,
-    ) {
+    fn on_leave_entry(&mut self, _span: &Range<usize>) {
         self.entry_start = None;
         self.prev_entry_end = self.entry_end.take();
     }

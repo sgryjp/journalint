@@ -74,15 +74,7 @@ impl<'a> ast::Visitor for Exporter<'a> {
     ) {
     }
 
-    fn on_visit_entry(
-        &mut self,
-        _start_time: &ast::Expr,
-        _end_time: &ast::Expr,
-        _codes: &[ast::Expr],
-        _duration: &ast::Expr,
-        _activity: &ast::Expr,
-        _span: &Range<usize>,
-    ) {
+    fn on_visit_entry(&mut self, _span: &Range<usize>) {
         self.curr_start_time = None;
         self.curr_end_time = None;
         self.curr_duration = None;
@@ -110,15 +102,7 @@ impl<'a> ast::Visitor for Exporter<'a> {
         self.curr_activity = Some(String::from(value));
     }
 
-    fn on_leave_entry(
-        &mut self,
-        _start_time: &ast::Expr,
-        _end_time: &ast::Expr,
-        _codes: &[ast::Expr],
-        _duration: &ast::Expr,
-        _activity: &ast::Expr,
-        _span: &Range<usize>,
-    ) {
+    fn on_leave_entry(&mut self, _span: &Range<usize>) {
         let Some(start_time) = self.curr_start_time else {
             return;
         };

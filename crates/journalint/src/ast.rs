@@ -130,30 +130,13 @@ pub trait Visitor {
     fn on_visit_fm_start(&mut self, value: &LooseTime, span: &Range<usize>);
     fn on_visit_fm_end(&mut self, value: &LooseTime, span: &Range<usize>);
     fn on_leave_fm(&mut self, date: &Expr, start: &Expr, end: &Expr, span: &Range<usize>);
-    fn on_visit_entry(
-        // TODO: Remove child expressions from parameters
-        &mut self,
-        start_time: &Expr,
-        end_time: &Expr,
-        codes: &[Expr],
-        duration: &Expr,
-        activity: &Expr,
-        span: &Range<usize>,
-    );
+    fn on_visit_entry(&mut self, span: &Range<usize>);
     fn on_visit_start_time(&mut self, value: &LooseTime, span: &Range<usize>);
     fn on_visit_end_time(&mut self, value: &LooseTime, span: &Range<usize>);
     fn on_visit_duration(&mut self, value: &Duration, span: &Range<usize>);
     fn on_visit_code(&mut self, value: &str, span: &Range<usize>);
     fn on_visit_activity(&mut self, value: &str, span: &Range<usize>);
-    fn on_leave_entry(
-        &mut self,
-        start_time: &Expr,
-        end_time: &Expr,
-        codes: &[Expr],
-        duration: &Expr,
-        activity: &Expr,
-        span: &Range<usize>,
-    );
+    fn on_leave_entry(&mut self, span: &Range<usize>);
 }
 
 pub fn walk(expr: &Expr, visitor: &mut impl Visitor) {
@@ -201,7 +184,7 @@ pub fn walk(expr: &Expr, visitor: &mut impl Visitor) {
             activity,
             span,
         } => {
-            visitor.on_visit_entry(start, end, codes, duration, activity, span);
+            visitor.on_visit_entry(span);
             walk(start, visitor);
             walk(end, visitor);
             for code in codes {
@@ -209,7 +192,7 @@ pub fn walk(expr: &Expr, visitor: &mut impl Visitor) {
             }
             walk(duration, visitor);
             walk(activity, visitor);
-            visitor.on_leave_entry(start, end, codes, duration, activity, span);
+            visitor.on_leave_entry(span);
         }
         Expr::Journal {
             front_matter,
