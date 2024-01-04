@@ -1,12 +1,14 @@
 # See https://pre-commit.com for more information
 # See https://pre-commit.com/hooks.html for more hooks
 repos:
+
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.4.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-added-large-files
+
   - repo: local
     hooks:
       - id: cargo-fmt
@@ -14,13 +16,21 @@ repos:
         entry: cargo fmt --all -- --check --color always
         language: system
         pass_filenames: false
+
       - id: clippy
         name: clippy
         entry: cargo clippy -- -D warnings
         language: system
         pass_filenames: false
+
       - id: cargo-test
         name: cargo-test
         entry: cargo test
+        language: system
+        pass_filenames: false
+
+      - id: prettier
+        name: prettier
+        entry: sh -c "cd tools/journalint-vscode && npm run format"
         language: system
         pass_filenames: false
