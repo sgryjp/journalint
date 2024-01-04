@@ -12,7 +12,7 @@
   "version": "0.2.0",
   "repository": {
     "type": "git",
-    "url": "https://gitlab.com/sgryjp/journalint.git"
+    "url": "https://github.com/sgryjp/journalint.git"
   },
   "engines": {
     "vscode": "^1.76.0"
