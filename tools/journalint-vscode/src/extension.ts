@@ -76,7 +76,7 @@ export function activate(context: vscode.ExtensionContext) {
     "journalint",
     "journalint",
     serverOptions,
-    clientOptions
+    clientOptions,
   );
   client.start();
 

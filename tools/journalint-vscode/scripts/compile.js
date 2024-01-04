@@ -18,7 +18,7 @@ const suffix = process.platform === "win32" ? ".exe" : "";
 const rustTarget = targetMapping.get(nodeTarget);
 console.log("rustTarget:", rustTarget);
 const executablePath = path.resolve(
-  `../../target/${rustTarget}/release/${stem}${suffix}`
+  `../../target/${rustTarget}/release/${stem}${suffix}`,
 );
 if (!shell.test("-f", executablePath)) {
   console.log("WARNING: Native binary not found. Building...");
