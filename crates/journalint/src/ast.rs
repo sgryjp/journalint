@@ -111,7 +111,8 @@ impl LooseTime {
                     )));
                 }
                 let num_days = h / 24;
-                let time = NaiveTime::from_hms_opt(h - num_days * 24, m, 0).unwrap();
+                let time = NaiveTime::from_hms_opt(h - num_days * 24, m, 0)
+                    .expect("failed to calculate time value");
                 let Some(date) = date.checked_add_days(Days::new(u64::from(num_days))) else {
                     return Err(JournalintError::ParseError(format!(
                         "failed to calculate one date ahead of '{date}'"
@@ -121,5 +122,89 @@ impl LooseTime {
                 Ok(DateTime::from_utc(datetime, Utc))
             }
         }
+    }
+}
+
+pub trait Visitor {
+    fn on_visit_fm_date(&mut self, value: &NaiveDate, span: &Range<usize>);
+    fn on_visit_fm_start(&mut self, value: &LooseTime, span: &Range<usize>);
+    fn on_visit_fm_end(&mut self, value: &LooseTime, span: &Range<usize>);
+    fn on_leave_fm(&mut self, date: &Expr, start: &Expr, end: &Expr, span: &Range<usize>);
+    fn on_visit_start_time(&mut self, value: &LooseTime, span: &Range<usize>);
+    fn on_visit_end_time(&mut self, value: &LooseTime, span: &Range<usize>);
+    fn on_visit_duration(&mut self, value: &Duration, span: &Range<usize>);
+    fn on_leave_entry(
+        &mut self,
+        start_time: &Expr,
+        end_time: &Expr,
+        codes: &[Expr],
+        duration: &Expr,
+        activity: &Expr,
+        span: &Range<usize>,
+    );
+}
+
+pub fn walk(expr: &Expr, visitor: &mut impl Visitor) {
+    match expr {
+        Expr::FrontMatterDate { value, span } => {
+            visitor.on_visit_fm_date(value, span);
+        }
+        Expr::FrontMatterStartTime { value, span } => {
+            visitor.on_visit_fm_start(value, span);
+        }
+        Expr::FrontMatterEndTime { value, span } => {
+            visitor.on_visit_fm_end(value, span);
+        }
+        Expr::FrontMatter {
+            date,
+            start,
+            end,
+            span,
+        } => {
+            walk(date, visitor);
+            walk(start, visitor);
+            walk(end, visitor);
+            visitor.on_leave_fm(date, start, end, span);
+        }
+        Expr::StartTime { value, span } => {
+            visitor.on_visit_start_time(value, span);
+        }
+        Expr::EndTime { value, span } => {
+            visitor.on_visit_end_time(value, span);
+        }
+        Expr::Duration { value, span } => {
+            visitor.on_visit_duration(value, span);
+        }
+        // Expr::Code { value, span } => todo!(),
+        // Expr::Activity { value, span } => todo!(),
+        Expr::Entry {
+            start,
+            end,
+            codes,
+            duration,
+            activity,
+            span,
+        } => {
+            walk(start, visitor);
+            walk(end, visitor);
+            for code in codes {
+                walk(code, visitor);
+            }
+            walk(duration, visitor);
+            walk(activity, visitor);
+            visitor.on_leave_entry(start, end, codes, duration, activity, span);
+        }
+        Expr::Journal {
+            front_matter,
+            lines,
+        } => {
+            walk(front_matter, visitor);
+            for line in lines {
+                walk(line, visitor);
+            }
+        }
+        // Expr::Error { reason, span } => todo!(),
+        // Expr::NonTargetLine => todo!(),
+        _ => (),
     }
 }
