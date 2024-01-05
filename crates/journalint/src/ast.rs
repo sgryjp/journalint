@@ -79,10 +79,7 @@ impl LooseTime {
 
     pub fn to_datetime(&self, date: NaiveDate) -> Result<DateTime<Utc>, JournalintError> {
         match NaiveTime::parse_from_str(self.0.as_str(), "%H:%M") {
-            Ok(t) => {
-                let datetime = NaiveDateTime::new(date, t);
-                Ok(DateTime::from_utc(datetime, Utc))
-            }
+            Ok(t) => Ok(NaiveDateTime::new(date, t).and_utc()),
             Err(e) => {
                 // Try parsing as it's beyond 24:00.
                 let hhmm: Vec<&str> = self.0.split(':').collect();
@@ -118,8 +115,7 @@ impl LooseTime {
                         "failed to calculate one date ahead of '{date}'"
                     )));
                 };
-                let datetime = NaiveDateTime::new(date, time);
-                Ok(DateTime::from_utc(datetime, Utc))
+                Ok(NaiveDateTime::new(date, time).and_utc())
             }
         }
     }
