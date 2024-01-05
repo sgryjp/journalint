@@ -1,0 +1,9 @@
+{
+  "private": true,
+  "workspaces": [
+    "tools/journalint-vscode"
+  ],
+  "devDependencies": {
+    "prettier": "^3.1.1"
+  }
+}

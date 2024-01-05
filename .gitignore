@@ -1,3 +1,4 @@
-/dist
-/target
+dist/
+node_modules/
+target/
 tarpaulin-report.html
