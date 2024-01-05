@@ -19,5 +19,5 @@ yarn install --frozen-lockfile
 
 # Here I intentionally avoid using npm exec because executing vsce in that way makes it
 # fail to parse command arguments and I cannot fix the problem...
-npm vsce package --target ${node_target}
+vsce package --yarn --target ${node_target}
 cd ../..

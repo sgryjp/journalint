@@ -46,7 +46,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw }
 
     Write-Host -ForegroundColor Yellow "+ vsce package --target $env:node_target --out $workspace_dir/dist/"
-    vsce package --target $env:node_target --out $workspace_dir/dist/
+    vsce package --yarn --target $env:node_target --out $workspace_dir/dist/
     if ($LASTEXITCODE -ne 0) { throw }
 }
 finally {

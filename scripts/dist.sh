@@ -32,4 +32,4 @@ yarn install --frozen-lockfile
 
 # Here I intentionally avoid using npm exec because executing vsce in that way
 # makes it fail to parse command arguments and I cannot fix the problem...
-vsce package --target ${node_target} --out $workspace_dir/dist/
+vsce package --yarn --target ${node_target} --out $workspace_dir/dist/
