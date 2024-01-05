@@ -27,8 +27,8 @@ cd $workspace_dir
 node --version
 ls -lF target/$rust_target/release
 cd tools/journalint-vscode
-npm cache verify
-npm ci
+rm -rf node_modules
+yarn install --frozen-lockfile
 
 # Here I intentionally avoid using npm exec because executing vsce in that way
 # makes it fail to parse command arguments and I cannot fix the problem...

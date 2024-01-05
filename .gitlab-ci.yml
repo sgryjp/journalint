@@ -58,6 +58,7 @@ build-vsix-linux:
     node_target: "linux-x64"
     rust_target: "x86_64-unknown-linux-gnu"
   script:
+    - npm install -g yarn
     - npm install -g @vscode/vsce
     - scripts/build-vsix.sh
   artifacts:
@@ -78,6 +79,7 @@ build-vsix-windows:
     - "'node', 'npm' | Get-Command"
     - New-Item -Type Directory -Force $env:AppData\npm
     - npm install -g @vscode/vsce
+    - npm install -g yarn
     - scripts/build-vsix.ps1
   artifacts:
     paths:

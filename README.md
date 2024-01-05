@@ -2,9 +2,16 @@
 
 Linter for my personal journal files.
 
-## Test
+## Prerequesties
 
-This project uses [insta](https://insta.rs/) snapshot testing tool.
+Tools below are required for development tasks:
+
+- [vsce](https://github.com/microsoft/vscode-vsce)
+- [yarn](https://github.com/yarnpkg/yarn)
+
+Tool below is required for unit testing:
+
+- [insta](https://insta.rs/)
 
 ## ToDo List
 

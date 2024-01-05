@@ -34,8 +34,10 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install vsce command globally
-        run: npm install -g @vscode/vsce
+      - name: Install yarn and vsce globally
+        run: |
+          npm install -g yarn
+          npm install -g @vscode/vsce
 
       - name: Build
         run: |
