@@ -17,8 +17,8 @@ Get-ChildItem target/$env:rust_target/release
 Write-Host -ForegroundColor Yellow "+ pushd tools/journalint-vscode"
 pushd tools/journalint-vscode
 try {
-    Write-Host -ForegroundColor Yellow "+ Remove-Item -Recurse -Force node_modules"
-    Remove-Item -Recurse -Force node_modules
+    Write-Host -ForegroundColor Yellow "+ Remove-Item -Recurse -Force -ErrorAction Ignore node_modules"
+    Remove-Item -Recurse -Force -ErrorAction Ignore node_modules
     if ($LASTEXITCODE -ne 0) {
         throw
     }
