@@ -8,7 +8,7 @@
     "url": "https://github.com/sgryjp"
   },
   "description": "Linter for my personal journal files.",
-  "license": "(MIT OR Apache-2.1)",
+  "license": "(MIT OR Apache-2.0)",
   "version": "0.2.0",
   "repository": {
     "type": "git",
