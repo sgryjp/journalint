@@ -18,8 +18,8 @@ jobs:
       matrix:
         job:
           # prettier-ignore
-          - { target: x86_64-pc-windows-msvc,   os: windows-latest, script: makedist.ps1 }
-          - { target: x86_64-unknown-linux-gnu, os: ubuntu-latest,  script: makedist.sh  }
+          - { target: x86_64-pc-windows-msvc,   os: windows-latest, script: dist.ps1 }
+          - { target: x86_64-unknown-linux-gnu, os: ubuntu-latest,  script: dist.sh  }
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
