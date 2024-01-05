@@ -1,13 +1,20 @@
 {
 	"folders": [
 		{
+			"name": ".github",
+			"path": ".github"
+		},
+		{
+			"name": "scripts",
+			"path": "scripts"
+		},
+		{
+			"name": "journalint",
 			"path": "crates/journalint"
 		},
 		{
+			"name": "journalint-vscode",
 			"path": "tools/journalint-vscode"
-		},
-		{
-			"path": "scripts"
 		}
 	],
 	"settings": {
