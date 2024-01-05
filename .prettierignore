@@ -1,6 +1,2 @@
 /target
 /tools/journalint-vscode/out
-
-# Use vscode-json-languageservice
-# (https://github.com/Microsoft/vscode-json-languageservice)
-*.json
