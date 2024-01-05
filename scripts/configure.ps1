@@ -1,8 +1,8 @@
 $workspace_dir = (Get-Item $MyInvocation.MyCommand.Path).Directory.Parent.FullName
-if (-not $env:rust_target) {
+if (-not $rust_target) {
     $rust_target = (rustc -vV | Select-String "host").ToString().Split(' ')[-1]
 }
-if (-not $env:node_target) {
+if (-not $node_target) {
     $node_target = "$((node -p "process.platform") + '-' + (node -p "process.arch"))"
 }
 $executable_suffix = ".exe"

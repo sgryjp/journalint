@@ -26,7 +26,9 @@
   "main": "./out/extension.js",
   "scripts": {
     "vscode:prepublish": "yarn run compile",
-    "compile": "node scripts/compile.js",
+    "compile": "run-script-os",
+    "compile:darwin:linux": "cd ../.. && sh scripts/compile-crates.sh && sh scripts/compile-node.sh",
+    "compile:win32": "cd ../.. && powershell scripts/compile-crates.ps1 && powershell scripts/compile-node.ps1",
     "watch": "tsc -watch -p ./",
     "pretest": "yarn run compile && yarn run lint",
     "lint": "eslint src --ext ts",
@@ -44,7 +46,7 @@
     "eslint": "^8.56.0",
     "glob": "^8.0.3",
     "mocha": "^10.1.0",
-    "shelljs": "^0.8.5",
+    "run-script-os": "^1.1.6",
     "typescript": "^5.3.3"
   },
   "dependencies": {
