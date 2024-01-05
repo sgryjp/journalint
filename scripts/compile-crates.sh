@@ -7,3 +7,4 @@ trap 'cd $orig_cwd' EXIT
 set -ex
 cd $workspace_dir
 cargo build --quiet --release --target $rust_target
+ls -l $native_executable_path
