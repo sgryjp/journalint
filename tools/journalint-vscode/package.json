@@ -25,10 +25,10 @@
     "onLanguage:markdown"
   ],
   "scripts": {
-    "vscode:prepublish": "npm run compile",
+    "vscode:prepublish": "yarn run compile",
     "compile": "node scripts/compile.js",
     "watch": "tsc -watch -p ./",
-    "pretest": "npm run compile && npm run lint",
+    "pretest": "yarn run compile && yarn run lint",
     "lint": "eslint src --ext ts",
     "format": "prettier -w .",
     "test": "node ./out/test/runTest.js"

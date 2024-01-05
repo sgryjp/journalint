@@ -27,9 +27,15 @@ cd $workspace_dir
 node --version
 ls -lF target/$rust_target/release
 cd tools/journalint-vscode
-npm cache verify
-npm ci
+rm -rf node_modules
+yarn install --frozen-lockfile
 
+# As of vsce 2.22.0, without specifying --yarn for a project using workspace
+# oddly fails with message as below:
+#     Error: invalid relative path: extension/../../.git/config
+# To avoid this error I switch the packaging tool to yarn and rewrote scripts
+# using npm.
+#
 # Here I intentionally avoid using npm exec because executing vsce in that way
 # makes it fail to parse command arguments and I cannot fix the problem...
-vsce package --target ${node_target} --out $workspace_dir/dist/
+vsce package --yarn --target ${node_target} --out $workspace_dir/dist/
