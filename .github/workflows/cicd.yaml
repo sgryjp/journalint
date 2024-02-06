@@ -53,7 +53,7 @@ jobs:
   release-latest:
     needs: [build]
     permissions:
-      deployments: write
+      contents: write
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ github.token }}
