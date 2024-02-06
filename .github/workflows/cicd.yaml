@@ -44,6 +44,7 @@ jobs:
           scripts/${{ matrix.job.script }}
           ls dist
 
+      # Upload the executable file and the VSIX file
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
@@ -63,4 +64,4 @@ jobs:
         with:
           path: artifacts/
       - run: "gh release delete latest --yes || true"
-      - run: "gh release create latest artifacts/*"
+      - run: "gh release create latest artifacts/*/*"
