@@ -61,4 +61,4 @@ jobs:
         with:
           path: artifacts/
       - run: "gh release delete latest --yes || true"
-      - run: "gh release create latest dist/*"
+      - run: "gh release create latest artifacts/*"
