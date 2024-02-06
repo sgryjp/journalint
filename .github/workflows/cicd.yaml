@@ -30,7 +30,7 @@ jobs:
           targets: ${{ matrix.job.target }}
 
       - name: Install Node.js toolchain
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 20
 
@@ -44,8 +44,25 @@ jobs:
           scripts/${{ matrix.job.script }}
           ls dist
 
+      # Upload the executable file and the VSIX file
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: artifacts-${{ matrix.job.target }}
           path: dist/*
+
+  release-latest:
+    needs: [build]
+    if: ${{ ! startsWith(github.ref, 'refs/heads/main') }}
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+      - run: "gh release delete latest --yes || true"
+      - run: "gh release create latest artifacts/*/*"
