@@ -30,7 +30,7 @@ jobs:
           targets: ${{ matrix.job.target }}
 
       - name: Install Node.js toolchain
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 20
 
@@ -53,6 +53,8 @@ jobs:
   publish:
     needs: [build]
     runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
