@@ -260,14 +260,16 @@ mod tests {
     #[case("2z:56", 2006, 2, 3)] // Non-number hour
     #[case("24:5z", 2006, 2, 3)] // Non-number minute
     #[case("00:61", 2006, 2, 3)] // Not parsable as a time value and its hour is less than 24.
-    #[case("24:56", 262143, 12, 31)] // Loosely valid time value but out of supported range.
+    #[case("24:56", 999999, 12, 31)] // Loosely valid time value but out of supported range.
     fn loose_time_to_datetime_error(
         #[case] input: &str,
         #[case] year: i32,
         #[case] month: u32,
         #[case] day: u32,
     ) {
-        let date = NaiveDate::from_ymd_opt(year, month, day).unwrap();
+        let date = NaiveDate::from_ymd_opt(year, month, day)
+            .or(Some(NaiveDate::MAX))
+            .unwrap();
 
         assert!(matches!(
             LooseTime::new(input).to_datetime(date),
