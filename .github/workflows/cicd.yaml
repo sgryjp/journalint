@@ -64,5 +64,6 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           path: artifacts/
+      - run: "git tag push origin :latest || true"
       - run: "gh release delete latest --yes || true"
       - run: "gh release create latest artifacts/*/*"
