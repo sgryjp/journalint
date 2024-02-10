@@ -1,53 +1,13 @@
+//! Autofix commands
 use std::collections::HashMap;
-use std::fs::write;
-use std::path::Path;
 
 use lsp_types::{TextEdit, Url, WorkspaceEdit};
 use once_cell::sync::Lazy;
 
 use crate::code::Code;
-use crate::diagnostic::Diagnostic;
+use crate::commands::Command;
 use crate::errors::JournalintError;
 use crate::service::ServerState;
-
-/// Command of journalint.
-///
-/// Currently I only think of auto-fix commands so this must be unsuitable for other kinds of
-/// commands.
-pub trait Command {
-    /// Get short description of this command which is meant to be used in UI.
-    fn title(&self) -> &str;
-
-    /// Get machine-readable identifier of this command.
-    fn id(&self) -> &str;
-
-    /// Get a diagnostic code which is fixable by this command.
-    fn fixable_codes(&self) -> Code;
-
-    /// Executes this command.
-    ///
-    /// In case of fix commands, the result is the change set to be applied to the document.
-    /// Note that it will be `Ok(None)` if there is nothing to do.
-    fn execute(
-        &self,
-        state: &ServerState,
-        url: &Url,
-        range: &lsp_types::Range,
-    ) -> Result<Option<WorkspaceEdit>, JournalintError>;
-}
-
-#[derive(serde::Serialize, serde::Deserialize)]
-pub struct CommandParams {
-    url: Url,
-    range: lsp_types::Range,
-}
-
-/// Auto-fix command.
-pub enum AutofixCommand {
-    RecalculateDuration,
-    ReplaceWithPreviousEndTime,
-    UseDateInFilename,
-}
 
 /// A global static array of all auto-fix commands.
 pub static ALL_AUTOFIX_COMMANDS: Lazy<Vec<AutofixCommand>> = Lazy::new(|| {
@@ -57,6 +17,13 @@ pub static ALL_AUTOFIX_COMMANDS: Lazy<Vec<AutofixCommand>> = Lazy::new(|| {
         AutofixCommand::UseDateInFilename,
     ]
 });
+
+/// Auto-fix command.
+pub enum AutofixCommand {
+    RecalculateDuration,
+    ReplaceWithPreviousEndTime,
+    UseDateInFilename,
+}
 
 impl Command for AutofixCommand {
     fn title(&self) -> &str {
@@ -95,23 +62,6 @@ impl Command for AutofixCommand {
     ) -> Result<Option<WorkspaceEdit>, JournalintError> {
         execute_fix(self, state, url, range)
     }
-}
-
-// -----------------------------------------------------------------------------
-
-pub fn fix(diagnostic: &Diagnostic, content: &str, path: &Path) -> Result<(), JournalintError> {
-    // TODO: Move somewhere else
-    let span = diagnostic.span();
-    let (start, end) = (span.start, span.end);
-
-    if let Some(expectation) = diagnostic.expectation() {
-        let mut buf = String::with_capacity(content.len());
-        buf.push_str(&content[..start]);
-        buf.push_str(expectation.as_str());
-        buf.push_str(&content[end..]);
-        write(path, buf)?;
-    };
-    Ok(())
 }
 
 fn execute_fix(
