@@ -180,12 +180,27 @@ fn on_text_document_did_open(
     conn: &Connection,
     msg: lsp_server::Notification,
 ) -> Result<(), JournalintError> {
+    // Deserialize parameters
     let params: DidOpenTextDocumentParams = serde_json::from_value(msg.params)?;
     let uri = params.text_document.uri;
     let content = params.text_document.text.as_str();
     let version = None;
-    let diagnostics = lint_and_publish_diagnostics(conn, &uri, content, version)?;
+
+    // Parse
+    let (journal, mut diagnostics, line_map) = parse(content);
+
+    // Lint
+    if let Some(journal) = &journal {
+        let mut d = lint(journal, &uri, line_map)?;
+        diagnostics.append(&mut d);
+    }
+
+    // Publish diagnostics
+    publish_diagnostics(conn, &uri, &diagnostics, version)?;
+
+    // Update (replace) server state
     state.diagnostics.insert(uri, diagnostics);
+
     Ok(())
 }
 
@@ -194,6 +209,7 @@ fn on_text_document_did_change(
     conn: &Connection,
     msg: lsp_server::Notification,
 ) -> Result<(), JournalintError> {
+    // Deserialize parameters
     let params: DidChangeTextDocumentParams = serde_json::from_value(msg.params)?;
     let uri = params.text_document.uri;
     let content = params
@@ -201,8 +217,22 @@ fn on_text_document_did_change(
         .last()
         .map_or("", |e| e.text.as_str());
     let version = Some(params.text_document.version);
-    let diagnostics = lint_and_publish_diagnostics(conn, &uri, content, version)?;
+
+    // Parse
+    let (journal, mut diagnostics, line_map) = parse(content);
+
+    // Lint
+    if let Some(journal) = &journal {
+        let mut d = lint(journal, &uri, line_map)?;
+        diagnostics.append(&mut d);
+    }
+
+    // Publish diagnostics
+    publish_diagnostics(conn, &uri, &diagnostics, version)?;
+
+    // Update (replace) server state
     state.diagnostics.insert(uri, diagnostics);
+
     Ok(())
 }
 
@@ -330,21 +360,13 @@ fn on_workspace_execute_command(
     Ok(())
 }
 
-fn lint_and_publish_diagnostics(
+#[warn(unused_results)]
+fn publish_diagnostics(
     conn: &Connection,
     url: &Url,
-    content: &str,
+    diagnostics: &[Diagnostic],
     version: Option<i32>,
-) -> Result<Vec<Diagnostic>, JournalintError> {
-    // Parse
-    let (journal, mut diagnostics, line_map) = parse(content);
-
-    // Lint
-    if let Some(journal) = journal {
-        let mut d = lint(&journal, url, line_map)?;
-        diagnostics.append(&mut d);
-    }
-
+) -> Result<(), JournalintError> {
     // Publish them to the client
     let params = PublishDiagnosticsParams::new(
         url.clone(),
@@ -361,5 +383,5 @@ fn lint_and_publish_diagnostics(
             params,
         }))?;
 
-    Ok(diagnostics)
+    Ok(())
 }
