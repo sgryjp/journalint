@@ -25,11 +25,12 @@ use lsp_types::ServerCapabilities;
 use lsp_types::TextDocumentSyncCapability;
 use lsp_types::TextDocumentSyncKind;
 use lsp_types::Url;
+use strum::IntoEnumIterator;
 
 use crate::ast::Expr;
 use crate::code::Code;
+use crate::commands::AutofixCommand;
 use crate::commands::Command as _;
-use crate::commands::ALL_AUTOFIX_COMMANDS;
 use crate::diagnostic::Diagnostic;
 use crate::errors::JournalintError;
 use crate::lint::lint;
@@ -112,8 +113,7 @@ pub fn main() -> Result<(), JournalintError> {
             resolve_provider: Some(false),
         })),
         execute_command_provider: Some(ExecuteCommandOptions {
-            commands: ALL_AUTOFIX_COMMANDS
-                .iter()
+            commands: AutofixCommand::iter()
                 .map(|cmd| cmd.id().to_string())
                 .collect::<Vec<String>>(),
             work_done_progress_options: lsp_types::WorkDoneProgressOptions {
@@ -309,8 +309,7 @@ fn on_text_document_code_action(
         };
 
         // List up all available code actions (auto-fix only as of now) for the code
-        let mut commands: Vec<Command> = ALL_AUTOFIX_COMMANDS
-            .iter()
+        let mut commands: Vec<Command> = AutofixCommand::iter()
             .filter(|cmd| cmd.fixable_codes() == code)
             .map(|cmd| {
                 lsp_types::Command::new(
@@ -340,9 +339,7 @@ fn on_workspace_execute_command(
     let params: lsp_types::ExecuteCommandParams = serde_json::from_value(msg.params)?;
 
     // Dispatch the requested command
-    let Some(command) = ALL_AUTOFIX_COMMANDS
-        .iter()
-        .find(|cmd| cmd.id() == params.command.as_str())
+    let Some(command) = AutofixCommand::iter().find(|cmd| cmd.id() == params.command.as_str())
     else {
         let errmsg = format!("Unknown command: {}", params.command.as_str());
         conn.sender.send(Message::Response(Response::new_err(

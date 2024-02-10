@@ -7,7 +7,7 @@ use std::path::Path;
 use lsp_types::{Url, WorkspaceEdit};
 
 use crate::code::Code;
-pub use crate::commands::autofix::ALL_AUTOFIX_COMMANDS; // TOOD: There may be a better way...
+pub use crate::commands::autofix::AutofixCommand;
 use crate::diagnostic::Diagnostic;
 use crate::errors::JournalintError;
 use crate::service::ServerState;

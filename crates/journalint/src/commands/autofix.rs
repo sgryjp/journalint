@@ -2,23 +2,15 @@
 use std::collections::HashMap;
 
 use lsp_types::{TextEdit, Url, WorkspaceEdit};
-use once_cell::sync::Lazy;
+use strum::EnumIter;
 
 use crate::code::Code;
 use crate::commands::Command;
 use crate::errors::JournalintError;
 use crate::service::ServerState;
 
-/// A global static array of all auto-fix commands.
-pub static ALL_AUTOFIX_COMMANDS: Lazy<Vec<AutofixCommand>> = Lazy::new(|| {
-    vec![
-        AutofixCommand::RecalculateDuration,
-        AutofixCommand::ReplaceWithPreviousEndTime,
-        AutofixCommand::UseDateInFilename,
-    ]
-});
-
 /// Auto-fix command.
+#[derive(Debug, EnumIter)]
 pub enum AutofixCommand {
     RecalculateDuration,
     ReplaceWithPreviousEndTime,
