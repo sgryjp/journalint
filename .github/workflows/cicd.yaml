@@ -66,4 +66,4 @@ jobs:
           path: artifacts/
       - run: "git push origin :latest || true"
       - run: "gh release delete latest --yes || true"
-      - run: "gh release create latest artifacts/*/*"
+      - run: "gh release create latest --prerelease artifacts/*/*"
