@@ -26,6 +26,7 @@ use lsp_types::TextDocumentSyncCapability;
 use lsp_types::TextDocumentSyncKind;
 use lsp_types::Url;
 
+use crate::ast::Expr;
 use crate::code::Code;
 use crate::commands::Command as _;
 use crate::commands::ALL_AUTOFIX_COMMANDS;
@@ -37,17 +38,29 @@ use crate::parse::parse;
 const E_UNKNOWN_COMMAND: i32 = 1;
 const E_INVALID_ARGUMENTS: i32 = 2;
 
+/// State of the journalint language server.
 #[derive(Default)]
 pub struct ServerState {
-    pub diagnostics: HashMap<Url, Vec<Diagnostic>>,
-    pub sent_requests: Vec<Request>,
+    document_states: HashMap<Url, DocumentState>,
+    sent_requests: Vec<Request>,
     msgid_counter: u16,
 }
 
 impl ServerState {
+    /// Generates numeric ID for next request message.
     fn next_request_id(&mut self) -> RequestId {
         self.msgid_counter = self.msgid_counter.wrapping_add(1);
         RequestId::from(i32::from(self.msgid_counter))
+    }
+
+    // Set state data for the specified document.
+    fn set_document_state(&mut self, url: &Url, state: DocumentState) -> Option<DocumentState> {
+        self.document_states.insert(url.clone(), state)
+    }
+
+    // Remove state data for the specified document.
+    fn remove_document_state(&mut self, url: &Url) -> Option<DocumentState> {
+        self.document_states.remove(url)
     }
 
     /// Find a diagnostic at the specified location with appropriate code.
@@ -57,11 +70,28 @@ impl ServerState {
         range: &lsp_types::Range,
         code: &Code,
     ) -> Option<&Diagnostic> {
-        self.diagnostics.get(url).and_then(|diagnostic| {
-            diagnostic
+        self.document_states.get(url).and_then(|doc_state| {
+            doc_state
+                .diagnostics
                 .iter()
                 .find(|d| d.is_in_lsp_range(range) && *d.code() == *code)
         })
+    }
+}
+
+/// State data associated with a doocument.
+#[derive(Default)]
+pub struct DocumentState {
+    _ast: Option<Expr>,
+    diagnostics: Vec<Diagnostic>,
+}
+
+impl DocumentState {
+    pub fn new(ast: Option<Expr>, diagnostics: Vec<Diagnostic>) -> Self {
+        Self {
+            _ast: ast,
+            diagnostics,
+        }
     }
 }
 
@@ -198,8 +228,8 @@ fn on_text_document_did_open(
     // Publish diagnostics
     publish_diagnostics(conn, &uri, &diagnostics, version)?;
 
-    // Update (replace) server state
-    state.diagnostics.insert(uri, diagnostics);
+    // Update (replace) state data for the document
+    state.set_document_state(&uri, DocumentState::new(journal, diagnostics));
 
     Ok(())
 }
@@ -230,9 +260,8 @@ fn on_text_document_did_change(
     // Publish diagnostics
     publish_diagnostics(conn, &uri, &diagnostics, version)?;
 
-    // Update (replace) server state
-    state.diagnostics.insert(uri, diagnostics);
-
+    // Update (replace) state data for the document
+    state.set_document_state(&uri, DocumentState::new(journal, diagnostics));
     Ok(())
 }
 
@@ -253,8 +282,8 @@ fn on_text_document_did_close(
             params,
         }))?;
 
-    // Remove them from the server state
-    let _ = state.diagnostics.remove(&url);
+    // Remove state data for the document
+    let _ = state.remove_document_state(&url);
     Ok(())
 }
 
