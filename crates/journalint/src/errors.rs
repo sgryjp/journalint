@@ -52,6 +52,9 @@ pub enum JournalintError {
     #[error("Unexpected arguments: {0}")]
     UnexpectedArguments(String),
 
+    #[error("invalid URL: {0}")]
+    InvalidUrl(String),
+
     #[error("Parse error: {0}")]
     ParseError(String),
 
