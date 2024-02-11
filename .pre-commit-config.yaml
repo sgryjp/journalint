@@ -16,21 +16,25 @@ repos:
         entry: cargo fmt --all -- --check --color always
         language: system
         pass_filenames: false
+        types_or: [rust]
 
       - id: clippy
         name: clippy
         entry: cargo clippy -- -D warnings
         language: system
         pass_filenames: false
+        types_or: [rust]
 
       - id: cargo-test
         name: cargo-test
         entry: cargo test
         language: system
         pass_filenames: false
+        types_or: [rust]
 
       - id: prettier
         name: prettier
         entry: sh -c "cd tools/journalint-vscode && yarn run format"
         language: system
         pass_filenames: false
+        types_or: [javascript, json, markdown, ts]
