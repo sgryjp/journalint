@@ -80,6 +80,13 @@ impl LineMap {
             .unwrap_or(self.line_offsets.last().unwrap());
         min(x + character, self.content_length)
     }
+
+    #[warn(unused_results)]
+    pub fn span_to_lsp_range(&self, span: &std::ops::Range<usize>) -> lsp_types::Range {
+        let start = self.position_from_offset(span.start);
+        let end = self.position_from_offset(span.end);
+        lsp_types::Range::new(start, end)
+    }
 }
 
 #[cfg(test)]

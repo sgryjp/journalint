@@ -1,6 +1,7 @@
 use crossbeam_channel::SendError;
 use lsp_server::Message;
 use lsp_server::ProtocolError;
+use lsp_types::Url;
 use thiserror::Error;
 
 // ----------------------------------------------------------------------------
@@ -52,8 +53,14 @@ pub enum JournalintError {
     #[error("Unexpected arguments: {0}")]
     UnexpectedArguments(String),
 
-    #[error("invalid URL: {0}")]
-    InvalidUrl(String),
+    #[error("Unsupported URL: {url}")]
+    UnsupportedUrl { url: Url },
+
+    #[error("Doucument not found: {url}")]
+    DocumentNotFound { url: Url },
+
+    #[error("The doucument was not parsed yet: {url}")]
+    DocumentNotParsedYet { url: Url },
 
     #[error("Parse error: {0}")]
     ParseError(String),
@@ -71,6 +78,12 @@ pub enum JournalintError {
     SerializationError {
         #[from]
         source: serde_json::error::Error,
+    },
+
+    #[error("Parsing date or time failed: {}", .source)]
+    ChronoParseError {
+        #[from]
+        source: chrono::ParseError,
     },
 }
 

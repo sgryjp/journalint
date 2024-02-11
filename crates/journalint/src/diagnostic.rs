@@ -68,12 +68,6 @@ impl Diagnostic {
 
     // --- helper methods ---
 
-    pub fn lsp_range(&self) -> lsp_types::Range {
-        let start = self.line_map.position_from_offset(self.span.start);
-        let end = self.line_map.position_from_offset(self.span.end);
-        lsp_types::Range::new(start, end)
-    }
-
     pub fn is_in_lsp_range(&self, range: &lsp_types::Range) -> bool {
         let start = self.line_map.offset_from_position(range.start);
         let end = self.line_map.offset_from_position(range.end);

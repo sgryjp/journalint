@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use log::debug;
 use log::error;
@@ -33,6 +34,7 @@ use crate::commands::AutofixCommand;
 use crate::commands::Command as _;
 use crate::diagnostic::Diagnostic;
 use crate::errors::JournalintError;
+use crate::linemap::LineMap;
 use crate::lint::lint;
 use crate::parse::parse;
 
@@ -52,6 +54,13 @@ impl ServerState {
     fn next_request_id(&mut self) -> RequestId {
         self.msgid_counter = self.msgid_counter.wrapping_add(1);
         RequestId::from(i32::from(self.msgid_counter))
+    }
+
+    // Get state data for the specified document.
+    pub fn document_state(&self, url: &Url) -> Result<&DocumentState, JournalintError> {
+        self.document_states
+            .get(url)
+            .ok_or_else(|| JournalintError::DocumentNotFound { url: url.clone() })
     }
 
     // Set state data for the specified document.
@@ -83,16 +92,26 @@ impl ServerState {
 /// State data associated with a doocument.
 #[derive(Default)]
 pub struct DocumentState {
-    _ast: Option<Expr>,
+    line_map: Arc<LineMap>,
+    ast: Option<Expr>,
     diagnostics: Vec<Diagnostic>,
 }
 
 impl DocumentState {
-    pub fn new(ast: Option<Expr>, diagnostics: Vec<Diagnostic>) -> Self {
+    pub fn new(line_map: Arc<LineMap>, ast: Option<Expr>, diagnostics: Vec<Diagnostic>) -> Self {
         Self {
-            _ast: ast,
+            line_map,
+            ast,
             diagnostics,
         }
+    }
+
+    pub fn line_map(&self) -> Arc<LineMap> {
+        self.line_map.clone()
+    }
+
+    pub fn ast(&self) -> Option<&Expr> {
+        self.ast.as_ref()
     }
 }
 
@@ -221,7 +240,7 @@ fn on_text_document_did_open(
 
     // Lint
     if let Some(journal) = &journal {
-        let mut d = lint(journal, &uri, line_map)?;
+        let mut d = lint(journal, &uri, line_map.clone())?;
         diagnostics.append(&mut d);
     }
 
@@ -229,7 +248,7 @@ fn on_text_document_did_open(
     publish_diagnostics(conn, &uri, &diagnostics, version)?;
 
     // Update (replace) state data for the document
-    state.set_document_state(&uri, DocumentState::new(journal, diagnostics));
+    state.set_document_state(&uri, DocumentState::new(line_map, journal, diagnostics));
 
     Ok(())
 }
@@ -253,7 +272,7 @@ fn on_text_document_did_change(
 
     // Lint
     if let Some(journal) = &journal {
-        let mut d = lint(journal, &uri, line_map)?;
+        let mut d = lint(journal, &uri, line_map.clone())?;
         diagnostics.append(&mut d);
     }
 
@@ -261,7 +280,7 @@ fn on_text_document_did_change(
     publish_diagnostics(conn, &uri, &diagnostics, version)?;
 
     // Update (replace) state data for the document
-    state.set_document_state(&uri, DocumentState::new(journal, diagnostics));
+    state.set_document_state(&uri, DocumentState::new(line_map, journal, diagnostics));
     Ok(())
 }
 
