@@ -1,5 +1,6 @@
 //! This module provides commands of journalint language server.
 mod autofix;
+mod replace_with_previous_end_time;
 mod use_date_in_filename_visitor;
 
 use std::fs::write;

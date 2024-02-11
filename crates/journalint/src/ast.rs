@@ -77,6 +77,10 @@ impl LooseTime {
         LooseTime(value.into())
     }
 
+    pub fn as_str(&self) -> &str {
+        self.0.as_str()
+    }
+
     pub fn to_datetime(&self, date: NaiveDate) -> Result<DateTime<Utc>, JournalintError> {
         match NaiveTime::parse_from_str(self.0.as_str(), "%H:%M") {
             Ok(t) => Ok(NaiveDateTime::new(date, t).and_utc()),

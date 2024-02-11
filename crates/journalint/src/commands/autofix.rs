@@ -9,7 +9,7 @@ use crate::commands::Command;
 use crate::errors::JournalintError;
 use crate::service::ServerState;
 
-use super::use_date_in_filename_visitor;
+use super::{replace_with_previous_end_time, use_date_in_filename_visitor};
 
 /// Auto-fix command.
 #[derive(Debug, EnumIter)]
@@ -61,19 +61,21 @@ impl Command for AutofixCommand {
         url: &Url,
         range: &lsp_types::Range,
     ) -> Result<Option<WorkspaceEdit>, JournalintError> {
+        // Get state of the document
+        let doc_state = state.document_state(url)?;
+        let line_map = doc_state.line_map();
+        let ast = doc_state.ast().ok_or_else(|| {
+            JournalintError::UnexpectedError(format!("No AST available for the document: {url}"))
+        })?;
+        let target_span = line_map.lsp_range_to_span(range);
+
         match self {
             AutofixCommand::RecalculateDuration => execute_fix(self, state, url, range),
-            AutofixCommand::ReplaceWithPreviousEndTime => execute_fix(self, state, url, range),
+            AutofixCommand::ReplaceWithPreviousEndTime => {
+                replace_with_previous_end_time::execute(url, &line_map, ast, &target_span)
+            }
             AutofixCommand::UseDateInFilename => {
-                // Get state of the document
-                let doc_state = state.document_state(url)?;
-                let line_map = doc_state.line_map();
-                let ast = doc_state.ast().ok_or_else(|| {
-                    JournalintError::UnexpectedError(format!(
-                        "No AST available for the document: {url}"
-                    ))
-                })?;
-                use_date_in_filename_visitor::execute(url, line_map, ast)
+                use_date_in_filename_visitor::execute(url, &line_map, ast)
             }
         }
     }

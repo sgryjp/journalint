@@ -65,6 +65,9 @@ pub enum JournalintError {
     #[error("Parse error: {0}")]
     ParseError(String),
 
+    #[error("Target not found for command '{command}'")]
+    CommandTargetNotFound { command: String },
+
     #[error("LSP communication error: {0}")]
     LspCommunicationError(String),
 

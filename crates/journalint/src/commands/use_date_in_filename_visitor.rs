@@ -33,10 +33,10 @@ impl Visitor for UseDateInFilenameVisitor {
 
 pub(super) fn execute(
     url: &Url,
-    line_map: Arc<LineMap>,
+    line_map: &Arc<LineMap>,
     ast: &Expr,
 ) -> Result<Option<WorkspaceEdit>, JournalintError> {
-    // Find the AST node touched by the selection range.
+    // Determine where to edit.
     let mut visitor = UseDateInFilenameVisitor::default();
     walk(ast, &mut visitor)?;
     let range_to_replace = line_map.span_to_lsp_range(visitor.fm_date_span());
