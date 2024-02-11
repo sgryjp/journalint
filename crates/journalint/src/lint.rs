@@ -327,10 +327,6 @@ impl Visitor for Linter<'_> {
         Ok(())
     }
 
-    fn on_visit_entry(&mut self, _span: &Range<usize>) -> Result<(), JournalintError> {
-        Ok(())
-    }
-
     fn on_visit_start_time(
         &mut self,
         value: &LooseTime,
@@ -361,24 +357,6 @@ impl Visitor for Linter<'_> {
     ) -> Result<(), JournalintError> {
         self.check_end_time_exceeds_start_time();
         self.check_duration_matches_end_minus_start(value, span);
-        Ok(())
-    }
-
-    fn on_visit_code(&mut self, _value: &str, _span: &Range<usize>) -> Result<(), JournalintError> {
-        Ok(())
-    }
-
-    fn on_visit_activity(
-        &mut self,
-        _value: &str,
-        _span: &Range<usize>,
-    ) -> Result<(), JournalintError> {
-        Ok(())
-    }
-
-    fn on_leave_entry(&mut self, _span: &Range<usize>) -> Result<(), JournalintError> {
-        self.entry_start = None;
-        self.prev_entry_end = self.entry_end.take();
         Ok(())
     }
 }

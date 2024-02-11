@@ -125,63 +125,85 @@ pub trait Visitor {
     #[warn(unused_results)]
     fn on_visit_fm_date(
         &mut self,
-        value: &NaiveDate,
-        span: &Range<usize>,
-    ) -> Result<(), JournalintError>;
+        _value: &NaiveDate,
+        _span: &Range<usize>,
+    ) -> Result<(), JournalintError> {
+        Ok(())
+    }
 
     #[warn(unused_results)]
     fn on_visit_fm_start(
         &mut self,
-        value: &LooseTime,
-        span: &Range<usize>,
-    ) -> Result<(), JournalintError>;
+        _value: &LooseTime,
+        _span: &Range<usize>,
+    ) -> Result<(), JournalintError> {
+        Ok(())
+    }
 
     #[warn(unused_results)]
     fn on_visit_fm_end(
         &mut self,
-        value: &LooseTime,
-        span: &Range<usize>,
-    ) -> Result<(), JournalintError>;
+        _value: &LooseTime,
+        _span: &Range<usize>,
+    ) -> Result<(), JournalintError> {
+        Ok(())
+    }
 
     #[warn(unused_results)]
-    fn on_leave_fm(&mut self, span: &Range<usize>) -> Result<(), JournalintError>;
+    fn on_leave_fm(&mut self, _span: &Range<usize>) -> Result<(), JournalintError> {
+        Ok(())
+    }
 
     #[warn(unused_results)]
-    fn on_visit_entry(&mut self, span: &Range<usize>) -> Result<(), JournalintError>;
+    fn on_visit_entry(&mut self, _span: &Range<usize>) -> Result<(), JournalintError> {
+        Ok(())
+    }
 
     #[warn(unused_results)]
     fn on_visit_start_time(
         &mut self,
-        value: &LooseTime,
-        span: &Range<usize>,
-    ) -> Result<(), JournalintError>;
+        _value: &LooseTime,
+        _span: &Range<usize>,
+    ) -> Result<(), JournalintError> {
+        Ok(())
+    }
 
     #[warn(unused_results)]
     fn on_visit_end_time(
         &mut self,
-        value: &LooseTime,
-        span: &Range<usize>,
-    ) -> Result<(), JournalintError>;
+        _value: &LooseTime,
+        _span: &Range<usize>,
+    ) -> Result<(), JournalintError> {
+        Ok(())
+    }
 
     #[warn(unused_results)]
     fn on_visit_duration(
         &mut self,
-        value: &Duration,
-        span: &Range<usize>,
-    ) -> Result<(), JournalintError>;
+        _value: &Duration,
+        _span: &Range<usize>,
+    ) -> Result<(), JournalintError> {
+        Ok(())
+    }
 
     #[warn(unused_results)]
-    fn on_visit_code(&mut self, value: &str, span: &Range<usize>) -> Result<(), JournalintError>;
+    fn on_visit_code(&mut self, _value: &str, _span: &Range<usize>) -> Result<(), JournalintError> {
+        Ok(())
+    }
 
     #[warn(unused_results)]
     fn on_visit_activity(
         &mut self,
-        value: &str,
-        span: &Range<usize>,
-    ) -> Result<(), JournalintError>;
+        _value: &str,
+        _span: &Range<usize>,
+    ) -> Result<(), JournalintError> {
+        Ok(())
+    }
 
     #[warn(unused_results)]
-    fn on_leave_entry(&mut self, span: &Range<usize>) -> Result<(), JournalintError>;
+    fn on_leave_entry(&mut self, _span: &Range<usize>) -> Result<(), JournalintError> {
+        Ok(())
+    }
 }
 
 #[warn(unused_results)]

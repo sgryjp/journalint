@@ -70,26 +70,6 @@ impl<'a> ast::Visitor for Exporter<'a> {
         Ok(())
     }
 
-    fn on_visit_fm_start(
-        &mut self,
-        _value: &ast::LooseTime,
-        _span: &Range<usize>,
-    ) -> Result<(), JournalintError> {
-        Ok(())
-    }
-
-    fn on_visit_fm_end(
-        &mut self,
-        _value: &ast::LooseTime,
-        _span: &Range<usize>,
-    ) -> Result<(), JournalintError> {
-        Ok(())
-    }
-
-    fn on_leave_fm(&mut self, _span: &Range<usize>) -> Result<(), JournalintError> {
-        Ok(())
-    }
-
     fn on_visit_entry(&mut self, _span: &Range<usize>) -> Result<(), JournalintError> {
         self.curr_start_time = None;
         self.curr_end_time = None;
