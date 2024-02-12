@@ -1,7 +1,5 @@
 //! Autofix commands
-use std::collections::HashMap;
-
-use lsp_types::{TextEdit, Url, WorkspaceEdit};
+use lsp_types::{Url, WorkspaceEdit};
 use strum::EnumIter;
 
 use crate::code::Code;
@@ -9,7 +7,7 @@ use crate::commands::Command;
 use crate::errors::JournalintError;
 use crate::service::ServerState;
 
-use super::{replace_with_previous_end_time, use_date_in_filename_visitor};
+use super::{recalculate_duration, replace_with_previous_end_time, use_date_in_filename_visitor};
 
 /// Auto-fix command.
 #[derive(Debug, EnumIter)]
@@ -70,7 +68,9 @@ impl Command for AutofixCommand {
         let target_span = line_map.lsp_range_to_span(range);
 
         match self {
-            AutofixCommand::RecalculateDuration => execute_fix(self, state, url, range),
+            AutofixCommand::RecalculateDuration => {
+                recalculate_duration::execute(url, &line_map, ast, &target_span)
+            }
             AutofixCommand::ReplaceWithPreviousEndTime => {
                 replace_with_previous_end_time::execute(url, &line_map, ast, &target_span)
             }
@@ -79,33 +79,4 @@ impl Command for AutofixCommand {
             }
         }
     }
-}
-
-fn execute_fix(
-    command: &dyn Command,
-    state: &ServerState,
-    url: &Url,
-    range: &lsp_types::Range,
-) -> Result<Option<WorkspaceEdit>, JournalintError> {
-    let doc_state = state.document_state(url)?;
-
-    // Find matching diagnostic object
-    let code = command.fixable_codes();
-    let diagnostic = state
-        .find_diagnostic(url, range, &code)
-        .ok_or_else(|| JournalintError::UnexpectedError(format!(
-            "No corresponding diagnostic found to fix: {{command: {}, url: {}, range: {:?}, code: {}}}",
-            command.id(), url, range, code
-        )))?;
-    let range_to_replace = doc_state.line_map().span_to_lsp_range(diagnostic.span());
-
-    // Create an edit data in the file to fix the issue
-    let Some(new_text) = diagnostic.expectation() else {
-        return Ok(None);
-    };
-    let edit = TextEdit::new(range_to_replace, new_text.clone());
-
-    // Compose a "workspace edit" from it
-    let edits = HashMap::from([(url.clone(), vec![edit])]);
-    Ok(Some(WorkspaceEdit::new(edits)))
 }

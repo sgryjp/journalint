@@ -72,21 +72,6 @@ impl ServerState {
     fn remove_document_state(&mut self, url: &Url) -> Option<DocumentState> {
         self.document_states.remove(url)
     }
-
-    /// Find a diagnostic at the specified location with appropriate code.
-    pub fn find_diagnostic(
-        &self,
-        url: &Url,
-        range: &lsp_types::Range,
-        code: &Code,
-    ) -> Option<&Diagnostic> {
-        self.document_states.get(url).and_then(|doc_state| {
-            doc_state
-                .diagnostics
-                .iter()
-                .find(|d| d.is_in_lsp_range(range) && *d.code() == *code)
-        })
-    }
 }
 
 /// State data associated with a doocument.
@@ -94,16 +79,11 @@ impl ServerState {
 pub struct DocumentState {
     line_map: Arc<LineMap>,
     ast: Option<Expr>,
-    diagnostics: Vec<Diagnostic>,
 }
 
 impl DocumentState {
-    pub fn new(line_map: Arc<LineMap>, ast: Option<Expr>, diagnostics: Vec<Diagnostic>) -> Self {
-        Self {
-            line_map,
-            ast,
-            diagnostics,
-        }
+    pub fn new(line_map: Arc<LineMap>, ast: Option<Expr>) -> Self {
+        Self { line_map, ast }
     }
 
     pub fn line_map(&self) -> Arc<LineMap> {
@@ -248,7 +228,7 @@ fn on_text_document_did_open(
     publish_diagnostics(conn, &uri, &diagnostics, version)?;
 
     // Update (replace) state data for the document
-    state.set_document_state(&uri, DocumentState::new(line_map, journal, diagnostics));
+    state.set_document_state(&uri, DocumentState::new(line_map, journal));
 
     Ok(())
 }
@@ -280,7 +260,7 @@ fn on_text_document_did_change(
     publish_diagnostics(conn, &uri, &diagnostics, version)?;
 
     // Update (replace) state data for the document
-    state.set_document_state(&uri, DocumentState::new(line_map, journal, diagnostics));
+    state.set_document_state(&uri, DocumentState::new(line_map, journal));
     Ok(())
 }
 

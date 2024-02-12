@@ -65,6 +65,9 @@ pub enum JournalintError {
     #[error("Parse error: {0}")]
     ParseError(String),
 
+    #[error("Required value is missing: {name}")]
+    MissingRequiredValue { name: String },
+
     #[error("Target not found for command '{command}'")]
     CommandTargetNotFound { command: String },
 
