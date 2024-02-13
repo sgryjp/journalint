@@ -19,9 +19,9 @@ use super::{AutofixCommand, Command};
 struct ReplaceWithPreviousEndTimeVisitor {
     target_span: Range<usize>,
 
+    target_start_time_span: Option<Range<usize>>,
     prev_end_time_value: Option<LooseTime>,
     prev_end_time_span: Option<Range<usize>>,
-    found: bool,
 }
 
 impl ReplaceWithPreviousEndTimeVisitor {
@@ -39,7 +39,7 @@ impl Visitor for ReplaceWithPreviousEndTimeVisitor {
         value: &crate::ast::LooseTime,
         span: &Range<usize>,
     ) -> Result<(), JournalintError> {
-        if !self.found {
+        if self.target_start_time_span.is_none() {
             self.prev_end_time_value = Some(value.clone());
             self.prev_end_time_span = Some(span.clone());
         }
@@ -51,10 +51,12 @@ impl Visitor for ReplaceWithPreviousEndTimeVisitor {
         _value: &crate::ast::LooseTime,
         span: &Range<usize>,
     ) -> Result<(), JournalintError> {
-        let start = max(self.target_span.start, span.start);
-        let end = min(self.target_span.end, span.end);
-        if start < end {
-            self.found = true;
+        if self.target_start_time_span.is_none() {
+            let start = max(self.target_span.start, span.start);
+            let end = min(self.target_span.end, span.end);
+            if start <= end {
+                self.target_start_time_span = Some(span.clone());
+            }
         }
         Ok(())
     }
@@ -69,21 +71,21 @@ pub(super) fn execute(
     // Determine where to edit.
     let mut visitor = ReplaceWithPreviousEndTimeVisitor::new(target_span);
     walk(ast, &mut visitor)?;
-    let span_to_replace =
-        visitor
-            .prev_end_time_span
-            .ok_or_else(|| JournalintError::CommandTargetNotFound {
-                command: AutofixCommand::ReplaceWithPreviousEndTime.id().to_string(),
-            })?;
+    let span_to_replace = visitor.target_start_time_span.as_ref().ok_or_else(|| {
+        JournalintError::CommandTargetNotFound {
+            command: AutofixCommand::ReplaceWithPreviousEndTime.id().to_string(),
+        }
+    })?;
 
     // Generate the new value.
     let new_value = visitor
         .prev_end_time_value
+        .as_ref()
         .map(|dt| dt.as_str().to_string())
         .expect("prev_end_time_value was not available but prev_end_time_span was available.");
 
     // Compose a "workspace edit" from it
-    let range = line_map.span_to_lsp_range(&span_to_replace);
+    let range = line_map.span_to_lsp_range(span_to_replace);
     let edit = TextEdit::new(range, new_value);
     let edits = HashMap::from([(url.clone(), vec![edit])]);
     Ok(Some(WorkspaceEdit::new(edits)))
