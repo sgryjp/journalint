@@ -366,7 +366,12 @@ fn on_workspace_execute_command(
     let range: lsp_types::Range = serde_json::from_value(params.arguments[1].clone())?;
 
     // Execute the command
-    let Some(edit) = command.execute(state, &url, &range)? else {
+    let doc_state = state.document_state(&url)?;
+    let line_map = doc_state.line_map();
+    let ast = doc_state.ast().ok_or_else(|| {
+        JournalintError::UnexpectedError(format!("No AST available for the document: {url}"))
+    })?;
+    let Some(edit) = command.execute(&url, &line_map, ast, &range)? else {
         return Ok(()); // Do nothing if command does not change the document
     };
 

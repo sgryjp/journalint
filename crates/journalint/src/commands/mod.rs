@@ -6,14 +6,16 @@ mod use_date_in_filename_visitor;
 
 use std::fs::write;
 use std::path::Path;
+use std::sync::Arc;
 
 use lsp_types::{Url, WorkspaceEdit};
 
+use crate::ast::Expr;
 use crate::code::Code;
 pub use crate::commands::autofix::AutofixCommand;
 use crate::diagnostic::Diagnostic;
 use crate::errors::JournalintError;
-use crate::service::ServerState;
+use crate::linemap::LineMap;
 
 /// Command of journalint.
 ///
@@ -35,8 +37,9 @@ pub trait Command {
     /// Note that it will be `Ok(None)` if there is nothing to do.
     fn execute(
         &self,
-        state: &ServerState,
         url: &Url,
+        line_map: &Arc<LineMap>,
+        ast: &Expr,
         range: &lsp_types::Range,
     ) -> Result<Option<WorkspaceEdit>, JournalintError>;
 }

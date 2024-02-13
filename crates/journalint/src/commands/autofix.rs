@@ -1,11 +1,14 @@
 //! Autofix commands
+use std::sync::Arc;
+
 use lsp_types::{Url, WorkspaceEdit};
 use strum::EnumIter;
 
+use crate::ast::Expr;
 use crate::code::Code;
 use crate::commands::Command;
 use crate::errors::JournalintError;
-use crate::service::ServerState;
+use crate::linemap::LineMap;
 
 use super::{recalculate_duration, replace_with_previous_end_time, use_date_in_filename_visitor};
 
@@ -50,32 +53,28 @@ impl Command for AutofixCommand {
     ///
     /// # Arguments
     ///
-    /// * `state` - State of the language server
     /// * `url` - URL of the document
+    /// * `line_map` - Line-column mapper for the document
+    /// * `ast` - AST of the document
     /// * `range` - Range of the selection at the time this command was invoked.
     fn execute(
         &self,
-        state: &ServerState,
         url: &Url,
+        line_map: &Arc<LineMap>,
+        ast: &Expr,
         range: &lsp_types::Range,
     ) -> Result<Option<WorkspaceEdit>, JournalintError> {
-        // Get state of the document
-        let doc_state = state.document_state(url)?;
-        let line_map = doc_state.line_map();
-        let ast = doc_state.ast().ok_or_else(|| {
-            JournalintError::UnexpectedError(format!("No AST available for the document: {url}"))
-        })?;
         let target_span = line_map.lsp_range_to_span(range);
 
         match self {
             AutofixCommand::RecalculateDuration => {
-                recalculate_duration::execute(url, &line_map, ast, &target_span)
+                recalculate_duration::execute(url, line_map, ast, &target_span)
             }
             AutofixCommand::ReplaceWithPreviousEndTime => {
-                replace_with_previous_end_time::execute(url, &line_map, ast, &target_span)
+                replace_with_previous_end_time::execute(url, line_map, ast, &target_span)
             }
             AutofixCommand::UseDateInFilename => {
-                use_date_in_filename_visitor::execute(url, &line_map, ast)
+                use_date_in_filename_visitor::execute(url, line_map, ast)
             }
         }
     }
