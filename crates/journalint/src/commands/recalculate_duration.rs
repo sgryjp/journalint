@@ -112,10 +112,11 @@ pub(super) fn execute(
         })
         .and_then(|t| t.to_datetime(date))?;
     let new_value = end_time - start_time;
+    let new_value = (new_value.num_seconds() as f64) / 3600.0;
 
     // Compose a "workspace edit" from it
     let range = line_map.span_to_lsp_range(&span_to_replace);
-    let edit = TextEdit::new(range, format!("{:1.2}", new_value.num_hours() as f64));
+    let edit = TextEdit::new(range, format!("{new_value:1.2}"));
     let edits = HashMap::from([(url.clone(), vec![edit])]);
     Ok(Some(WorkspaceEdit::new(edits)))
 }
