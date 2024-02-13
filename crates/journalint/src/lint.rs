@@ -359,6 +359,12 @@ impl Visitor for Linter<'_> {
         self.check_duration_matches_end_minus_start(value, span);
         Ok(())
     }
+
+    fn on_leave_entry(&mut self, _span: &Range<usize>) -> Result<(), JournalintError> {
+        self.entry_start = None;
+        self.prev_entry_end = self.entry_end.take();
+        Ok(())
+    }
 }
 
 pub fn lint(

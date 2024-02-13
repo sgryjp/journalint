@@ -1,0 +1,26 @@
+---
+source: crates/journalint/src/main.rs
+expression: diagnostics
+---
+- range:
+    start:
+      line: 9
+      character: 2
+    end:
+      line: 9
+      character: 7
+  severity: 2
+  code: time-jumped
+  source: journalint
+  message: "The start time does not match the previous entry's end time, which is 09:45"
+  relatedInformation:
+    - location:
+        uri: "file:///C:/Users/sgryjp/src/journalint/crates/journalint/src/snapshots/time-jumped.md"
+        range:
+          start:
+            line: 8
+            character: 8
+          end:
+            line: 8
+            character: 13
+      message: "Previous entry's end time is 09:45"
