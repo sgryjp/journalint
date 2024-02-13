@@ -1,13 +1,14 @@
-use std::{collections::HashMap, ops::Range, path::PathBuf, sync::Arc};
+use std::collections::HashMap;
+use std::ops::Range;
+use std::path::PathBuf;
+use std::sync::Arc;
 
 use chrono::NaiveDate;
 use lsp_types::{TextEdit, Url, WorkspaceEdit};
 
-use crate::{
-    ast::{walk, Expr, Visitor},
-    errors::JournalintError,
-    linemap::LineMap,
-};
+use crate::ast::{walk, Expr, Visitor};
+use crate::errors::JournalintError;
+use crate::linemap::LineMap;
 
 #[derive(Debug, Default)]
 struct UseDateInFilenameVisitor {

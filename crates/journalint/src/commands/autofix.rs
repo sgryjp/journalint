@@ -56,22 +56,22 @@ impl Command for AutofixCommand {
     /// * `url` - URL of the document
     /// * `line_map` - Line-column mapper for the document
     /// * `ast` - AST of the document
-    /// * `range` - Range of the selection at the time this command was invoked.
+    /// * `selection_range` - Range of the selection at the time this command was invoked.
     fn execute(
         &self,
         url: &Url,
         line_map: &Arc<LineMap>,
         ast: &Expr,
-        range: &lsp_types::Range,
+        selection_range: &lsp_types::Range,
     ) -> Result<Option<WorkspaceEdit>, JournalintError> {
-        let target_span = line_map.lsp_range_to_span(range);
+        let selection = line_map.lsp_range_to_span(selection_range);
 
         match self {
             AutofixCommand::RecalculateDuration => {
-                recalculate_duration::execute(url, line_map, ast, &target_span)
+                recalculate_duration::execute(url, line_map, ast, &selection)
             }
             AutofixCommand::ReplaceWithPreviousEndTime => {
-                replace_with_previous_end_time::execute(url, line_map, ast, &target_span)
+                replace_with_previous_end_time::execute(url, line_map, ast, &selection)
             }
             AutofixCommand::UseDateInFilename => {
                 use_date_in_filename_visitor::execute(url, line_map, ast)

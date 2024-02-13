@@ -6,15 +6,13 @@ use std::sync::Arc;
 use chrono::prelude::NaiveDate;
 use lsp_types::{TextEdit, Url, WorkspaceEdit};
 
-use crate::{
-    ast::{walk, Expr, LooseTime, Visitor},
-    errors::JournalintError,
-    linemap::LineMap,
-};
+use crate::ast::{walk, Expr, LooseTime, Visitor};
+use crate::errors::JournalintError;
+use crate::linemap::LineMap;
 
 #[derive(Debug, Default)]
 struct RecalculateDurationVisitor {
-    target_span: Range<usize>,
+    selection: Range<usize>,
 
     fm_date_value: Option<NaiveDate>,
     start_time_value: Option<LooseTime>,
@@ -23,9 +21,9 @@ struct RecalculateDurationVisitor {
 }
 
 impl RecalculateDurationVisitor {
-    fn new(target_span: &Range<usize>) -> Self {
+    fn new(selection: Range<usize>) -> Self {
         Self {
-            target_span: target_span.clone(),
+            selection,
             ..Default::default()
         }
     }
@@ -68,8 +66,8 @@ impl Visitor for RecalculateDurationVisitor {
         _value: &std::time::Duration,
         span: &Range<usize>,
     ) -> Result<(), JournalintError> {
-        let start = max(self.target_span.start, span.start);
-        let end = min(self.target_span.end, span.end);
+        let start = max(self.selection.start, span.start);
+        let end = min(self.selection.end, span.end);
         if start <= end {
             self.target_duration_span = Some(span.clone());
         }
@@ -81,10 +79,10 @@ pub(super) fn execute(
     url: &Url,
     line_map: &Arc<LineMap>,
     ast: &Expr,
-    target_span: &Range<usize>,
+    selection: &Range<usize>,
 ) -> Result<Option<WorkspaceEdit>, JournalintError> {
     // Determine where to edit.
-    let mut visitor = RecalculateDurationVisitor::new(target_span);
+    let mut visitor = RecalculateDurationVisitor::new(selection.clone());
     walk(ast, &mut visitor)?;
     let span_to_replace =
         visitor
