@@ -1,13 +1,11 @@
 use std::cmp::{max, min};
-use std::collections::HashMap;
 use std::ops::Range;
-use std::sync::Arc;
 
-use lsp_types::{TextEdit, Url, WorkspaceEdit};
+use lsp_types::Url;
 
 use crate::ast::{walk, Expr, LooseTime, Visitor};
 use crate::errors::JournalintError;
-use crate::linemap::LineMap;
+use crate::textedit::TextEdit;
 
 use super::{AutofixCommand, Command};
 
@@ -59,11 +57,10 @@ impl Visitor for ReplaceWithPreviousEndTimeVisitor {
 }
 
 pub(super) fn execute(
-    url: &Url,
-    line_map: &Arc<LineMap>,
+    _url: &Url,
     ast: &Expr,
     selection: &Range<usize>,
-) -> Result<Option<WorkspaceEdit>, JournalintError> {
+) -> Result<Option<TextEdit>, JournalintError> {
     // Determine where to edit.
     let mut visitor = ReplaceWithPreviousEndTimeVisitor::new(selection.clone());
     walk(ast, &mut visitor)?;
@@ -80,9 +77,5 @@ pub(super) fn execute(
         .map(|dt| dt.as_str().to_string())
         .expect("prev_end_time_value was not available but prev_end_time_span was available.");
 
-    // Compose a "workspace edit" from it
-    let range = line_map.span_to_lsp_range(span_to_replace);
-    let edit = TextEdit::new(range, new_value);
-    let edits = HashMap::from([(url.clone(), vec![edit])]);
-    Ok(Some(WorkspaceEdit::new(edits)))
+    Ok(Some(TextEdit::new(span_to_replace.clone(), new_value)))
 }

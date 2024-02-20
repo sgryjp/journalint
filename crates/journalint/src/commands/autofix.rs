@@ -1,4 +1,5 @@
 //! Autofix commands
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use lsp_types::{Url, WorkspaceEdit};
@@ -66,16 +67,22 @@ impl Command for AutofixCommand {
     ) -> Result<Option<WorkspaceEdit>, JournalintError> {
         let selection = line_map.lsp_range_to_span(selection_range);
 
-        match self {
+        let edit = match self {
             AutofixCommand::RecalculateDuration => {
-                recalculate_duration::execute(url, line_map, ast, &selection)
+                recalculate_duration::execute(url, ast, &selection)
             }
             AutofixCommand::ReplaceWithPreviousEndTime => {
-                replace_with_previous_end_time::execute(url, line_map, ast, &selection)
+                replace_with_previous_end_time::execute(url, ast, &selection)
             }
-            AutofixCommand::UseDateInFilename => {
-                use_date_in_filename_visitor::execute(url, line_map, ast)
-            }
-        }
+            AutofixCommand::UseDateInFilename => use_date_in_filename_visitor::execute(url, ast),
+        }?;
+        let Some(edit) = edit else {
+            return Ok(None);
+        };
+
+        let range = line_map.span_to_lsp_range(edit.span());
+        let edit = lsp_types::TextEdit::new(range, edit.new_text().to_string());
+        let edits = HashMap::from([(url.clone(), vec![edit])]);
+        Ok(Some(WorkspaceEdit::new(edits)))
     }
 }

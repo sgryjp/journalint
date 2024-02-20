@@ -1,14 +1,12 @@
-use std::collections::HashMap;
 use std::ops::Range;
 use std::path::PathBuf;
-use std::sync::Arc;
 
 use chrono::NaiveDate;
-use lsp_types::{TextEdit, Url, WorkspaceEdit};
+use lsp_types::Url;
 
 use crate::ast::{walk, Expr, Visitor};
 use crate::errors::JournalintError;
-use crate::linemap::LineMap;
+use crate::textedit::TextEdit;
 
 #[derive(Debug, Default)]
 struct UseDateInFilenameVisitor {
@@ -32,15 +30,11 @@ impl Visitor for UseDateInFilenameVisitor {
     }
 }
 
-pub(super) fn execute(
-    url: &Url,
-    line_map: &Arc<LineMap>,
-    ast: &Expr,
-) -> Result<Option<WorkspaceEdit>, JournalintError> {
+pub(super) fn execute(url: &Url, ast: &Expr) -> Result<Option<TextEdit>, JournalintError> {
     // Determine where to edit.
     let mut visitor = UseDateInFilenameVisitor::default();
     walk(ast, &mut visitor)?;
-    let range_to_replace = line_map.span_to_lsp_range(visitor.fm_date_span());
+    let range_to_replace = visitor.fm_date_span();
 
     // Generate the new value.
     let new_value = PathBuf::from(url.path())
@@ -50,8 +44,5 @@ pub(super) fn execute(
         .and_then(|stem| NaiveDate::parse_from_str(stem, "%Y-%m-%d").map_err(JournalintError::from))
         .map(|date| date.format("%Y-%m-%d").to_string())?;
 
-    // Compose a "workspace edit" from it
-    let edit = TextEdit::new(range_to_replace, new_value);
-    let edits = HashMap::from([(url.clone(), vec![edit])]);
-    Ok(Some(WorkspaceEdit::new(edits)))
+    Ok(Some(TextEdit::new(range_to_replace.clone(), new_value)))
 }

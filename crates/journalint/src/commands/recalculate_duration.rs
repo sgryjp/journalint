@@ -1,14 +1,12 @@
 use std::cmp::{max, min};
-use std::collections::HashMap;
 use std::ops::Range;
-use std::sync::Arc;
 
 use chrono::prelude::NaiveDate;
-use lsp_types::{TextEdit, Url, WorkspaceEdit};
+use lsp_types::Url;
 
 use crate::ast::{walk, Expr, LooseTime, Visitor};
 use crate::errors::JournalintError;
-use crate::linemap::LineMap;
+use crate::textedit::TextEdit;
 
 #[derive(Debug, Default)]
 struct RecalculateDurationVisitor {
@@ -76,11 +74,10 @@ impl Visitor for RecalculateDurationVisitor {
 }
 
 pub(super) fn execute(
-    url: &Url,
-    line_map: &Arc<LineMap>,
+    _url: &Url,
     ast: &Expr,
     selection: &Range<usize>,
-) -> Result<Option<WorkspaceEdit>, JournalintError> {
+) -> Result<Option<TextEdit>, JournalintError> {
     // Determine where to edit.
     let mut visitor = RecalculateDurationVisitor::new(selection.clone());
     walk(ast, &mut visitor)?;
@@ -112,9 +109,8 @@ pub(super) fn execute(
     let new_value = end_time - start_time;
     let new_value = (new_value.num_seconds() as f64) / 3600.0;
 
-    // Compose a "workspace edit" from it
-    let range = line_map.span_to_lsp_range(&span_to_replace);
-    let edit = TextEdit::new(range, format!("{new_value:1.2}"));
-    let edits = HashMap::from([(url.clone(), vec![edit])]);
-    Ok(Some(WorkspaceEdit::new(edits)))
+    Ok(Some(TextEdit::new(
+        span_to_replace,
+        format!("{new_value:1.2}"),
+    )))
 }

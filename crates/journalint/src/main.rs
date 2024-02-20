@@ -9,6 +9,7 @@ mod linemap;
 mod lint;
 mod parse;
 mod service;
+mod textedit;
 
 use std::env;
 use std::fs::read_to_string;
