@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::io::Write;
 use std::ops::Range;
 use std::time::Duration;
@@ -24,6 +25,21 @@ struct JournalEntry {
     duration: u64, // seconds
     codes: Vec<String>,
     activity: String,
+}
+
+impl JournalEntry {
+    pub fn to_flat_map(&self) -> BTreeMap<String, String> {
+        let mut entry = BTreeMap::new();
+        entry.insert("start_time".to_string(), self.start_time.to_rfc3339());
+        entry.insert("end_time".to_string(), self.end_time.to_rfc3339());
+        entry.insert("duration".to_string(), self.duration.to_string());
+        for (i, code) in self.codes.iter().enumerate() {
+            let key = format!("code{}", i + 1);
+            entry.insert(key, code.clone());
+        }
+        entry.insert("activity".to_string(), self.activity.clone());
+        entry
+    }
 }
 
 struct Exporter<'a> {
@@ -142,7 +158,8 @@ impl<'a> ast::Visitor for Exporter<'a> {
             duration: duration.as_secs(),
             codes: self.curr_codes.clone(),
             activity: activity.clone(),
-        };
+        }
+        .to_flat_map();
 
         // Serialize
         let bytes = match self.fmt {
