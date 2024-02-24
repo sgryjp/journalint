@@ -42,11 +42,11 @@ impl Command for AutofixCommand {
         }
     }
 
-    fn fixable_codes(&self) -> Code {
+    fn can_fix(&self, code: &Code) -> bool {
         match self {
-            AutofixCommand::RecalculateDuration => Code::IncorrectDuration,
-            AutofixCommand::ReplaceWithPreviousEndTime => Code::TimeJumped,
-            AutofixCommand::UseDateInFilename => Code::MismatchedDates,
+            AutofixCommand::RecalculateDuration => *code == Code::IncorrectDuration,
+            AutofixCommand::ReplaceWithPreviousEndTime => *code == Code::TimeJumped,
+            AutofixCommand::UseDateInFilename => *code == Code::MismatchedDates,
         }
     }
 

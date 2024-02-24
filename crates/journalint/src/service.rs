@@ -309,7 +309,7 @@ fn on_text_document_code_action(
 
         // List up all available code actions (auto-fix only as of now) for the code
         let mut commands: Vec<Command> = AutofixCommand::iter()
-            .filter(|cmd| cmd.fixable_codes() == code)
+            .filter(|cmd| cmd.can_fix(&code))
             .map(|cmd| {
                 lsp_types::Command::new(
                     cmd.title().to_string(),

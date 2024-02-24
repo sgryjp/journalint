@@ -28,8 +28,8 @@ pub trait Command {
     /// Get machine-readable identifier of this command.
     fn id(&self) -> &str;
 
-    /// Get a diagnostic code which is fixable by this command.
-    fn fixable_codes(&self) -> Code;
+    /// Check whether the specified diagnostic code can be fixed by this command or not.
+    fn can_fix(&self, code: &Code) -> bool;
 
     /// Executes this command.
     ///
