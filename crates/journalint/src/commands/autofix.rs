@@ -1,15 +1,14 @@
 //! Autofix commands
-use std::collections::HashMap;
-use std::sync::Arc;
+use std::ops::Range;
 
-use lsp_types::{Url, WorkspaceEdit};
+use lsp_types::Url;
 use strum::EnumIter;
 
 use crate::ast::Expr;
 use crate::code::Code;
 use crate::commands::Command;
 use crate::errors::JournalintError;
-use crate::linemap::LineMap;
+use crate::textedit::TextEdit;
 
 use super::{recalculate_duration, replace_with_previous_end_time, use_date_in_filename_visitor};
 
@@ -55,36 +54,24 @@ impl Command for AutofixCommand {
     /// # Arguments
     ///
     /// * `url` - URL of the document
-    /// * `line_map` - Line-column mapper for the document
     /// * `ast_root` - AST of the document
-    /// * `selection_range` - Range of the selection at the time this command was invoked.
+    /// * `selection` - Span of the selection at the time this command was invoked.
     fn execute(
         &self,
         url: &Url,
-        line_map: &Arc<LineMap>,
         ast_root: &Expr,
-        selection_range: &lsp_types::Range,
-    ) -> Result<Option<WorkspaceEdit>, JournalintError> {
-        let selection = line_map.lsp_range_to_span(selection_range);
-
-        let edit = match self {
+        selection: &Range<usize>,
+    ) -> Result<Option<TextEdit>, JournalintError> {
+        match self {
             AutofixCommand::RecalculateDuration => {
-                recalculate_duration::execute(url, ast_root, &selection)
+                recalculate_duration::execute(url, ast_root, selection)
             }
             AutofixCommand::ReplaceWithPreviousEndTime => {
-                replace_with_previous_end_time::execute(url, ast_root, &selection)
+                replace_with_previous_end_time::execute(url, ast_root, selection)
             }
             AutofixCommand::UseDateInFilename => {
                 use_date_in_filename_visitor::execute(url, ast_root)
             }
-        }?;
-        let Some(edit) = edit else {
-            return Ok(None);
-        };
-
-        let range = line_map.span_to_lsp_range(edit.span());
-        let edit = lsp_types::TextEdit::new(range, edit.new_text().to_string());
-        let edits = HashMap::from([(url.clone(), vec![edit])]);
-        Ok(Some(WorkspaceEdit::new(edits)))
+        }
     }
 }

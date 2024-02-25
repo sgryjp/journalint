@@ -26,6 +26,7 @@ use lsp_types::ServerCapabilities;
 use lsp_types::TextDocumentSyncCapability;
 use lsp_types::TextDocumentSyncKind;
 use lsp_types::Url;
+use lsp_types::WorkspaceEdit;
 use strum::IntoEnumIterator;
 
 use crate::ast::Expr;
@@ -371,16 +372,19 @@ fn on_workspace_execute_command(
     let ast_root = doc_state.ast_root().ok_or_else(|| {
         JournalintError::UnexpectedError(format!("No AST available for the document: {url}"))
     })?;
-    let Some(edit) = command.execute(&url, &line_map, ast_root, &range)? else {
+    let span = line_map.lsp_range_to_span(&range);
+    let Some(edit) = command.execute(&url, ast_root, &span)? else {
         return Ok(()); // Do nothing if command does not change the document
     };
+    let text_edit = lsp_types::TextEdit::new(range, edit.new_text().to_string());
+    let workspace_edit = WorkspaceEdit::new(HashMap::from([(url.clone(), vec![text_edit])]));
 
     // Request the changes to be executed to the client
     let request_id = state.next_request_id();
     info!("[S:{}] textDocument/applyEdit", request_id);
     let params = ApplyWorkspaceEditParams {
         label: Some(command.title().to_string()),
-        edit,
+        edit: workspace_edit,
     };
     let request = Request::new(request_id, "workspace/applyEdit".to_string(), params);
     conn.sender.send(Message::Request(request.clone()))?;

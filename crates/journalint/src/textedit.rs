@@ -1,7 +1,7 @@
 use std::ops::Range;
 
 /// Represents a text replacement operation.
-pub(super) struct TextEdit {
+pub struct TextEdit {
     /// Where to replace.
     span: Range<usize>,
 

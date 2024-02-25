@@ -21,7 +21,7 @@ use ariadne::Report;
 use ariadne::ReportKind;
 use ariadne::Source;
 use clap::Parser;
-use commands::apply_workspace_edit;
+use commands::apply_text_edit;
 use commands::Command;
 use diagnostic::Diagnostic;
 use env_logger::TimestampPrecision;
@@ -105,12 +105,11 @@ fn cli_main(args: Arguments) -> Result<(), CliError> {
             };
 
             // Execute the default auto-fix command.
-            let span = line_map.span_to_lsp_range(d.span());
-            let workspace_edit = command
-                .execute(&url, &line_map, ast_root, &span)
+            let text_edit = command
+                .execute(&url, ast_root, d.span())
                 .map_err(|e| CliError::new(E_UNEXPECTED).with_message(e.to_string()))?;
-            if let Some(workspace_edit) = workspace_edit {
-                apply_workspace_edit(&line_map, workspace_edit)
+            if let Some(text_edit) = text_edit {
+                apply_text_edit(&url, text_edit)
                     .map_err(|e| CliError::new(E_UNEXPECTED).with_message(e.to_string()))?;
             }
         }
