@@ -58,12 +58,12 @@ impl Visitor for ReplaceWithPreviousEndTimeVisitor {
 
 pub(super) fn execute(
     _url: &Url,
-    ast: &Expr,
+    ast_root: &Expr,
     selection: &Range<usize>,
 ) -> Result<Option<TextEdit>, JournalintError> {
     // Determine where to edit.
     let mut visitor = ReplaceWithPreviousEndTimeVisitor::new(selection.clone());
-    walk(ast, &mut visitor)?;
+    walk(ast_root, &mut visitor)?;
     let span_to_replace = visitor.target_start_time_span.as_ref().ok_or_else(|| {
         JournalintError::CommandTargetNotFound {
             command: AutofixCommand::ReplaceWithPreviousEndTime.id().to_string(),

@@ -30,10 +30,10 @@ impl Visitor for UseDateInFilenameVisitor {
     }
 }
 
-pub(super) fn execute(url: &Url, ast: &Expr) -> Result<Option<TextEdit>, JournalintError> {
+pub(super) fn execute(url: &Url, ast_root: &Expr) -> Result<Option<TextEdit>, JournalintError> {
     // Determine where to edit.
     let mut visitor = UseDateInFilenameVisitor::default();
-    walk(ast, &mut visitor)?;
+    walk(ast_root, &mut visitor)?;
     let range_to_replace = visitor.fm_date_span();
 
     // Generate the new value.

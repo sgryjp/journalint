@@ -75,12 +75,12 @@ impl Visitor for RecalculateDurationVisitor {
 
 pub(super) fn execute(
     _url: &Url,
-    ast: &Expr,
+    ast_root: &Expr,
     selection: &Range<usize>,
 ) -> Result<Option<TextEdit>, JournalintError> {
     // Determine where to edit.
     let mut visitor = RecalculateDurationVisitor::new(selection.clone());
-    walk(ast, &mut visitor)?;
+    walk(ast_root, &mut visitor)?;
     let span_to_replace =
         visitor
             .target_duration_span

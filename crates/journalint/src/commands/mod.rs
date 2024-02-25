@@ -39,8 +39,8 @@ pub trait Command {
         &self,
         url: &Url,
         line_map: &Arc<LineMap>,
-        ast: &Expr,
-        range: &lsp_types::Range,
+        ast_root: &Expr,
+        range: &lsp_types::Range, // TODO: use Range<usize>
     ) -> Result<Option<WorkspaceEdit>, JournalintError>;
 }
 

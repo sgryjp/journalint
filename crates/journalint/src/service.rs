@@ -78,20 +78,20 @@ impl ServerState {
 #[derive(Default)]
 pub struct DocumentState {
     line_map: Arc<LineMap>,
-    ast: Option<Expr>,
+    ast_root: Option<Expr>,
 }
 
 impl DocumentState {
-    pub fn new(line_map: Arc<LineMap>, ast: Option<Expr>) -> Self {
-        Self { line_map, ast }
+    pub fn new(line_map: Arc<LineMap>, ast_root: Option<Expr>) -> Self {
+        Self { line_map, ast_root }
     }
 
     pub fn line_map(&self) -> Arc<LineMap> {
         self.line_map.clone()
     }
 
-    pub fn ast(&self) -> Option<&Expr> {
-        self.ast.as_ref()
+    pub fn ast_root(&self) -> Option<&Expr> {
+        self.ast_root.as_ref()
     }
 }
 
@@ -368,10 +368,10 @@ fn on_workspace_execute_command(
     // Execute the command
     let doc_state = state.document_state(&url)?;
     let line_map = doc_state.line_map();
-    let ast = doc_state.ast().ok_or_else(|| {
+    let ast_root = doc_state.ast_root().ok_or_else(|| {
         JournalintError::UnexpectedError(format!("No AST available for the document: {url}"))
     })?;
-    let Some(edit) = command.execute(&url, &line_map, ast, &range)? else {
+    let Some(edit) = command.execute(&url, &line_map, ast_root, &range)? else {
         return Ok(()); // Do nothing if command does not change the document
     };
 
