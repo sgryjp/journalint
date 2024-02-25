@@ -21,10 +21,11 @@ use ariadne::Report;
 use ariadne::ReportKind;
 use ariadne::Source;
 use clap::Parser;
+use commands::apply_workspace_edit;
+use commands::Command;
 use diagnostic::Diagnostic;
 use env_logger::TimestampPrecision;
 use errors::CliError;
-use log::debug;
 use log::error;
 use lsp_types::Url;
 
@@ -32,6 +33,8 @@ use crate::arg::Arguments;
 use crate::errors::JournalintError;
 use crate::lint::lint;
 use crate::parse::parse;
+
+const E_UNEXPECTED: exitcode::ExitCode = 1;
 
 /// Entry point of journalint CLI.
 fn main() -> Result<(), JournalintError> {
@@ -71,7 +74,8 @@ fn cli_main(args: Arguments) -> Result<(), CliError> {
         ))
     })?;
     let url = Url::from_file_path(path.clone()).map_err(|_| {
-        CliError::new(1).with_message(format!("Failed to compose URL from path {:?}", &path))
+        CliError::new(E_UNEXPECTED)
+            .with_message(format!("Failed to compose URL from path {:?}", &path))
     })?;
 
     // Load the content
@@ -82,8 +86,9 @@ fn cli_main(args: Arguments) -> Result<(), CliError> {
     // Parse the content and lint the AST unless parsing itself failed
     let (journal, mut diagnostics, line_map) = parse(&content);
     if let Some(journal) = journal.as_ref() {
-        let mut d = lint(journal, &url, line_map)
-            .map_err(|e| CliError::new(1).with_message(format!("Failed on linting: {e:?}")))?;
+        let mut d = lint(journal, &url, line_map.clone()).map_err(|e| {
+            CliError::new(E_UNEXPECTED).with_message(format!("Failed on linting: {e:?}"))
+        })?;
         diagnostics.append(&mut d);
     }
 
@@ -92,12 +97,23 @@ fn cli_main(args: Arguments) -> Result<(), CliError> {
         // Sort diagnostics in reverse order
         diagnostics.sort_by(|a, b| b.span().start.cmp(&a.span().start));
 
-        // Fix one by one, from the last to the first
-        diagnostics.iter().map(Box::new).for_each(|d| {
-            if let Err(e) = commands::fix(*d, content.as_str(), path.as_path()) {
-                debug!("Autofix failed: {e}");
+        // Fix one by one
+        for d in diagnostics.iter().as_ref() {
+            // Check if there is a default auto-fix command for the diagnostic.
+            let (Some(ast_root), Some(command)) = (&journal, d.code().default_autofix()) else {
+                continue; // unavailable
+            };
+
+            // Execute the default auto-fix command.
+            let span = line_map.span_to_lsp_range(d.span());
+            let workspace_edit = command
+                .execute(&url, &line_map, ast_root, &span)
+                .map_err(|e| CliError::new(E_UNEXPECTED).with_message(e.to_string()))?;
+            if let Some(workspace_edit) = workspace_edit {
+                apply_workspace_edit(&line_map, workspace_edit)
+                    .map_err(|e| CliError::new(E_UNEXPECTED).with_message(e.to_string()))?;
             }
-        });
+        }
     } else {
         // Write diagnostic report to stderr
         diagnostics

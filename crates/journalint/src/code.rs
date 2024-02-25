@@ -1,5 +1,6 @@
 use core::str::FromStr;
 
+use crate::commands::{AutofixCommand, Command};
 use crate::errors::JournalintError;
 
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -36,6 +37,22 @@ impl Code {
             Code::TimeJumped => "time-jumped",
             Code::NegativeTimeRange => "negative-time-range",
             Code::IncorrectDuration => "incorrect-duration",
+        }
+    }
+
+    /// Get default auto-fix command for the diagnostic code.
+    pub fn default_autofix(&self) -> Option<impl Command> {
+        match self {
+            Code::ParseError => None,
+            Code::MismatchedDates => Some(AutofixCommand::UseDateInFilename),
+            Code::InvalidStartTime => None,
+            Code::InvalidEndTime => None,
+            Code::MissingDate => None,
+            Code::MissingStartTime => None,
+            Code::MissingEndTime => None,
+            Code::TimeJumped => Some(AutofixCommand::ReplaceWithPreviousEndTime),
+            Code::NegativeTimeRange => None,
+            Code::IncorrectDuration => Some(AutofixCommand::RecalculateDuration),
         }
     }
 }
