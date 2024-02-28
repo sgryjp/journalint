@@ -1,13 +1,18 @@
 # See https://pre-commit.com for more information
 # See https://pre-commit.com/hooks.html for more hooks
 repos:
-
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.4.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-added-large-files
+
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: "v3.1.0"
+    hooks:
+      - id: prettier
+        types_or: [javascript, json, markdown, ts]
 
   - repo: local
     hooks:
@@ -31,10 +36,3 @@ repos:
         language: system
         pass_filenames: false
         types_or: [rust]
-
-      - id: prettier
-        name: prettier
-        entry: sh -c "cd tools/journalint-vscode && yarn run format"
-        language: system
-        pass_filenames: false
-        types_or: [javascript, json, markdown, ts]
