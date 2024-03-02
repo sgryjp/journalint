@@ -364,7 +364,7 @@ fn on_workspace_execute_command(
         return Err(JournalintError::UnexpectedArguments(errmsg));
     }
     let url: Url = serde_json::from_value(params.arguments[0].clone())?;
-    let range: lsp_types::Range = serde_json::from_value(params.arguments[1].clone())?;
+    let selected_range: lsp_types::Range = serde_json::from_value(params.arguments[1].clone())?;
 
     // Execute the command
     let doc_state = state.document_state(&url)?;
@@ -372,11 +372,11 @@ fn on_workspace_execute_command(
     let ast_root = doc_state.ast_root().ok_or_else(|| {
         JournalintError::UnexpectedError(format!("No AST available for the document: {url}"))
     })?;
-    let span = line_map.lsp_range_to_span(&range);
-    let Some(edit) = command.execute(&url, ast_root, &span)? else {
+    let selected_span = line_map.lsp_range_to_span(&selected_range);
+    let Some(edit) = command.execute(&url, ast_root, &selected_span)? else {
         return Ok(()); // Do nothing if command does not change the document
     };
-    let text_edit = lsp_types::TextEdit::new(range, edit.new_text().to_string());
+    let text_edit = edit.to_lsp_type(&line_map);
     let workspace_edit = WorkspaceEdit::new(HashMap::from([(url.clone(), vec![text_edit])]));
 
     // Request the changes to be executed to the client
