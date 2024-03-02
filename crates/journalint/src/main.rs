@@ -21,7 +21,6 @@ use ariadne::Report;
 use ariadne::ReportKind;
 use ariadne::Source;
 use clap::Parser;
-use commands::apply_text_edit;
 use commands::Command;
 use diagnostic::Diagnostic;
 use env_logger::TimestampPrecision;
@@ -109,7 +108,8 @@ fn cli_main(args: Arguments) -> Result<(), CliError> {
                 .execute(&url, ast_root, d.span())
                 .map_err(|e| CliError::new(E_UNEXPECTED).with_message(e.to_string()))?;
             if let Some(text_edit) = text_edit {
-                apply_text_edit(&url, text_edit)
+                text_edit
+                    .apply_to_file(&url)
                     .map_err(|e| CliError::new(E_UNEXPECTED).with_message(e.to_string()))?;
             }
         }

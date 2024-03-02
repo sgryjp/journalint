@@ -4,10 +4,8 @@ mod recalculate_duration;
 mod replace_with_previous_end_time;
 mod use_date_in_filename_visitor;
 
-use std::fs::write;
 use std::ops::Range;
 
-use log::warn;
 use lsp_types::Url;
 
 use crate::ast::Expr;
@@ -46,35 +44,4 @@ pub trait Command {
 pub struct CommandParams {
     url: Url,
     range: lsp_types::Range,
-}
-
-// -----------------------------------------------------------------------------
-
-/// Apply a text edit to a local file.
-pub(crate) fn apply_text_edit(url: &Url, text_edit: TextEdit) -> Result<(), JournalintError> {
-    // Skip if the URL points to non-local file.
-    if url.scheme() != "file" {
-        warn!(
-            "Tried to execute a TextEdit for a URL of which scheme is not `file`: {}",
-            url.scheme()
-        );
-        return Ok(());
-    }
-    let path = url
-        .to_file_path()
-        .map_err(|_| JournalintError::UnsupportedUrl { url: url.clone() })?;
-
-    // Read the current file content.
-    let content = std::fs::read_to_string(&path)?;
-
-    // Replace the target range
-    let mut buf = String::with_capacity(content.len());
-    buf.push_str(&content[..text_edit.span().start]);
-    buf.push_str(text_edit.new_text());
-    buf.push_str(&content[text_edit.span().end..]);
-
-    // Write the partly replaced content back.
-    write(&path, buf)?;
-
-    Ok(())
 }
