@@ -4,7 +4,8 @@ use std::path::PathBuf;
 use chrono::NaiveDate;
 use lsp_types::Url;
 
-use crate::ast::{walk, Expr, Visitor};
+use journalint_parse::ast::{walk, Expr, Visitor};
+
 use crate::errors::JournalintError;
 use crate::textedit::TextEdit;
 
@@ -19,7 +20,7 @@ impl UseDateInFilenameVisitor {
     }
 }
 
-impl Visitor for UseDateInFilenameVisitor {
+impl Visitor<JournalintError> for UseDateInFilenameVisitor {
     fn on_visit_fm_date(
         &mut self,
         _value: &NaiveDate,

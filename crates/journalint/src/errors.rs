@@ -4,6 +4,8 @@ use lsp_server::ProtocolError;
 use lsp_types::Url;
 use thiserror::Error;
 
+use journalint_parse::errors::JournalintParseError;
+
 // ----------------------------------------------------------------------------
 
 /// Error for CLI main function.
@@ -62,8 +64,11 @@ pub enum JournalintError {
     #[error("The doucument was not parsed yet: {url}")]
     DocumentNotParsedYet { url: Url },
 
-    #[error("Parse error: {0}")]
-    ParseError(String),
+    #[error("{}", .source)]
+    ParseError {
+        #[from]
+        source: JournalintParseError,
+    },
 
     #[error("Required value is missing: {name}")]
     MissingRequiredValue { name: String },

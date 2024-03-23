@@ -9,7 +9,8 @@ use std::time::Duration;
 use chrono::{DateTime, NaiveDate, Timelike, Utc};
 use lsp_types::Url;
 
-use crate::ast::{walk, Expr, LooseTime, Visitor};
+use journalint_parse::ast::{walk, Expr, LooseTime, Visitor};
+
 use crate::code::Code;
 use crate::diagnostic::{Diagnostic, DiagnosticRelatedInformation};
 use crate::errors::JournalintError;
@@ -285,7 +286,7 @@ impl<'a> Linter<'a> {
     }
 }
 
-impl Visitor for Linter<'_> {
+impl Visitor<JournalintError> for Linter<'_> {
     fn on_visit_fm_date(
         &mut self,
         value: &NaiveDate,

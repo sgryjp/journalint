@@ -4,22 +4,23 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-ariadne = { workspace = true }
-chrono = { workspace = true }
-chumsky = { workspace = true }
-clap = { workspace = true }
-crossbeam-channel = { workspace = true }
-env_logger = { workspace = true }
-exitcode = { workspace = true }
-log = { workspace = true }
-lsp-server = { workspace = true }
-lsp-types = { workspace = true }
-serde = { workspace = true }
-serde_json = { workspace = true }
-serde_yaml = { workspace = true }
-strum = { workspace = true }
-thiserror = { workspace = true }
+ariadne.workspace = true
+chrono.workspace = true
+chumsky.workspace = true
+clap.workspace = true
+crossbeam-channel.workspace = true
+env_logger.workspace = true
+exitcode.workspace = true
+journalint-parse = { path = "../journalint-parse" }
+log.workspace = true
+lsp-server.workspace = true
+lsp-types.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+serde_yaml.workspace = true
+strum.workspace = true
+thiserror.workspace = true
 
 [dev-dependencies]
-insta = { version = "1.31.0", features = ["yaml"] }
-rstest = "0.18.1"
+insta.workspace = true
+rstest.workspace = true

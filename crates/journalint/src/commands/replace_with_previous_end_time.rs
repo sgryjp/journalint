@@ -3,7 +3,8 @@ use std::ops::Range;
 
 use lsp_types::Url;
 
-use crate::ast::{walk, Expr, LooseTime, Visitor};
+use journalint_parse::ast::{walk, Expr, LooseTime, Visitor};
+
 use crate::errors::JournalintError;
 use crate::textedit::TextEdit;
 
@@ -27,10 +28,10 @@ impl ReplaceWithPreviousEndTimeVisitor {
     }
 }
 
-impl Visitor for ReplaceWithPreviousEndTimeVisitor {
+impl Visitor<JournalintError> for ReplaceWithPreviousEndTimeVisitor {
     fn on_visit_end_time(
         &mut self,
-        value: &crate::ast::LooseTime,
+        value: &LooseTime,
         span: &Range<usize>,
     ) -> Result<(), JournalintError> {
         if self.target_start_time_span.is_none() {
@@ -42,7 +43,7 @@ impl Visitor for ReplaceWithPreviousEndTimeVisitor {
 
     fn on_visit_start_time(
         &mut self,
-        _value: &crate::ast::LooseTime,
+        _value: &LooseTime,
         span: &Range<usize>,
     ) -> Result<(), JournalintError> {
         if self.target_start_time_span.is_none() {

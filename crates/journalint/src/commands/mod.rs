@@ -8,7 +8,8 @@ use std::ops::Range;
 
 use lsp_types::Url;
 
-use crate::ast::Expr;
+use journalint_parse::ast::Expr;
+
 use crate::code::Code;
 pub use crate::commands::autofix::AutofixCommand;
 use crate::errors::JournalintError;

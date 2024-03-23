@@ -4,7 +4,8 @@ use std::ops::Range;
 use lsp_types::Url;
 use strum::EnumIter;
 
-use crate::ast::Expr;
+use journalint_parse::ast::Expr;
+
 use crate::code::Code;
 use crate::commands::Command;
 use crate::errors::JournalintError;

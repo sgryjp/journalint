@@ -8,7 +8,8 @@ use chrono::NaiveDate;
 use chumsky::prelude::*;
 use chumsky::text::newline;
 
-use crate::ast::{Expr, LooseTime};
+use journalint_parse::ast::{Expr, LooseTime};
+
 use crate::code::Code;
 use crate::diagnostic::Diagnostic;
 use crate::linemap::LineMap;
@@ -249,10 +250,11 @@ pub fn parse(content: &str) -> (Option<Expr>, Vec<Diagnostic>, Arc<LineMap>) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use chrono::DateTime;
     use rstest::*;
 
-    use crate::errors::JournalintError;
+    use journalint_parse::errors::JournalintParseError;
 
     #[rstest]
     #[case("2456", 2006, 2, 3)] // No colon
@@ -273,7 +275,7 @@ mod tests {
 
         assert!(matches!(
             LooseTime::new(input).to_datetime(date),
-            Err(JournalintError::ParseError(..))
+            Err(JournalintParseError::ParseError(..))
         ));
     }
 

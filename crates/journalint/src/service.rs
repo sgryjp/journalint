@@ -29,7 +29,8 @@ use lsp_types::Url;
 use lsp_types::WorkspaceEdit;
 use strum::IntoEnumIterator;
 
-use crate::ast::Expr;
+use journalint_parse::ast::Expr;
+
 use crate::code::Code;
 use crate::commands::AutofixCommand;
 use crate::commands::Command as _;

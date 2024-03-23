@@ -1,5 +1,4 @@
 mod arg;
-mod ast;
 mod code;
 mod commands;
 mod diagnostic;
