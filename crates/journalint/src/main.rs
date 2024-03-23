@@ -6,13 +6,13 @@ mod errors;
 mod export;
 mod linemap;
 mod lint;
-mod parse;
 mod service;
 mod textedit;
 
 use std::env;
 use std::fs::read_to_string;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use ariadne::Color;
 use ariadne::Label;
@@ -24,13 +24,15 @@ use commands::Command;
 use diagnostic::Diagnostic;
 use env_logger::TimestampPrecision;
 use errors::CliError;
+use linemap::LineMap;
 use log::error;
 use lsp_types::Url;
+
+use journalint_parse::parse::parse;
 
 use crate::arg::Arguments;
 use crate::errors::JournalintError;
 use crate::lint::lint;
-use crate::parse::parse;
 
 const E_UNEXPECTED: exitcode::ExitCode = 1;
 
@@ -82,7 +84,12 @@ fn cli_main(args: Arguments) -> Result<(), CliError> {
     })?;
 
     // Parse the content and lint the AST unless parsing itself failed
-    let (journal, mut diagnostics, line_map) = parse(&content);
+    let line_map = Arc::new(LineMap::new(&content));
+    let (journal, parse_errors) = parse(&content);
+    let mut diagnostics: Vec<Diagnostic> = parse_errors
+        .iter()
+        .map(|e| Diagnostic::from_parse_error(e, line_map.clone()))
+        .collect();
     if let Some(journal) = journal.as_ref() {
         let mut d = lint(journal, &url, line_map.clone()).map_err(|e| {
             CliError::new(E_UNEXPECTED).with_message(format!("Failed on linting: {e:?}"))
@@ -159,7 +166,12 @@ mod snapshot_tests {
     use super::*;
 
     fn parse_and_lint(url: &Url, content: &str) -> Vec<Diagnostic> {
-        let (journal, mut diagnostics, line_map) = parse(&content);
+        let line_map = Arc::new(LineMap::new(&content));
+        let (journal, parse_errors) = parse(&content);
+        let mut diagnostics: Vec<Diagnostic> = parse_errors
+            .iter()
+            .map(|e| Diagnostic::from_parse_error(e, line_map.clone()))
+            .collect();
         if let Some(journal) = journal {
             let mut d = lint(&journal, &url, line_map).expect("FAILED TO LINT");
             diagnostics.append(&mut d);

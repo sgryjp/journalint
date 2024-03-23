@@ -30,6 +30,7 @@ use lsp_types::WorkspaceEdit;
 use strum::IntoEnumIterator;
 
 use journalint_parse::ast::Expr;
+use journalint_parse::parse::parse;
 
 use crate::code::Code;
 use crate::commands::AutofixCommand;
@@ -38,7 +39,6 @@ use crate::diagnostic::Diagnostic;
 use crate::errors::JournalintError;
 use crate::linemap::LineMap;
 use crate::lint::lint;
-use crate::parse::parse;
 
 const E_UNKNOWN_COMMAND: i32 = 1;
 const E_INVALID_ARGUMENTS: i32 = 2;
@@ -218,7 +218,12 @@ fn on_text_document_did_open(
     let version = None;
 
     // Parse
-    let (journal, mut diagnostics, line_map) = parse(content);
+    let line_map = Arc::new(LineMap::new(content));
+    let (journal, parse_errors) = parse(content);
+    let mut diagnostics: Vec<Diagnostic> = parse_errors
+        .iter()
+        .map(|e| Diagnostic::from_parse_error(e, line_map.clone()))
+        .collect();
 
     // Lint
     if let Some(journal) = &journal {
@@ -250,7 +255,12 @@ fn on_text_document_did_change(
     let version = Some(params.text_document.version);
 
     // Parse
-    let (journal, mut diagnostics, line_map) = parse(content);
+    let line_map = Arc::new(LineMap::new(content));
+    let (journal, parse_errors) = parse(content);
+    let mut diagnostics: Vec<Diagnostic> = parse_errors
+        .iter()
+        .map(|e| Diagnostic::from_parse_error(e, line_map.clone()))
+        .collect();
 
     // Lint
     if let Some(journal) = &journal {

@@ -1,6 +1,7 @@
 use core::ops::Range;
 use std::sync::Arc;
 
+use chumsky::error::Simple;
 use lsp_types::DiagnosticSeverity;
 use lsp_types::NumberOrString;
 use lsp_types::Url;
@@ -72,6 +73,17 @@ impl Diagnostic {
         let start = self.line_map.offset_from_position(range.start);
         let end = self.line_map.offset_from_position(range.end);
         self.span.start <= start && end <= self.span.end
+    }
+
+    pub fn from_parse_error(e: &Simple<char>, line_map: Arc<LineMap>) -> Diagnostic {
+        Diagnostic::new_warning(
+            e.span(),
+            Code::ParseError,
+            format!("Parse error: {e}"),
+            None,
+            None,
+            line_map,
+        )
     }
 }
 
