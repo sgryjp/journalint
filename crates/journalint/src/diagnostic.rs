@@ -5,14 +5,6 @@ use url::Url;
 
 use journalint_parse::violation::Violation;
 
-#[derive(Clone, Copy, Debug)]
-pub enum DiagnosticSeverity {
-    Error,
-    Warning,
-    Information,
-    Hint,
-}
-
 /// Internal diagnostic data structure.
 ///
 /// This is basically the same as `lsp_types::Diagnostic` except that this has a field
@@ -21,7 +13,6 @@ pub enum DiagnosticSeverity {
 pub struct Diagnostic {
     span: Range<usize>,
     violation: Violation,
-    severity: DiagnosticSeverity,
     message: String,
     related_informations: Option<Vec<DiagnosticRelatedInformation>>,
 }
@@ -33,11 +24,9 @@ impl Diagnostic {
         message: String,
         related_informations: Option<Vec<DiagnosticRelatedInformation>>,
     ) -> Self {
-        let severity = DiagnosticSeverity::Warning;
         Self {
             span,
             violation,
-            severity,
             message,
             related_informations,
         }
@@ -45,10 +34,6 @@ impl Diagnostic {
 
     pub fn span(&self) -> &Range<usize> {
         &self.span
-    }
-
-    pub fn severity(&self) -> DiagnosticSeverity {
-        self.severity
     }
 
     pub fn violation(&self) -> &Violation {

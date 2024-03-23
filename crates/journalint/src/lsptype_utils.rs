@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::diagnostic::{Diagnostic, DiagnosticRelatedInformation, DiagnosticSeverity};
+use crate::diagnostic::{Diagnostic, DiagnosticRelatedInformation};
 use crate::linemap::LineMap;
 
 static SOURCE_NAME: &str = "journalint";
@@ -18,7 +18,7 @@ impl ToLspDisgnostic for Diagnostic {
         );
         lsp_types::Diagnostic::new(
             range,
-            Some(self.severity().to_lsptype()),
+            Some(lsp_types::DiagnosticSeverity::WARNING),
             Some(lsp_types::NumberOrString::String(violation)),
             Some(SOURCE_NAME.to_string()),
             self.message().to_owned(),
@@ -43,36 +43,6 @@ impl ToLspDiagnosticRelatedInformation for DiagnosticRelatedInformation {
                 range: lsp_types::Range { start, end },
             },
             message: self.message().to_string(),
-        }
-    }
-}
-
-pub(crate) trait ToLspDiagnosticSeverity {
-    fn to_lsptype(&self) -> lsp_types::DiagnosticSeverity;
-}
-
-impl ToLspDiagnosticSeverity for DiagnosticSeverity {
-    fn to_lsptype(&self) -> lsp_types::DiagnosticSeverity {
-        match self {
-            DiagnosticSeverity::Error => lsp_types::DiagnosticSeverity::ERROR,
-            DiagnosticSeverity::Warning => lsp_types::DiagnosticSeverity::WARNING,
-            DiagnosticSeverity::Information => lsp_types::DiagnosticSeverity::INFORMATION,
-            DiagnosticSeverity::Hint => lsp_types::DiagnosticSeverity::HINT,
-        }
-    }
-}
-
-impl From<lsp_types::DiagnosticSeverity> for DiagnosticSeverity {
-    fn from(value: lsp_types::DiagnosticSeverity) -> Self {
-        match value {
-            lsp_types::DiagnosticSeverity::ERROR => DiagnosticSeverity::Error,
-            lsp_types::DiagnosticSeverity::WARNING => DiagnosticSeverity::Warning,
-            lsp_types::DiagnosticSeverity::INFORMATION => DiagnosticSeverity::Information,
-            lsp_types::DiagnosticSeverity::HINT => DiagnosticSeverity::Hint,
-            _ => {
-                log::warn!("Unknown severity value: {:?}", value);
-                DiagnosticSeverity::Error
-            }
         }
     }
 }
