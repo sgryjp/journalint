@@ -3,7 +3,6 @@
 //! See module `ast` for AST related features, and module `parse` for parsing logic.
 use std::ops::Range;
 use std::path::PathBuf;
-use std::sync::Arc;
 use std::time::Duration;
 
 use chrono::{DateTime, NaiveDate, Timelike, Utc};
@@ -14,12 +13,10 @@ use journalint_parse::violation::Violation;
 
 use crate::diagnostic::{Diagnostic, DiagnosticRelatedInformation};
 use crate::errors::JournalintError;
-use crate::linemap::LineMap;
 
 pub struct Linter<'a> {
     source: &'a Url,
     diagnostics: Vec<Diagnostic>,
-    line_map: Arc<LineMap>,
 
     fm_date: Option<(NaiveDate, Range<usize>)>,
     fm_start: Option<(LooseTime, Range<usize>)>,
@@ -33,11 +30,10 @@ pub struct Linter<'a> {
 }
 
 impl<'a> Linter<'a> {
-    pub fn new(source: &Url, line_map: Arc<LineMap>) -> Linter {
+    pub fn new(source: &Url) -> Linter {
         Linter {
             source,
             diagnostics: vec![],
-            line_map,
 
             fm_date: None,
             fm_start: None,
@@ -168,7 +164,6 @@ impl<'a> Linter<'a> {
                             prev_end_dt.hour(),
                             prev_end_dt.minute()
                         ),
-                        self.line_map.clone(),
                     )]),
                 ));
             }
@@ -346,12 +341,8 @@ impl Visitor<JournalintError> for Linter<'_> {
     }
 }
 
-pub fn lint(
-    journal: &Expr,
-    url: &Url,
-    line_map: Arc<LineMap>,
-) -> Result<Vec<Diagnostic>, JournalintError> {
-    let mut visitor = Linter::new(url, line_map);
+pub fn lint(journal: &Expr, url: &Url) -> Result<Vec<Diagnostic>, JournalintError> {
+    let mut visitor = Linter::new(url);
     walk(journal, &mut visitor)?;
     Ok(visitor.diagnostics)
 }

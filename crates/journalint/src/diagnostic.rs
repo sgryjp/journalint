@@ -1,13 +1,10 @@
 use core::ops::Range;
-use std::sync::Arc;
 
 use chumsky::error::Simple;
 use lsp_types::DiagnosticSeverity;
 use lsp_types::Url;
 
 use journalint_parse::violation::Violation;
-
-use crate::linemap::LineMap;
 
 /// Internal diagnostic data structure.
 ///
@@ -76,16 +73,14 @@ pub struct DiagnosticRelatedInformation {
     uri: Url,
     range: Range<usize>,
     message: String,
-    line_map: Arc<LineMap>,
 }
 
 impl DiagnosticRelatedInformation {
-    pub fn new(uri: Url, range: Range<usize>, message: String, line_map: Arc<LineMap>) -> Self {
+    pub fn new(uri: Url, range: Range<usize>, message: String) -> Self {
         Self {
             uri,
             range,
             message,
-            line_map,
         }
     }
 

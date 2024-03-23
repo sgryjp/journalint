@@ -225,7 +225,7 @@ fn on_text_document_did_open(
 
     // Lint
     if let Some(journal) = &journal {
-        let mut d = lint(journal, &uri, line_map.clone())?;
+        let mut d = lint(journal, &uri)?;
         diagnostics.append(&mut d);
     }
 
@@ -259,7 +259,7 @@ fn on_text_document_did_change(
 
     // Lint
     if let Some(journal) = &journal {
-        let mut d = lint(journal, &uri, line_map.clone())?;
+        let mut d = lint(journal, &uri)?;
         diagnostics.append(&mut d);
     }
 
