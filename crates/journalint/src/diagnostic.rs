@@ -53,7 +53,7 @@ impl Diagnostic {
     }
 
     pub fn related_informations(&self) -> Option<&[DiagnosticRelatedInformation]> {
-        self.related_informations.as_ref().map(|v| v.as_slice())
+        self.related_informations.as_deref()
     }
 }
 

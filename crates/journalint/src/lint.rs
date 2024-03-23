@@ -93,12 +93,8 @@ impl<'a> Linter<'a> {
     }
 
     fn check_fm_start_is_valid(&mut self) -> Option<DateTime<Utc>> {
-        let Some((date, _)) = self.fm_date.as_ref() else {
-            return None;
-        };
-        let Some((start, start_span)) = self.fm_start.as_ref() else {
-            return None;
-        };
+        let (date, _) = self.fm_date.as_ref()?;
+        let (start, start_span) = self.fm_start.as_ref()?;
 
         match start.to_datetime(*date) {
             Ok(dt) => Some(dt),
@@ -126,12 +122,8 @@ impl<'a> Linter<'a> {
     }
 
     fn check_fm_end_is_valid(&mut self) -> Option<DateTime<Utc>> {
-        let Some((date, _)) = self.fm_date.as_ref() else {
-            return None;
-        };
-        let Some((end, end_span)) = self.fm_end.as_ref() else {
-            return None;
-        };
+        let (date, _) = self.fm_date.as_ref()?;
+        let (end, end_span) = self.fm_end.as_ref()?;
 
         match end.to_datetime(*date) {
             Ok(dt) => Some(dt),
@@ -175,11 +167,9 @@ impl<'a> Linter<'a> {
         value: &LooseTime,
         span: &Range<usize>,
     ) -> Option<DateTime<Utc>> {
-        let Some((date, _)) = self.fm_date else {
-            return None;
-        };
+        let (date, _) = self.fm_date.as_ref()?;
 
-        match value.to_datetime(date) {
+        match value.to_datetime(*date) {
             Ok(dt) => Some(dt),
             Err(e) => {
                 // Start time is not a valid value
@@ -195,11 +185,9 @@ impl<'a> Linter<'a> {
     }
 
     fn check_end_time(&mut self, value: &LooseTime, span: &Range<usize>) -> Option<DateTime<Utc>> {
-        let Some((date, _)) = self.fm_date else {
-            return None;
-        };
+        let (date, _) = self.fm_date.as_ref()?;
 
-        match value.to_datetime(date) {
+        match value.to_datetime(*date) {
             Ok(dt) => Some(dt),
             Err(e) => {
                 self.diagnostics.push(Diagnostic::new_warning(

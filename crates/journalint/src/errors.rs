@@ -65,9 +65,6 @@ pub enum JournalintError {
     #[error("Doucument not found: {url}")]
     DocumentNotFound { url: Url },
 
-    #[error("The doucument was not parsed yet: {url}")]
-    DocumentNotParsedYet { url: Url },
-
     #[error("Parse error: {}", .source)]
     InvalidTimeValueError {
         #[from]
