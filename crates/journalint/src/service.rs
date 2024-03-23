@@ -30,12 +30,12 @@ use lsp_types::WorkspaceEdit;
 use strum::IntoEnumIterator;
 
 use journalint_parse::ast::Expr;
+use journalint_parse::diagnostic::Diagnostic;
 use journalint_parse::parse::parse;
 use journalint_parse::violation::Violation;
 
 use crate::commands::AutofixCommand;
 use crate::commands::Command as _;
-use crate::diagnostic::Diagnostic;
 use crate::errors::JournalintError;
 use crate::linemap::LineMap;
 use crate::lint::lint;

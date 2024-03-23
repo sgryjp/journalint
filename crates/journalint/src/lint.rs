@@ -9,9 +9,9 @@ use chrono::{DateTime, NaiveDate, Timelike, Utc};
 use lsp_types::Url;
 
 use journalint_parse::ast::{walk, Expr, LooseTime, Visitor};
+use journalint_parse::diagnostic::{Diagnostic, DiagnosticRelatedInformation};
 use journalint_parse::violation::Violation;
 
-use crate::diagnostic::{Diagnostic, DiagnosticRelatedInformation};
 use crate::errors::JournalintError;
 
 pub struct Linter<'a> {

@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
-use crate::diagnostic::{Diagnostic, DiagnosticRelatedInformation};
+use journalint_parse::diagnostic::{Diagnostic, DiagnosticRelatedInformation};
+
 use crate::linemap::LineMap;
 
 static SOURCE_NAME: &str = "journalint";

@@ -1,6 +1,5 @@
 mod arg;
 mod commands;
-mod diagnostic;
 mod errors;
 mod export;
 mod linemap;
@@ -21,12 +20,12 @@ use ariadne::Source;
 use clap::Parser;
 use commands::AutofixCommand;
 use commands::Command;
-use diagnostic::Diagnostic;
 use env_logger::TimestampPrecision;
 use errors::CliError;
 use log::error;
 use lsp_types::Url;
 
+use journalint_parse::diagnostic::Diagnostic;
 use journalint_parse::parse::parse;
 use journalint_parse::violation::Violation;
 

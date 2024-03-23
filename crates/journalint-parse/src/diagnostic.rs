@@ -3,7 +3,7 @@ use core::ops::Range;
 use chumsky::error::Simple;
 use url::Url;
 
-use journalint_parse::violation::Violation;
+use crate::violation::Violation;
 
 /// Internal diagnostic data structure.
 ///

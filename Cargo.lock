@@ -538,7 +538,6 @@ dependencies = [
  "serde_yaml",
  "strum",
  "thiserror",
- "url",
 ]
 
 [[package]]
@@ -550,6 +549,7 @@ dependencies = [
  "rstest",
  "serde",
  "thiserror",
+ "url",
 ]
 
 [[package]]
