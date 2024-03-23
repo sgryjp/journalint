@@ -223,7 +223,7 @@ fn on_text_document_did_open(
     let (journal, parse_errors) = parse(content);
     let mut diagnostics: Vec<Diagnostic> = parse_errors
         .iter()
-        .map(|e| Diagnostic::from_parse_error(e, line_map.clone()))
+        .map(|e| Diagnostic::from_parse_error(e))
         .collect();
 
     // Lint
@@ -260,7 +260,7 @@ fn on_text_document_did_change(
     let (journal, parse_errors) = parse(content);
     let mut diagnostics: Vec<Diagnostic> = parse_errors
         .iter()
-        .map(|e| Diagnostic::from_parse_error(e, line_map.clone()))
+        .map(|e| Diagnostic::from_parse_error(e))
         .collect();
 
     // Lint

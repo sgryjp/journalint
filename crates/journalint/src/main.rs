@@ -90,7 +90,7 @@ fn cli_main(args: Arguments) -> Result<(), CliError> {
     let (journal, parse_errors) = parse(&content);
     let mut diagnostics: Vec<Diagnostic> = parse_errors
         .iter()
-        .map(|e| Diagnostic::from_parse_error(e, line_map.clone()))
+        .map(|e| Diagnostic::from_parse_error(e))
         .collect();
     if let Some(journal) = journal.as_ref() {
         let mut d = lint(journal, &url, line_map.clone()).map_err(|e| {
@@ -191,7 +191,7 @@ mod snapshot_tests {
         let (journal, parse_errors) = parse(&content);
         let mut diagnostics: Vec<Diagnostic> = parse_errors
             .iter()
-            .map(|e| Diagnostic::from_parse_error(e, line_map.clone()))
+            .map(|e| Diagnostic::from_parse_error(e))
             .collect();
         if let Some(journal) = journal {
             let mut d = lint(&journal, &url, line_map).expect("FAILED TO LINT");

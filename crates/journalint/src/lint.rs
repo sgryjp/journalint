@@ -67,9 +67,7 @@ impl<'a> Linter<'a> {
                             "Date is different from the one in the filename: expected to be {}",
                             expectation.as_str()
                         ),
-                        Some(expectation),
                         None,
-                        self.line_map.clone(),
                     ));
                 }
             }
@@ -83,8 +81,6 @@ impl<'a> Linter<'a> {
                 Violation::MissingDate,
                 "Field 'date' is missing".to_string(),
                 None,
-                None,
-                self.line_map.clone(),
             ));
         }
     }
@@ -96,8 +92,6 @@ impl<'a> Linter<'a> {
                 Violation::MissingStartTime,
                 "Field 'start' is missing".to_string(),
                 None,
-                None,
-                self.line_map.clone(),
             ));
         }
     }
@@ -118,8 +112,6 @@ impl<'a> Linter<'a> {
                     Violation::InvalidStartTime,
                     format!("Invalid start time: {e}"),
                     None,
-                    None,
-                    self.line_map.clone(),
                 ));
                 None
             }
@@ -133,8 +125,6 @@ impl<'a> Linter<'a> {
                 Violation::MissingEndTime,
                 "Field 'end' is missing".to_string(),
                 None,
-                None,
-                self.line_map.clone(),
             ));
         }
     }
@@ -155,8 +145,6 @@ impl<'a> Linter<'a> {
                     Violation::InvalidEndTime,
                     format!("Invalid end time: {e}"),
                     None,
-                    None,
-                    self.line_map.clone(),
                 ));
                 None
             }
@@ -172,7 +160,6 @@ impl<'a> Linter<'a> {
                     span.clone(),
                     Violation::TimeJumped,
                     format!("The start time does not match the previous entry's end time, which is {expectation}"),
-                    Some(expectation),
                     Some(vec![DiagnosticRelatedInformation::new(
                         self.source.clone(),
                         prev_end_range.clone(),
@@ -183,7 +170,6 @@ impl<'a> Linter<'a> {
                         ),
                         self.line_map.clone(),
                     )]),
-                    self.line_map.clone(),
                 ));
             }
         }
@@ -207,8 +193,6 @@ impl<'a> Linter<'a> {
                     Violation::InvalidStartTime,
                     format!("Invalid start time: {e}"),
                     None,
-                    None,
-                    self.line_map.clone(),
                 ));
                 None
             }
@@ -228,8 +212,6 @@ impl<'a> Linter<'a> {
                     Violation::InvalidEndTime,
                     format!("Invalid end time: {e}"),
                     None,
-                    None,
-                    self.line_map.clone(),
                 ));
                 None
             }
@@ -253,8 +235,6 @@ impl<'a> Linter<'a> {
                     start.format("%H:%M"),
                 ),
                 None,
-                None,
-                self.line_map.clone(),
             ));
             return;
         };
@@ -278,9 +258,7 @@ impl<'a> Linter<'a> {
                 span.clone(),
                 Violation::IncorrectDuration,
                 format!("Incorrect duration: expected {expectation}"),
-                Some(expectation),
                 None,
-                self.line_map.clone(),
             ));
         }
     }

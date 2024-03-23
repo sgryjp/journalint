@@ -19,9 +19,7 @@ pub struct Diagnostic {
     violation: Violation,
     severity: DiagnosticSeverity,
     message: String,
-    expectation: Option<String>,
     related_informations: Option<Vec<DiagnosticRelatedInformation>>,
-    line_map: Arc<LineMap>,
 }
 
 impl Diagnostic {
@@ -29,9 +27,7 @@ impl Diagnostic {
         span: Range<usize>,
         violation: Violation,
         message: String,
-        expectation: Option<String>,
         related_informations: Option<Vec<DiagnosticRelatedInformation>>,
-        line_mapper: Arc<LineMap>,
     ) -> Self {
         let severity = DiagnosticSeverity::WARNING;
         Self {
@@ -39,9 +35,7 @@ impl Diagnostic {
             violation,
             severity,
             message,
-            expectation,
             related_informations,
-            line_map: line_mapper,
         }
     }
 
@@ -61,30 +55,19 @@ impl Diagnostic {
         self.message.as_ref()
     }
 
-    pub fn expectation(&self) -> Option<&String> {
-        self.expectation.as_ref()
-    }
-
     pub fn related_informations(&self) -> Option<&[DiagnosticRelatedInformation]> {
         self.related_informations.as_ref().map(|v| v.as_slice())
     }
 
     // --- helper methods ---
 
-    pub fn is_in_lsp_range(&self, range: &lsp_types::Range) -> bool {
-        let start = self.line_map.offset_from_position(range.start);
-        let end = self.line_map.offset_from_position(range.end);
-        self.span.start <= start && end <= self.span.end
-    }
-
-    pub fn from_parse_error(e: &Simple<char>, line_map: Arc<LineMap>) -> Diagnostic {
+    pub fn from_parse_error(e: &Simple<char>) -> Diagnostic {
+        // TODO: Use From trait
         Diagnostic::new_warning(
             e.span(),
             Violation::ParseError,
             format!("Parse error: {e}"),
             None,
-            None,
-            line_map,
         )
     }
 }
