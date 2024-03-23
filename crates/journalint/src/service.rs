@@ -39,6 +39,7 @@ use crate::diagnostic::Diagnostic;
 use crate::errors::JournalintError;
 use crate::linemap::LineMap;
 use crate::lint::lint;
+use crate::lsptype_utils::ToLspDisgnostic;
 
 const E_UNKNOWN_COMMAND: i32 = 1;
 const E_INVALID_ARGUMENTS: i32 = 2;
@@ -232,7 +233,7 @@ fn on_text_document_did_open(
     }
 
     // Publish diagnostics
-    publish_diagnostics(conn, &uri, &diagnostics, version)?;
+    publish_diagnostics(conn, &uri, &line_map, &diagnostics, version)?;
 
     // Update (replace) state data for the document
     state.set_document_state(&uri, DocumentState::new(line_map, journal));
@@ -269,7 +270,7 @@ fn on_text_document_did_change(
     }
 
     // Publish diagnostics
-    publish_diagnostics(conn, &uri, &diagnostics, version)?;
+    publish_diagnostics(conn, &uri, &line_map, &diagnostics, version)?;
 
     // Update (replace) state data for the document
     state.set_document_state(&uri, DocumentState::new(line_map, journal));
@@ -409,6 +410,7 @@ fn on_workspace_execute_command(
 fn publish_diagnostics(
     conn: &Connection,
     url: &Url,
+    line_map: &Arc<LineMap>,
     diagnostics: &[Diagnostic],
     version: Option<i32>,
 ) -> Result<(), JournalintError> {
@@ -417,7 +419,7 @@ fn publish_diagnostics(
         url.clone(),
         diagnostics
             .iter()
-            .map(|d| d.clone().into())
+            .map(|d| d.clone().to_lsptype(line_map))
             .collect::<Vec<lsp_types::Diagnostic>>(),
         version,
     );

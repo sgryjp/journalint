@@ -3,14 +3,11 @@ use std::sync::Arc;
 
 use chumsky::error::Simple;
 use lsp_types::DiagnosticSeverity;
-use lsp_types::NumberOrString;
 use lsp_types::Url;
 
 use journalint_parse::violation::Violation;
 
 use crate::linemap::LineMap;
-
-static SOURCE_NAME: &str = "journalint";
 
 /// Internal diagnostic data structure.
 ///
@@ -68,6 +65,10 @@ impl Diagnostic {
         self.expectation.as_ref()
     }
 
+    pub fn related_informations(&self) -> Option<&[DiagnosticRelatedInformation]> {
+        self.related_informations.as_ref().map(|v| v.as_slice())
+    }
+
     // --- helper methods ---
 
     pub fn is_in_lsp_range(&self, range: &lsp_types::Range) -> bool {
@@ -84,27 +85,6 @@ impl Diagnostic {
             None,
             None,
             line_map,
-        )
-    }
-}
-
-impl From<Diagnostic> for lsp_types::Diagnostic {
-    fn from(value: Diagnostic) -> Self {
-        let violation = value.violation().as_str().to_string();
-        let range = lsp_types::Range::new(
-            value.line_map.position_from_offset(value.span().start),
-            value.line_map.position_from_offset(value.span().end),
-        );
-        lsp_types::Diagnostic::new(
-            range,
-            Some(value.severity()),
-            Some(NumberOrString::String(violation)),
-            Some(SOURCE_NAME.to_string()),
-            value.message().to_owned(),
-            value
-                .related_informations
-                .map(|v| v.iter().map(|ri| ri.clone().into()).collect()),
-            None,
         )
     }
 }
@@ -126,18 +106,16 @@ impl DiagnosticRelatedInformation {
             line_map,
         }
     }
-}
 
-impl From<DiagnosticRelatedInformation> for lsp_types::DiagnosticRelatedInformation {
-    fn from(value: DiagnosticRelatedInformation) -> Self {
-        let start = value.line_map.position_from_offset(value.range.start);
-        let end = value.line_map.position_from_offset(value.range.end);
-        lsp_types::DiagnosticRelatedInformation {
-            location: lsp_types::Location {
-                uri: value.uri,
-                range: lsp_types::Range { start, end },
-            },
-            message: value.message,
-        }
+    pub fn uri(&self) -> &Url {
+        &self.uri
+    }
+
+    pub fn range(&self) -> &Range<usize> {
+        &self.range
+    }
+
+    pub fn message(&self) -> &str {
+        &self.message
     }
 }

@@ -5,6 +5,7 @@ mod errors;
 mod export;
 mod linemap;
 mod lint;
+mod lsptype_utils;
 mod service;
 mod textedit;
 
@@ -181,6 +182,8 @@ fn get_default_autofix(violation: &Violation) -> Option<impl Command> {
 mod snapshot_tests {
     use std::{ffi::OsStr, fs};
 
+    use crate::lsptype_utils::ToLspDisgnostic;
+
     use super::*;
 
     fn parse_and_lint(url: &Url, content: &str) -> Vec<Diagnostic> {
@@ -213,9 +216,10 @@ mod snapshot_tests {
                 Err(err) => panic!("failed to read a file: {{path: {:?}, err:{}}}", path, err),
             };
 
+            let line_map = Arc::new(LineMap::new(&content));
             let diagnostics = parse_and_lint(&url, &content)
                 .iter()
-                .map(|d| d.clone().into())
+                .map(|d| d.clone().to_lsptype(&line_map))
                 .collect::<Vec<lsp_types::Diagnostic>>();
             insta::assert_yaml_snapshot!(path.file_stem().unwrap().to_str().unwrap(), diagnostics);
         }
