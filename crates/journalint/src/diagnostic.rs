@@ -1,10 +1,17 @@
 use core::ops::Range;
 
 use chumsky::error::Simple;
-use lsp_types::DiagnosticSeverity;
-use lsp_types::Url;
+use url::Url;
 
 use journalint_parse::violation::Violation;
+
+#[derive(Clone, Copy, Debug)]
+pub enum DiagnosticSeverity {
+    Error,
+    Warning,
+    Information,
+    Hint,
+}
 
 /// Internal diagnostic data structure.
 ///
@@ -26,7 +33,7 @@ impl Diagnostic {
         message: String,
         related_informations: Option<Vec<DiagnosticRelatedInformation>>,
     ) -> Self {
-        let severity = DiagnosticSeverity::WARNING;
+        let severity = DiagnosticSeverity::Warning;
         Self {
             span,
             violation,
