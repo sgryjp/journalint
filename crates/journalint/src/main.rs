@@ -20,6 +20,7 @@ use ariadne::Report;
 use ariadne::ReportKind;
 use ariadne::Source;
 use clap::Parser;
+use commands::AutofixCommand;
 use commands::Command;
 use diagnostic::Diagnostic;
 use env_logger::TimestampPrecision;
@@ -29,6 +30,7 @@ use log::error;
 use lsp_types::Url;
 
 use journalint_parse::parse::parse;
+use violation::Violation;
 
 use crate::arg::Arguments;
 use crate::errors::JournalintError;
@@ -105,7 +107,7 @@ fn cli_main(args: Arguments) -> Result<(), CliError> {
         // Fix one by one
         for d in diagnostics.iter().as_ref() {
             // Check if there is a default auto-fix command for the diagnostic.
-            let (Some(ast_root), Some(command)) = (&journal, d.violation().default_autofix())
+            let (Some(ast_root), Some(command)) = (&journal, get_default_autofix(d.violation()))
             else {
                 continue; // unavailable
             };
@@ -158,6 +160,22 @@ fn report(content: &str, filename: Option<&str>, diagnostic: &Diagnostic) {
         .finish()
         .eprint((filename, Source::from(content)))
         .unwrap();
+}
+
+/// Get default auto-fix command for the violation code.
+fn get_default_autofix(violation: &Violation) -> Option<impl Command> {
+    match violation {
+        Violation::ParseError => None,
+        Violation::MismatchedDates => Some(AutofixCommand::UseDateInFilename),
+        Violation::InvalidStartTime => None,
+        Violation::InvalidEndTime => None,
+        Violation::MissingDate => None,
+        Violation::MissingStartTime => None,
+        Violation::MissingEndTime => None,
+        Violation::TimeJumped => Some(AutofixCommand::ReplaceWithPreviousEndTime),
+        Violation::NegativeTimeRange => None,
+        Violation::IncorrectDuration => Some(AutofixCommand::RecalculateDuration),
+    }
 }
 
 #[cfg(test)]

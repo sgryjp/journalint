@@ -1,6 +1,5 @@
 use core::str::FromStr;
 
-use crate::commands::{AutofixCommand, Command};
 use crate::errors::JournalintError;
 
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -37,22 +36,6 @@ impl Violation {
             Violation::TimeJumped => "time-jumped",
             Violation::NegativeTimeRange => "negative-time-range",
             Violation::IncorrectDuration => "incorrect-duration",
-        }
-    }
-
-    /// Get default auto-fix command for the violation code.
-    pub fn default_autofix(&self) -> Option<impl Command> {
-        match self {
-            Violation::ParseError => None,
-            Violation::MismatchedDates => Some(AutofixCommand::UseDateInFilename),
-            Violation::InvalidStartTime => None,
-            Violation::InvalidEndTime => None,
-            Violation::MissingDate => None,
-            Violation::MissingStartTime => None,
-            Violation::MissingEndTime => None,
-            Violation::TimeJumped => Some(AutofixCommand::ReplaceWithPreviousEndTime),
-            Violation::NegativeTimeRange => None,
-            Violation::IncorrectDuration => Some(AutofixCommand::RecalculateDuration),
         }
     }
 }
