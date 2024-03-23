@@ -7,7 +7,6 @@ mod linemap;
 mod lint;
 mod service;
 mod textedit;
-mod violation;
 
 use std::env;
 use std::fs::read_to_string;
@@ -30,7 +29,7 @@ use log::error;
 use lsp_types::Url;
 
 use journalint_parse::parse::parse;
-use violation::Violation;
+use journalint_parse::violation::Violation;
 
 use crate::arg::Arguments;
 use crate::errors::JournalintError;

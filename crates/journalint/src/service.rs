@@ -31,6 +31,7 @@ use strum::IntoEnumIterator;
 
 use journalint_parse::ast::Expr;
 use journalint_parse::parse::parse;
+use journalint_parse::violation::Violation;
 
 use crate::commands::AutofixCommand;
 use crate::commands::Command as _;
@@ -38,7 +39,6 @@ use crate::diagnostic::Diagnostic;
 use crate::errors::JournalintError;
 use crate::linemap::LineMap;
 use crate::lint::lint;
-use crate::violation::Violation;
 
 const E_UNKNOWN_COMMAND: i32 = 1;
 const E_INVALID_ARGUMENTS: i32 = 2;

@@ -10,11 +10,11 @@ use chrono::{DateTime, NaiveDate, Timelike, Utc};
 use lsp_types::Url;
 
 use journalint_parse::ast::{walk, Expr, LooseTime, Visitor};
+use journalint_parse::violation::Violation;
 
 use crate::diagnostic::{Diagnostic, DiagnosticRelatedInformation};
 use crate::errors::JournalintError;
 use crate::linemap::LineMap;
-use crate::violation::Violation;
 
 pub struct Linter<'a> {
     source: &'a Url,

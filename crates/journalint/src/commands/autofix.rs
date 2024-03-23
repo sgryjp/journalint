@@ -5,11 +5,11 @@ use lsp_types::Url;
 use strum::EnumIter;
 
 use journalint_parse::ast::Expr;
+use journalint_parse::violation::Violation;
 
 use crate::commands::Command;
 use crate::errors::JournalintError;
 use crate::textedit::TextEdit;
-use crate::violation::Violation;
 
 use super::{recalculate_duration, replace_with_previous_end_time, use_date_in_filename_visitor};
 

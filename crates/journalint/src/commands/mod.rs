@@ -9,11 +9,11 @@ use std::ops::Range;
 use lsp_types::Url;
 
 use journalint_parse::ast::Expr;
+use journalint_parse::violation::Violation;
 
 pub use crate::commands::autofix::AutofixCommand;
 use crate::errors::JournalintError;
 use crate::textedit::TextEdit;
-use crate::violation::Violation;
 
 /// Command of journalint.
 ///

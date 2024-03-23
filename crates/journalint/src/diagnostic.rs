@@ -6,8 +6,9 @@ use lsp_types::DiagnosticSeverity;
 use lsp_types::NumberOrString;
 use lsp_types::Url;
 
+use journalint_parse::violation::Violation;
+
 use crate::linemap::LineMap;
-use crate::violation::Violation;
 
 static SOURCE_NAME: &str = "journalint";
 

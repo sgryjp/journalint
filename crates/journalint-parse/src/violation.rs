@@ -1,6 +1,6 @@
 use core::str::FromStr;
 
-use crate::errors::JournalintError;
+use crate::errors::UnknownViolationCode;
 
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum Violation {
@@ -41,7 +41,7 @@ impl Violation {
 }
 
 impl FromStr for Violation {
-    type Err = JournalintError;
+    type Err = UnknownViolationCode;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
@@ -55,7 +55,9 @@ impl FromStr for Violation {
             "time-jumped" => Ok(Violation::TimeJumped),
             "negative-time-range" => Ok(Violation::NegativeTimeRange),
             "incorrect-duration" => Ok(Violation::IncorrectDuration),
-            _ => Err(JournalintError::UnknownViolationCode(s.to_string())),
+            _ => Err(UnknownViolationCode {
+                code: s.to_string(),
+            }),
         }
     }
 }
