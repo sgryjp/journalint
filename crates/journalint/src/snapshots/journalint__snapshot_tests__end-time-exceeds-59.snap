@@ -12,5 +12,4 @@ expression: diagnostics
   severity: 2
   code: invalid-end-time
   source: journalint
-  message: "Invalid end time: Parse error: invalid minute value: trailing input: '09:450'"
-
+  message: "Invalid end time: Invalid time value `09:450`: minute value out of range"

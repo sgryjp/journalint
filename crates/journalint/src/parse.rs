@@ -254,8 +254,6 @@ mod tests {
     use chrono::DateTime;
     use rstest::*;
 
-    use journalint_parse::errors::JournalintParseError;
-
     #[rstest]
     #[case("2456", 2006, 2, 3)] // No colon
     #[case("2:4:56", 2006, 2, 3)] // Too many colons
@@ -273,10 +271,7 @@ mod tests {
             .or(Some(NaiveDate::MAX))
             .unwrap();
 
-        assert!(matches!(
-            LooseTime::new(input).to_datetime(date),
-            Err(JournalintParseError::ParseError(..))
-        ));
+        assert!(matches!(LooseTime::new(input).to_datetime(date), Err(..)));
     }
 
     #[rstest]

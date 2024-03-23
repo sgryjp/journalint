@@ -4,7 +4,7 @@ use lsp_server::ProtocolError;
 use lsp_types::Url;
 use thiserror::Error;
 
-use journalint_parse::errors::JournalintParseError;
+use journalint_parse::errors::InvalidTimeValueError;
 
 // ----------------------------------------------------------------------------
 
@@ -65,9 +65,9 @@ pub enum JournalintError {
     DocumentNotParsedYet { url: Url },
 
     #[error("{}", .source)]
-    ParseError {
+    InvalidTimeValueError {
         #[from]
-        source: JournalintParseError,
+        source: InvalidTimeValueError,
     },
 
     #[error("Required value is missing: {name}")]

@@ -6,7 +6,7 @@ use std::time::Duration;
 
 use chrono::{DateTime, Days, NaiveDate, NaiveDateTime, NaiveTime, Utc};
 
-use crate::errors::JournalintParseError;
+use crate::errors::InvalidTimeValueError;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Expr {
@@ -81,43 +81,44 @@ impl LooseTime {
         self.0.as_str()
     }
 
-    pub fn to_datetime(&self, date: NaiveDate) -> Result<DateTime<Utc>, JournalintParseError> {
+    pub fn to_datetime(&self, date: NaiveDate) -> Result<DateTime<Utc>, InvalidTimeValueError> {
         match NaiveTime::parse_from_str(self.0.as_str(), "%H:%M") {
             Ok(t) => Ok(NaiveDateTime::new(date, t).and_utc()),
-            Err(e) => {
+            Err(_) => {
                 // Try parsing as it's beyond 24:00.
                 let hhmm: Vec<&str> = self.0.split(':').collect();
                 if hhmm.len() != 2 {
-                    return Err(JournalintParseError::ParseError(format!(
-                        "the time value is not in format \"HH:MM\": '{}'",
-                        self.0
-                    )));
+                    return Err(InvalidTimeValueError::new(
+                        self.0.clone(),
+                        "the time value is not in format \"HH:MM\"",
+                    ));
                 }
                 let Ok(h) = str::parse::<u32>(hhmm[0]) else {
-                    return Err(JournalintParseError::ParseError(format!(
-                        "the hour is not a number: '{}'",
-                        self.0
-                    )));
+                    return Err(InvalidTimeValueError::new(
+                        self.0.clone(),
+                        "the hour is not a number",
+                    ));
                 };
                 let Ok(m) = str::parse::<u32>(hhmm[1]) else {
-                    return Err(JournalintParseError::ParseError(format!(
-                        "the minute is not a number: '{}'",
-                        self.0
-                    )));
+                    return Err(InvalidTimeValueError::new(
+                        self.0.clone(),
+                        "the minute is not a number",
+                    ));
                 };
                 if 60 < m {
-                    return Err(JournalintParseError::ParseError(format!(
-                        "invalid minute value: {}: '{}'",
-                        e, self.0
-                    )));
+                    return Err(InvalidTimeValueError::new(
+                        self.0.clone(),
+                        "minute value out of range",
+                    ));
                 }
                 let num_days = h / 24;
                 let time = NaiveTime::from_hms_opt(h - num_days * 24, m, 0)
                     .expect("failed to calculate time value");
                 let Some(date) = date.checked_add_days(Days::new(u64::from(num_days))) else {
-                    return Err(JournalintParseError::ParseError(format!(
-                        "failed to calculate one date ahead of '{date}'"
-                    )));
+                    return Err(InvalidTimeValueError::new(
+                        self.0.clone(),
+                        format!("failed to calculate one date ahead of '{date}'"),
+                    ));
                 };
                 Ok(NaiveDateTime::new(date, time).and_utc())
             }

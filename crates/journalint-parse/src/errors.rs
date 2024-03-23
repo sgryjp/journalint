@@ -1,7 +1,20 @@
-use thiserror::Error;
+/// The string value cannot be recognized as a time.
+#[derive(thiserror::Error, Debug)]
+#[error("Invalid time value `{}`: {}", .value, .msg)]
+pub struct InvalidTimeValueError {
+    value: String,
+    msg: String,
+}
 
-#[derive(Error, Debug)]
-pub enum JournalintParseError {
-    #[error("Parse error: {0}")]
-    ParseError(String),
+impl InvalidTimeValueError {
+    pub fn new<S, T>(value: S, msg: T) -> Self
+    where
+        S: Into<String>,
+        T: Into<String>,
+    {
+        Self {
+            value: value.into(),
+            msg: msg.into(),
+        }
+    }
 }
