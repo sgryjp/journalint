@@ -221,10 +221,7 @@ fn on_text_document_did_open(
     // Parse
     let line_map = Arc::new(LineMap::new(content));
     let (journal, parse_errors) = parse(content);
-    let mut diagnostics: Vec<Diagnostic> = parse_errors
-        .iter()
-        .map(|e| Diagnostic::from_parse_error(e))
-        .collect();
+    let mut diagnostics: Vec<Diagnostic> = parse_errors.iter().map(Diagnostic::from).collect();
 
     // Lint
     if let Some(journal) = &journal {
@@ -258,10 +255,7 @@ fn on_text_document_did_change(
     // Parse
     let line_map = Arc::new(LineMap::new(content));
     let (journal, parse_errors) = parse(content);
-    let mut diagnostics: Vec<Diagnostic> = parse_errors
-        .iter()
-        .map(|e| Diagnostic::from_parse_error(e))
-        .collect();
+    let mut diagnostics: Vec<Diagnostic> = parse_errors.iter().map(Diagnostic::from).collect();
 
     // Lint
     if let Some(journal) = &journal {

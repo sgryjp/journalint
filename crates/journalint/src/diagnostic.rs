@@ -58,15 +58,14 @@ impl Diagnostic {
     pub fn related_informations(&self) -> Option<&[DiagnosticRelatedInformation]> {
         self.related_informations.as_ref().map(|v| v.as_slice())
     }
+}
 
-    // --- helper methods ---
-
-    pub fn from_parse_error(e: &Simple<char>) -> Diagnostic {
-        // TODO: Use From trait
+impl From<&Simple<char>> for Diagnostic {
+    fn from(value: &Simple<char>) -> Self {
         Diagnostic::new_warning(
-            e.span(),
+            value.span(),
             Violation::ParseError,
-            format!("Parse error: {e}"),
+            format!("Parse error: {value}"),
             None,
         )
     }

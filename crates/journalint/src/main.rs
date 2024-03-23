@@ -88,10 +88,8 @@ fn cli_main(args: Arguments) -> Result<(), CliError> {
     // Parse the content and lint the AST unless parsing itself failed
     let line_map = Arc::new(LineMap::new(&content));
     let (journal, parse_errors) = parse(&content);
-    let mut diagnostics: Vec<Diagnostic> = parse_errors
-        .iter()
-        .map(|e| Diagnostic::from_parse_error(e))
-        .collect();
+    let mut diagnostics: Vec<Diagnostic> =
+        parse_errors.iter().map(|e| Diagnostic::from(e)).collect();
     if let Some(journal) = journal.as_ref() {
         let mut d = lint(journal, &url, line_map.clone()).map_err(|e| {
             CliError::new(E_UNEXPECTED).with_message(format!("Failed on linting: {e:?}"))
@@ -189,10 +187,7 @@ mod snapshot_tests {
     fn parse_and_lint(url: &Url, content: &str) -> Vec<Diagnostic> {
         let line_map = Arc::new(LineMap::new(&content));
         let (journal, parse_errors) = parse(&content);
-        let mut diagnostics: Vec<Diagnostic> = parse_errors
-            .iter()
-            .map(|e| Diagnostic::from_parse_error(e))
-            .collect();
+        let mut diagnostics: Vec<Diagnostic> = parse_errors.iter().map(Diagnostic::from).collect();
         if let Some(journal) = journal {
             let mut d = lint(&journal, &url, line_map).expect("FAILED TO LINT");
             diagnostics.append(&mut d);
