@@ -10,10 +10,10 @@ use lsp_types::Url;
 
 use journalint_parse::ast::Expr;
 
-use crate::code::Code;
 pub use crate::commands::autofix::AutofixCommand;
 use crate::errors::JournalintError;
 use crate::textedit::TextEdit;
+use crate::violation::Violation;
 
 /// Command of journalint.
 ///
@@ -26,8 +26,8 @@ pub trait Command {
     /// Get machine-readable identifier of this command.
     fn id(&self) -> &str;
 
-    /// Check whether the specified diagnostic code can be fixed by this command or not.
-    fn can_fix(&self, code: &Code) -> bool;
+    /// Check whether the specified violation can be fixed by this command or not.
+    fn can_fix(&self, violation: &Violation) -> bool;
 
     /// Executes this command.
     ///

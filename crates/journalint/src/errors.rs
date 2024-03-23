@@ -46,8 +46,8 @@ pub enum JournalintError {
     #[error("UNEXPECTED ERROR: {0}")]
     UnexpectedError(String),
 
-    #[error("Unknown code: {0}")]
-    UnknownCode(String),
+    #[error("Unknown violation code: {0}")]
+    UnknownViolationCode(String),
 
     #[error("Unknown command: {0}")]
     UnknownCommand(String),

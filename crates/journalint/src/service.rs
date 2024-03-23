@@ -32,13 +32,13 @@ use strum::IntoEnumIterator;
 use journalint_parse::ast::Expr;
 use journalint_parse::parse::parse;
 
-use crate::code::Code;
 use crate::commands::AutofixCommand;
 use crate::commands::Command as _;
 use crate::diagnostic::Diagnostic;
 use crate::errors::JournalintError;
 use crate::linemap::LineMap;
 use crate::lint::lint;
+use crate::violation::Violation;
 
 const E_UNKNOWN_COMMAND: i32 = 1;
 const E_INVALID_ARGUMENTS: i32 = 2;
@@ -315,13 +315,13 @@ fn on_text_document_code_action(
         let Some(NumberOrString::String(code)) = code else {
             continue;
         };
-        let Ok(code) = str::parse::<Code>(code) else {
+        let Ok(violation) = str::parse::<Violation>(code) else {
             continue;
         };
 
-        // List up all available code actions (auto-fix only as of now) for the code
+        // List up all available code actions (auto-fix only as of now) for the violation
         let mut commands: Vec<Command> = AutofixCommand::iter()
-            .filter(|cmd| cmd.can_fix(&code))
+            .filter(|cmd| cmd.can_fix(&violation))
             .map(|cmd| {
                 lsp_types::Command::new(
                     cmd.title().to_string(),

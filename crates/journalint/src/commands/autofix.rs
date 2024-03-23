@@ -6,10 +6,10 @@ use strum::EnumIter;
 
 use journalint_parse::ast::Expr;
 
-use crate::code::Code;
 use crate::commands::Command;
 use crate::errors::JournalintError;
 use crate::textedit::TextEdit;
+use crate::violation::Violation;
 
 use super::{recalculate_duration, replace_with_previous_end_time, use_date_in_filename_visitor};
 
@@ -42,11 +42,11 @@ impl Command for AutofixCommand {
         }
     }
 
-    fn can_fix(&self, code: &Code) -> bool {
+    fn can_fix(&self, violation: &Violation) -> bool {
         match self {
-            AutofixCommand::RecalculateDuration => *code == Code::IncorrectDuration,
-            AutofixCommand::ReplaceWithPreviousEndTime => *code == Code::TimeJumped,
-            AutofixCommand::UseDateInFilename => *code == Code::MismatchedDates,
+            AutofixCommand::RecalculateDuration => *violation == Violation::IncorrectDuration,
+            AutofixCommand::ReplaceWithPreviousEndTime => *violation == Violation::TimeJumped,
+            AutofixCommand::UseDateInFilename => *violation == Violation::MismatchedDates,
         }
     }
 

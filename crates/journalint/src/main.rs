@@ -1,5 +1,4 @@
 mod arg;
-mod code;
 mod commands;
 mod diagnostic;
 mod errors;
@@ -8,6 +7,7 @@ mod linemap;
 mod lint;
 mod service;
 mod textedit;
+mod violation;
 
 use std::env;
 use std::fs::read_to_string;
@@ -105,7 +105,8 @@ fn cli_main(args: Arguments) -> Result<(), CliError> {
         // Fix one by one
         for d in diagnostics.iter().as_ref() {
             // Check if there is a default auto-fix command for the diagnostic.
-            let (Some(ast_root), Some(command)) = (&journal, d.code().default_autofix()) else {
+            let (Some(ast_root), Some(command)) = (&journal, d.violation().default_autofix())
+            else {
                 continue; // unavailable
             };
 

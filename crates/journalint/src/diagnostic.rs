@@ -6,8 +6,8 @@ use lsp_types::DiagnosticSeverity;
 use lsp_types::NumberOrString;
 use lsp_types::Url;
 
-use crate::code::Code;
 use crate::linemap::LineMap;
+use crate::violation::Violation;
 
 static SOURCE_NAME: &str = "journalint";
 
@@ -18,7 +18,7 @@ static SOURCE_NAME: &str = "journalint";
 #[derive(Clone, Debug)]
 pub struct Diagnostic {
     span: Range<usize>,
-    code: Code,
+    violation: Violation,
     severity: DiagnosticSeverity,
     message: String,
     expectation: Option<String>,
@@ -29,7 +29,7 @@ pub struct Diagnostic {
 impl Diagnostic {
     pub fn new_warning(
         span: Range<usize>,
-        code: Code,
+        violation: Violation,
         message: String,
         expectation: Option<String>,
         related_informations: Option<Vec<DiagnosticRelatedInformation>>,
@@ -38,7 +38,7 @@ impl Diagnostic {
         let severity = DiagnosticSeverity::WARNING;
         Self {
             span,
-            code,
+            violation,
             severity,
             message,
             expectation,
@@ -55,8 +55,8 @@ impl Diagnostic {
         self.severity
     }
 
-    pub fn code(&self) -> &Code {
-        &self.code
+    pub fn violation(&self) -> &Violation {
+        &self.violation
     }
 
     pub fn message(&self) -> &str {
@@ -78,7 +78,7 @@ impl Diagnostic {
     pub fn from_parse_error(e: &Simple<char>, line_map: Arc<LineMap>) -> Diagnostic {
         Diagnostic::new_warning(
             e.span(),
-            Code::ParseError,
+            Violation::ParseError,
             format!("Parse error: {e}"),
             None,
             None,
@@ -89,7 +89,7 @@ impl Diagnostic {
 
 impl From<Diagnostic> for lsp_types::Diagnostic {
     fn from(value: Diagnostic) -> Self {
-        let code = value.code().as_str().to_string();
+        let violation = value.violation().as_str().to_string();
         let range = lsp_types::Range::new(
             value.line_map.position_from_offset(value.span().start),
             value.line_map.position_from_offset(value.span().end),
@@ -97,7 +97,7 @@ impl From<Diagnostic> for lsp_types::Diagnostic {
         lsp_types::Diagnostic::new(
             range,
             Some(value.severity()),
-            Some(NumberOrString::String(code)),
+            Some(NumberOrString::String(violation)),
             Some(SOURCE_NAME.to_string()),
             value.message().to_owned(),
             value
