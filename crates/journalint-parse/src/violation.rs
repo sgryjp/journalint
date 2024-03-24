@@ -61,3 +61,32 @@ impl FromStr for Violation {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use rstest::*;
+
+    #[rstest]
+    #[case("parse-error", true)]
+    #[case("date-mismatch", true)]
+    #[case("invalid-start-time", true)]
+    #[case("invalid-end-time", true)]
+    #[case("missing-date", true)]
+    #[case("missing-start-time", true)]
+    #[case("missing-end-time", true)]
+    #[case("time-jumped", true)]
+    #[case("negative-time-range", true)]
+    #[case("incorrect-duration", true)]
+    #[case("foobar", false)]
+    fn string_conversion(#[case] s: &'static str, #[case] ok: bool) {
+        let result = Violation::from_str(s);
+        assert_eq!(result.is_ok(), ok);
+        if ok {
+            let violation = result.unwrap();
+            assert_eq!(violation.as_str(), s);
+            assert_eq!(format!("{violation}"), s);
+        }
+    }
+}
