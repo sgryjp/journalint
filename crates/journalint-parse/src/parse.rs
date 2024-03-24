@@ -1,17 +1,22 @@
 //! Provides parsing logic.
 //!
 //! See module `ast` for AST related features, and module `lint` for linting logic.
-use std::sync::Arc;
 use std::time::Duration;
 
 use chrono::NaiveDate;
-use chumsky::prelude::*;
-use chumsky::text::newline;
+use chumsky::{
+    error::Simple,
+    primitive::{end, filter, just},
+    text::newline,
+    Parser,
+};
 
 use crate::ast::{Expr, LooseTime};
-use crate::code::Code;
-use crate::diagnostic::Diagnostic;
-use crate::linemap::LineMap;
+
+/// Parse a journal file content.
+pub fn parse(content: &str) -> (Option<Expr>, Vec<Simple<char>>) {
+    journal().parse_recovery(content)
+}
 
 fn front_matter() -> impl Parser<char, Expr, Error = Simple<char>> {
     let delimiter = || just('-').repeated().at_least(3).debug("delimiter");
@@ -219,40 +224,12 @@ fn wsp() -> impl Parser<char, String, Error = Simple<char>> {
         .collect::<String>()
 }
 
-// ----------------------------------------------------------------------------
-pub fn parse(content: &str) -> (Option<Expr>, Vec<Diagnostic>, Arc<LineMap>) {
-    // Parse the content
-    let (journal, errors) = journal().parse_recovery(content);
-
-    // Calculate mapping between line-column indices and offset indices
-    let line_map = Arc::new(LineMap::new(content));
-
-    // Convert the parse errors into crate specific type
-    let diagnostics = errors
-        .iter()
-        .map(|e| {
-            Diagnostic::new_warning(
-                e.span(),
-                Code::ParseError,
-                format!("Parse error: {e}"),
-                None,
-                None,
-                line_map.clone(),
-            )
-        })
-        .collect::<Vec<Diagnostic>>();
-
-    (journal, diagnostics, line_map)
-}
-
-// ----------------------------------------------------------------------------
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use chrono::DateTime;
     use rstest::*;
-
-    use crate::errors::JournalintError;
 
     #[rstest]
     #[case("2456", 2006, 2, 3)] // No colon
@@ -271,10 +248,7 @@ mod tests {
             .or(Some(NaiveDate::MAX))
             .unwrap();
 
-        assert!(matches!(
-            LooseTime::new(input).to_datetime(date),
-            Err(JournalintError::ParseError(..))
-        ));
+        assert!(matches!(LooseTime::new(input).to_datetime(date), Err(..)));
     }
 
     #[rstest]

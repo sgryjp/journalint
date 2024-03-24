@@ -5,7 +5,8 @@ use std::time::Duration;
 
 use chrono::prelude::*;
 
-use crate::ast;
+use journalint_parse::ast;
+
 use crate::errors::JournalintError;
 
 /// Export data format.
@@ -76,7 +77,7 @@ impl<'a> Exporter<'a> {
     }
 }
 
-impl<'a> ast::Visitor for Exporter<'a> {
+impl<'a> ast::Visitor<JournalintError> for Exporter<'a> {
     fn on_visit_fm_date(
         &mut self,
         value: &NaiveDate,

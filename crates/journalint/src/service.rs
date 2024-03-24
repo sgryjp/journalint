@@ -29,15 +29,17 @@ use lsp_types::Url;
 use lsp_types::WorkspaceEdit;
 use strum::IntoEnumIterator;
 
-use crate::ast::Expr;
-use crate::code::Code;
+use journalint_parse::ast::Expr;
+use journalint_parse::diagnostic::Diagnostic;
+use journalint_parse::parse::parse;
+use journalint_parse::violation::Violation;
+
 use crate::commands::AutofixCommand;
 use crate::commands::Command as _;
-use crate::diagnostic::Diagnostic;
 use crate::errors::JournalintError;
 use crate::linemap::LineMap;
 use crate::lint::lint;
-use crate::parse::parse;
+use crate::lsptype_utils::ToLspDisgnostic;
 
 const E_UNKNOWN_COMMAND: i32 = 1;
 const E_INVALID_ARGUMENTS: i32 = 2;
@@ -217,16 +219,18 @@ fn on_text_document_did_open(
     let version = None;
 
     // Parse
-    let (journal, mut diagnostics, line_map) = parse(content);
+    let line_map = Arc::new(LineMap::new(content));
+    let (journal, parse_errors) = parse(content);
+    let mut diagnostics: Vec<Diagnostic> = parse_errors.iter().map(Diagnostic::from).collect();
 
     // Lint
     if let Some(journal) = &journal {
-        let mut d = lint(journal, &uri, line_map.clone())?;
+        let mut d = lint(journal, &uri)?;
         diagnostics.append(&mut d);
     }
 
     // Publish diagnostics
-    publish_diagnostics(conn, &uri, &diagnostics, version)?;
+    publish_diagnostics(conn, &uri, &line_map, &diagnostics, version)?;
 
     // Update (replace) state data for the document
     state.set_document_state(&uri, DocumentState::new(line_map, journal));
@@ -249,16 +253,18 @@ fn on_text_document_did_change(
     let version = Some(params.text_document.version);
 
     // Parse
-    let (journal, mut diagnostics, line_map) = parse(content);
+    let line_map = Arc::new(LineMap::new(content));
+    let (journal, parse_errors) = parse(content);
+    let mut diagnostics: Vec<Diagnostic> = parse_errors.iter().map(Diagnostic::from).collect();
 
     // Lint
     if let Some(journal) = &journal {
-        let mut d = lint(journal, &uri, line_map.clone())?;
+        let mut d = lint(journal, &uri)?;
         diagnostics.append(&mut d);
     }
 
     // Publish diagnostics
-    publish_diagnostics(conn, &uri, &diagnostics, version)?;
+    publish_diagnostics(conn, &uri, &line_map, &diagnostics, version)?;
 
     // Update (replace) state data for the document
     state.set_document_state(&uri, DocumentState::new(line_map, journal));
@@ -304,13 +310,13 @@ fn on_text_document_code_action(
         let Some(NumberOrString::String(code)) = code else {
             continue;
         };
-        let Ok(code) = str::parse::<Code>(code) else {
+        let Ok(violation) = str::parse::<Violation>(code) else {
             continue;
         };
 
-        // List up all available code actions (auto-fix only as of now) for the code
+        // List up all available code actions (auto-fix only as of now) for the violation
         let mut commands: Vec<Command> = AutofixCommand::iter()
-            .filter(|cmd| cmd.can_fix(&code))
+            .filter(|cmd| cmd.can_fix(&violation))
             .map(|cmd| {
                 lsp_types::Command::new(
                     cmd.title().to_string(),
@@ -398,6 +404,7 @@ fn on_workspace_execute_command(
 fn publish_diagnostics(
     conn: &Connection,
     url: &Url,
+    line_map: &Arc<LineMap>,
     diagnostics: &[Diagnostic],
     version: Option<i32>,
 ) -> Result<(), JournalintError> {
@@ -406,7 +413,7 @@ fn publish_diagnostics(
         url.clone(),
         diagnostics
             .iter()
-            .map(|d| d.clone().into())
+            .map(|d| d.clone().to_lsptype(line_map))
             .collect::<Vec<lsp_types::Diagnostic>>(),
         version,
     );

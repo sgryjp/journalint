@@ -1,8 +1,11 @@
 use crossbeam_channel::SendError;
+use journalint_parse::errors::UnknownViolationCode;
 use lsp_server::Message;
 use lsp_server::ProtocolError;
 use lsp_types::Url;
 use thiserror::Error;
+
+use journalint_parse::errors::InvalidTimeValueError;
 
 // ----------------------------------------------------------------------------
 
@@ -44,8 +47,11 @@ pub enum JournalintError {
     #[error("UNEXPECTED ERROR: {0}")]
     UnexpectedError(String),
 
-    #[error("Unknown code: {0}")]
-    UnknownCode(String),
+    #[error("{}", source)]
+    UnknownViolationCode {
+        #[from]
+        source: UnknownViolationCode,
+    },
 
     #[error("Unknown command: {0}")]
     UnknownCommand(String),
@@ -59,11 +65,11 @@ pub enum JournalintError {
     #[error("Doucument not found: {url}")]
     DocumentNotFound { url: Url },
 
-    #[error("The doucument was not parsed yet: {url}")]
-    DocumentNotParsedYet { url: Url },
-
-    #[error("Parse error: {0}")]
-    ParseError(String),
+    #[error("Parse error: {}", .source)]
+    InvalidTimeValueError {
+        #[from]
+        source: InvalidTimeValueError,
+    },
 
     #[error("Required value is missing: {name}")]
     MissingRequiredValue { name: String },

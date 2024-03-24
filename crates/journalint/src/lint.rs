@@ -3,22 +3,20 @@
 //! See module `ast` for AST related features, and module `parse` for parsing logic.
 use std::ops::Range;
 use std::path::PathBuf;
-use std::sync::Arc;
 use std::time::Duration;
 
 use chrono::{DateTime, NaiveDate, Timelike, Utc};
 use lsp_types::Url;
 
-use crate::ast::{walk, Expr, LooseTime, Visitor};
-use crate::code::Code;
-use crate::diagnostic::{Diagnostic, DiagnosticRelatedInformation};
+use journalint_parse::ast::{walk, Expr, LooseTime, Visitor};
+use journalint_parse::diagnostic::{Diagnostic, DiagnosticRelatedInformation};
+use journalint_parse::violation::Violation;
+
 use crate::errors::JournalintError;
-use crate::linemap::LineMap;
 
 pub struct Linter<'a> {
     source: &'a Url,
     diagnostics: Vec<Diagnostic>,
-    line_map: Arc<LineMap>,
 
     fm_date: Option<(NaiveDate, Range<usize>)>,
     fm_start: Option<(LooseTime, Range<usize>)>,
@@ -32,11 +30,10 @@ pub struct Linter<'a> {
 }
 
 impl<'a> Linter<'a> {
-    pub fn new(source: &Url, line_map: Arc<LineMap>) -> Linter {
+    pub fn new(source: &Url) -> Linter {
         Linter {
             source,
             diagnostics: vec![],
-            line_map,
 
             fm_date: None,
             fm_start: None,
@@ -61,14 +58,12 @@ impl<'a> Linter<'a> {
                     let expectation = date_in_filename.format("%Y-%m-%d").to_string();
                     self.diagnostics.push(Diagnostic::new_warning(
                         span.clone(),
-                        Code::MismatchedDates,
+                        Violation::MismatchedDates,
                         format!(
                             "Date is different from the one in the filename: expected to be {}",
                             expectation.as_str()
                         ),
-                        Some(expectation),
                         None,
-                        self.line_map.clone(),
                     ));
                 }
             }
@@ -79,11 +74,9 @@ impl<'a> Linter<'a> {
         if self.fm_date.is_none() {
             self.diagnostics.push(Diagnostic::new_warning(
                 span.clone(),
-                Code::MissingDate,
+                Violation::MissingDate,
                 "Field 'date' is missing".to_string(),
                 None,
-                None,
-                self.line_map.clone(),
             ));
         }
     }
@@ -92,33 +85,25 @@ impl<'a> Linter<'a> {
         if self.fm_start.is_none() {
             self.diagnostics.push(Diagnostic::new_warning(
                 span.clone(),
-                Code::MissingStartTime,
+                Violation::MissingStartTime,
                 "Field 'start' is missing".to_string(),
                 None,
-                None,
-                self.line_map.clone(),
             ));
         }
     }
 
     fn check_fm_start_is_valid(&mut self) -> Option<DateTime<Utc>> {
-        let Some((date, _)) = self.fm_date.as_ref() else {
-            return None;
-        };
-        let Some((start, start_span)) = self.fm_start.as_ref() else {
-            return None;
-        };
+        let (date, _) = self.fm_date.as_ref()?;
+        let (start, start_span) = self.fm_start.as_ref()?;
 
         match start.to_datetime(*date) {
             Ok(dt) => Some(dt),
             Err(e) => {
                 self.diagnostics.push(Diagnostic::new_warning(
                     start_span.clone(),
-                    Code::InvalidStartTime,
+                    Violation::InvalidStartTime,
                     format!("Invalid start time: {e}"),
                     None,
-                    None,
-                    self.line_map.clone(),
                 ));
                 None
             }
@@ -129,33 +114,25 @@ impl<'a> Linter<'a> {
         if self.fm_end.is_none() {
             self.diagnostics.push(Diagnostic::new_warning(
                 span.clone(),
-                Code::MissingEndTime,
+                Violation::MissingEndTime,
                 "Field 'end' is missing".to_string(),
                 None,
-                None,
-                self.line_map.clone(),
             ));
         }
     }
 
     fn check_fm_end_is_valid(&mut self) -> Option<DateTime<Utc>> {
-        let Some((date, _)) = self.fm_date.as_ref() else {
-            return None;
-        };
-        let Some((end, end_span)) = self.fm_end.as_ref() else {
-            return None;
-        };
+        let (date, _) = self.fm_date.as_ref()?;
+        let (end, end_span) = self.fm_end.as_ref()?;
 
         match end.to_datetime(*date) {
             Ok(dt) => Some(dt),
             Err(e) => {
                 self.diagnostics.push(Diagnostic::new_warning(
                     end_span.clone(),
-                    Code::InvalidEndTime,
+                    Violation::InvalidEndTime,
                     format!("Invalid end time: {e}"),
                     None,
-                    None,
-                    self.line_map.clone(),
                 ));
                 None
             }
@@ -169,9 +146,8 @@ impl<'a> Linter<'a> {
                 let expectation = prev_end_dt.format("%H:%M").to_string();
                 self.diagnostics.push(Diagnostic::new_warning(
                     span.clone(),
-                    Code::TimeJumped,
+                    Violation::TimeJumped,
                     format!("The start time does not match the previous entry's end time, which is {expectation}"),
-                    Some(expectation),
                     Some(vec![DiagnosticRelatedInformation::new(
                         self.source.clone(),
                         prev_end_range.clone(),
@@ -180,9 +156,7 @@ impl<'a> Linter<'a> {
                             prev_end_dt.hour(),
                             prev_end_dt.minute()
                         ),
-                        self.line_map.clone(),
                     )]),
-                    self.line_map.clone(),
                 ));
             }
         }
@@ -193,21 +167,17 @@ impl<'a> Linter<'a> {
         value: &LooseTime,
         span: &Range<usize>,
     ) -> Option<DateTime<Utc>> {
-        let Some((date, _)) = self.fm_date else {
-            return None;
-        };
+        let (date, _) = self.fm_date.as_ref()?;
 
-        match value.to_datetime(date) {
+        match value.to_datetime(*date) {
             Ok(dt) => Some(dt),
             Err(e) => {
                 // Start time is not a valid value
                 self.diagnostics.push(Diagnostic::new_warning(
                     span.clone(),
-                    Code::InvalidStartTime,
+                    Violation::InvalidStartTime,
                     format!("Invalid start time: {e}"),
                     None,
-                    None,
-                    self.line_map.clone(),
                 ));
                 None
             }
@@ -215,20 +185,16 @@ impl<'a> Linter<'a> {
     }
 
     fn check_end_time(&mut self, value: &LooseTime, span: &Range<usize>) -> Option<DateTime<Utc>> {
-        let Some((date, _)) = self.fm_date else {
-            return None;
-        };
+        let (date, _) = self.fm_date.as_ref()?;
 
-        match value.to_datetime(date) {
+        match value.to_datetime(*date) {
             Ok(dt) => Some(dt),
             Err(e) => {
                 self.diagnostics.push(Diagnostic::new_warning(
                     span.clone(),
-                    Code::InvalidEndTime,
+                    Violation::InvalidEndTime,
                     format!("Invalid end time: {e}"),
                     None,
-                    None,
-                    self.line_map.clone(),
                 ));
                 None
             }
@@ -246,14 +212,12 @@ impl<'a> Linter<'a> {
         let Ok(_) = (*end - *start).to_std() else {
             self.diagnostics.push(Diagnostic::new_warning(
                 end_span.clone(),
-                Code::NegativeTimeRange,
+                Violation::NegativeTimeRange,
                 format!(
                     "End time is not ahead of start time ({})",
                     start.format("%H:%M"),
                 ),
                 None,
-                None,
-                self.line_map.clone(),
             ));
             return;
         };
@@ -275,17 +239,15 @@ impl<'a> Linter<'a> {
             let expectation = format!("{expectation:1.2}");
             self.diagnostics.push(Diagnostic::new_warning(
                 span.clone(),
-                Code::IncorrectDuration,
+                Violation::IncorrectDuration,
                 format!("Incorrect duration: expected {expectation}"),
-                Some(expectation),
                 None,
-                self.line_map.clone(),
             ));
         }
     }
 }
 
-impl Visitor for Linter<'_> {
+impl Visitor<JournalintError> for Linter<'_> {
     fn on_visit_fm_date(
         &mut self,
         value: &NaiveDate,
@@ -367,12 +329,8 @@ impl Visitor for Linter<'_> {
     }
 }
 
-pub fn lint(
-    journal: &Expr,
-    url: &Url,
-    line_map: Arc<LineMap>,
-) -> Result<Vec<Diagnostic>, JournalintError> {
-    let mut visitor = Linter::new(url, line_map);
+pub fn lint(journal: &Expr, url: &Url) -> Result<Vec<Diagnostic>, JournalintError> {
+    let mut visitor = Linter::new(url);
     walk(journal, &mut visitor)?;
     Ok(visitor.diagnostics)
 }

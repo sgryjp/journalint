@@ -1,13 +1,10 @@
 mod arg;
-mod ast;
-mod code;
 mod commands;
-mod diagnostic;
 mod errors;
 mod export;
 mod linemap;
 mod lint;
-mod parse;
+mod lsptype_utils;
 mod service;
 mod textedit;
 
@@ -21,17 +18,20 @@ use ariadne::Report;
 use ariadne::ReportKind;
 use ariadne::Source;
 use clap::Parser;
+use commands::AutofixCommand;
 use commands::Command;
-use diagnostic::Diagnostic;
 use env_logger::TimestampPrecision;
 use errors::CliError;
 use log::error;
 use lsp_types::Url;
 
+use journalint_parse::diagnostic::Diagnostic;
+use journalint_parse::parse::parse;
+use journalint_parse::violation::Violation;
+
 use crate::arg::Arguments;
 use crate::errors::JournalintError;
 use crate::lint::lint;
-use crate::parse::parse;
 
 const E_UNEXPECTED: exitcode::ExitCode = 1;
 
@@ -83,9 +83,10 @@ fn cli_main(args: Arguments) -> Result<(), CliError> {
     })?;
 
     // Parse the content and lint the AST unless parsing itself failed
-    let (journal, mut diagnostics, line_map) = parse(&content);
+    let (journal, parse_errors) = parse(&content);
+    let mut diagnostics: Vec<Diagnostic> = parse_errors.iter().map(Diagnostic::from).collect();
     if let Some(journal) = journal.as_ref() {
-        let mut d = lint(journal, &url, line_map.clone()).map_err(|e| {
+        let mut d = lint(journal, &url).map_err(|e| {
             CliError::new(E_UNEXPECTED).with_message(format!("Failed on linting: {e:?}"))
         })?;
         diagnostics.append(&mut d);
@@ -99,7 +100,8 @@ fn cli_main(args: Arguments) -> Result<(), CliError> {
         // Fix one by one
         for d in diagnostics.iter().as_ref() {
             // Check if there is a default auto-fix command for the diagnostic.
-            let (Some(ast_root), Some(command)) = (&journal, d.code().default_autofix()) else {
+            let (Some(ast_root), Some(command)) = (&journal, get_default_autofix(d.violation()))
+            else {
                 continue; // unavailable
             };
 
@@ -153,16 +155,38 @@ fn report(content: &str, filename: Option<&str>, diagnostic: &Diagnostic) {
         .unwrap();
 }
 
+/// Get default auto-fix command for the violation code.
+fn get_default_autofix(violation: &Violation) -> Option<impl Command> {
+    match violation {
+        Violation::ParseError => None,
+        Violation::MismatchedDates => Some(AutofixCommand::UseDateInFilename),
+        Violation::InvalidStartTime => None,
+        Violation::InvalidEndTime => None,
+        Violation::MissingDate => None,
+        Violation::MissingStartTime => None,
+        Violation::MissingEndTime => None,
+        Violation::TimeJumped => Some(AutofixCommand::ReplaceWithPreviousEndTime),
+        Violation::NegativeTimeRange => None,
+        Violation::IncorrectDuration => Some(AutofixCommand::RecalculateDuration),
+    }
+}
+
 #[cfg(test)]
 mod snapshot_tests {
-    use std::{ffi::OsStr, fs};
-
     use super::*;
 
+    use std::ffi::OsStr;
+    use std::fs;
+    use std::sync::Arc;
+
+    use crate::linemap::LineMap;
+    use crate::lsptype_utils::ToLspDisgnostic;
+
     fn parse_and_lint(url: &Url, content: &str) -> Vec<Diagnostic> {
-        let (journal, mut diagnostics, line_map) = parse(&content);
+        let (journal, parse_errors) = parse(&content);
+        let mut diagnostics: Vec<Diagnostic> = parse_errors.iter().map(Diagnostic::from).collect();
         if let Some(journal) = journal {
-            let mut d = lint(&journal, &url, line_map).expect("FAILED TO LINT");
+            let mut d = lint(&journal, &url).expect("FAILED TO LINT");
             diagnostics.append(&mut d);
         };
 
@@ -184,9 +208,10 @@ mod snapshot_tests {
                 Err(err) => panic!("failed to read a file: {{path: {:?}, err:{}}}", path, err),
             };
 
+            let line_map = Arc::new(LineMap::new(&content));
             let diagnostics = parse_and_lint(&url, &content)
                 .iter()
-                .map(|d| d.clone().into())
+                .map(|d| d.clone().to_lsptype(&line_map))
                 .collect::<Vec<lsp_types::Diagnostic>>();
             insta::assert_yaml_snapshot!(path.file_stem().unwrap().to_str().unwrap(), diagnostics);
         }

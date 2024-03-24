@@ -4,8 +4,9 @@ use std::ops::Range;
 use lsp_types::Url;
 use strum::EnumIter;
 
-use crate::ast::Expr;
-use crate::code::Code;
+use journalint_parse::ast::Expr;
+use journalint_parse::violation::Violation;
+
 use crate::commands::Command;
 use crate::errors::JournalintError;
 use crate::textedit::TextEdit;
@@ -41,11 +42,11 @@ impl Command for AutofixCommand {
         }
     }
 
-    fn can_fix(&self, code: &Code) -> bool {
+    fn can_fix(&self, violation: &Violation) -> bool {
         match self {
-            AutofixCommand::RecalculateDuration => *code == Code::IncorrectDuration,
-            AutofixCommand::ReplaceWithPreviousEndTime => *code == Code::TimeJumped,
-            AutofixCommand::UseDateInFilename => *code == Code::MismatchedDates,
+            AutofixCommand::RecalculateDuration => *violation == Violation::IncorrectDuration,
+            AutofixCommand::ReplaceWithPreviousEndTime => *violation == Violation::TimeJumped,
+            AutofixCommand::UseDateInFilename => *violation == Violation::MismatchedDates,
         }
     }
 

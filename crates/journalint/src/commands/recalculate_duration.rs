@@ -4,7 +4,8 @@ use std::ops::Range;
 use chrono::prelude::NaiveDate;
 use lsp_types::Url;
 
-use crate::ast::{walk, Expr, LooseTime, Visitor};
+use journalint_parse::ast::{walk, Expr, LooseTime, Visitor};
+
 use crate::errors::JournalintError;
 use crate::textedit::TextEdit;
 
@@ -27,7 +28,7 @@ impl RecalculateDurationVisitor {
     }
 }
 
-impl Visitor for RecalculateDurationVisitor {
+impl Visitor<JournalintError> for RecalculateDurationVisitor {
     fn on_visit_fm_date(
         &mut self,
         value: &NaiveDate,
@@ -99,13 +100,13 @@ pub(super) fn execute(
         .ok_or(JournalintError::MissingRequiredValue {
             name: "start_time".to_string(),
         })
-        .and_then(|t| t.to_datetime(date))?;
+        .and_then(|t| t.to_datetime(date).map_err(JournalintError::from))?;
     let end_time = visitor
         .end_time_value
         .ok_or(JournalintError::MissingRequiredValue {
             name: "end_time".to_string(),
         })
-        .and_then(|t| t.to_datetime(date))?;
+        .and_then(|t| t.to_datetime(date).map_err(JournalintError::from))?;
     let new_value = end_time - start_time;
     let new_value = (new_value.num_seconds() as f64) / 3600.0;
 

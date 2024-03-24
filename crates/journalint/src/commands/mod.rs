@@ -8,8 +8,9 @@ use std::ops::Range;
 
 use lsp_types::Url;
 
-use crate::ast::Expr;
-use crate::code::Code;
+use journalint_parse::ast::Expr;
+use journalint_parse::violation::Violation;
+
 pub use crate::commands::autofix::AutofixCommand;
 use crate::errors::JournalintError;
 use crate::textedit::TextEdit;
@@ -25,8 +26,8 @@ pub trait Command {
     /// Get machine-readable identifier of this command.
     fn id(&self) -> &str;
 
-    /// Check whether the specified diagnostic code can be fixed by this command or not.
-    fn can_fix(&self, code: &Code) -> bool;
+    /// Check whether the specified violation can be fixed by this command or not.
+    fn can_fix(&self, violation: &Violation) -> bool;
 
     /// Executes this command.
     ///

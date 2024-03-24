@@ -528,6 +528,7 @@ dependencies = [
  "env_logger",
  "exitcode",
  "insta",
+ "journalint-parse",
  "log",
  "lsp-server",
  "lsp-types",
@@ -537,6 +538,18 @@ dependencies = [
  "serde_yaml",
  "strum",
  "thiserror",
+]
+
+[[package]]
+name = "journalint-parse"
+version = "0.2.1"
+dependencies = [
+ "chrono",
+ "chumsky",
+ "rstest",
+ "serde",
+ "thiserror",
+ "url",
 ]
 
 [[package]]
