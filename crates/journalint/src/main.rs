@@ -3,7 +3,6 @@ mod commands;
 mod errors;
 mod export;
 mod linemap;
-mod lint;
 mod lsptype_utils;
 mod service;
 mod textedit;
@@ -26,12 +25,12 @@ use log::error;
 use lsp_types::Url;
 
 use journalint_parse::diagnostic::Diagnostic;
+use journalint_parse::lint::lint;
 use journalint_parse::parse::parse;
 use journalint_parse::violation::Violation;
 
 use crate::arg::Arguments;
 use crate::errors::JournalintError;
-use crate::lint::lint;
 
 const E_UNEXPECTED: exitcode::ExitCode = 1;
 

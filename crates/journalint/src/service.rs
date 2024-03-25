@@ -31,6 +31,7 @@ use strum::IntoEnumIterator;
 
 use journalint_parse::ast::Expr;
 use journalint_parse::diagnostic::Diagnostic;
+use journalint_parse::lint::lint;
 use journalint_parse::parse::parse;
 use journalint_parse::violation::Violation;
 
@@ -38,7 +39,6 @@ use crate::commands::AutofixCommand;
 use crate::commands::Command as _;
 use crate::errors::JournalintError;
 use crate::linemap::LineMap;
-use crate::lint::lint;
 use crate::lsptype_utils::ToLspDisgnostic;
 
 const E_UNKNOWN_COMMAND: i32 = 1;
@@ -225,7 +225,7 @@ fn on_text_document_did_open(
 
     // Lint
     if let Some(journal) = &journal {
-        let mut d = lint(journal, &uri)?;
+        let mut d = lint(journal, &uri).expect("lint() expected to success always");
         diagnostics.append(&mut d);
     }
 
@@ -259,7 +259,7 @@ fn on_text_document_did_change(
 
     // Lint
     if let Some(journal) = &journal {
-        let mut d = lint(journal, &uri)?;
+        let mut d = lint(journal, &uri).expect("lint() expected to success always");
         diagnostics.append(&mut d);
     }
 

@@ -6,13 +6,11 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use chrono::{DateTime, NaiveDate, Timelike, Utc};
-use lsp_types::Url;
+use url::Url;
 
-use journalint_parse::ast::{walk, Expr, LooseTime, Visitor};
-use journalint_parse::diagnostic::{Diagnostic, DiagnosticRelatedInformation};
-use journalint_parse::violation::Violation;
-
-use crate::errors::JournalintError;
+use crate::ast::{walk, Expr, LooseTime, Visitor};
+use crate::diagnostic::{Diagnostic, DiagnosticRelatedInformation};
+use crate::violation::Violation;
 
 pub struct Linter<'a> {
     source: &'a Url,
@@ -247,36 +245,24 @@ impl<'a> Linter<'a> {
     }
 }
 
-impl Visitor<JournalintError> for Linter<'_> {
-    fn on_visit_fm_date(
-        &mut self,
-        value: &NaiveDate,
-        span: &Range<usize>,
-    ) -> Result<(), JournalintError> {
+impl Visitor<()> for Linter<'_> {
+    fn on_visit_fm_date(&mut self, value: &NaiveDate, span: &Range<usize>) -> Result<(), ()> {
         self.fm_date = Some((*value, span.clone()));
         self.check_fm_date_matches_filename(value, span);
         Ok(())
     }
 
-    fn on_visit_fm_start(
-        &mut self,
-        value: &LooseTime,
-        span: &Range<usize>,
-    ) -> Result<(), JournalintError> {
+    fn on_visit_fm_start(&mut self, value: &LooseTime, span: &Range<usize>) -> Result<(), ()> {
         self.fm_start = Some((value.clone(), span.clone()));
         Ok(())
     }
 
-    fn on_visit_fm_end(
-        &mut self,
-        value: &LooseTime,
-        span: &Range<usize>,
-    ) -> Result<(), JournalintError> {
+    fn on_visit_fm_end(&mut self, value: &LooseTime, span: &Range<usize>) -> Result<(), ()> {
         self.fm_end = Some((value.clone(), span.clone()));
         Ok(())
     }
 
-    fn on_leave_fm(&mut self, span: &Range<usize>) -> Result<(), JournalintError> {
+    fn on_leave_fm(&mut self, span: &Range<usize>) -> Result<(), ()> {
         // Calculate exact time of start and end
         self.fm_start_datetime = self.check_fm_start_is_valid();
         self.fm_end_datetime = self.check_fm_end_is_valid();
@@ -289,11 +275,7 @@ impl Visitor<JournalintError> for Linter<'_> {
         Ok(())
     }
 
-    fn on_visit_start_time(
-        &mut self,
-        value: &LooseTime,
-        span: &Range<usize>,
-    ) -> Result<(), JournalintError> {
+    fn on_visit_start_time(&mut self, value: &LooseTime, span: &Range<usize>) -> Result<(), ()> {
         if let Some(start_dt) = self.check_start_time(value, span) {
             self.entry_start = Some((start_dt, span.clone()));
             self.check_prev_end_equals_next_start(start_dt, span);
@@ -301,35 +283,27 @@ impl Visitor<JournalintError> for Linter<'_> {
         Ok(())
     }
 
-    fn on_visit_end_time(
-        &mut self,
-        value: &LooseTime,
-        span: &Range<usize>,
-    ) -> Result<(), JournalintError> {
+    fn on_visit_end_time(&mut self, value: &LooseTime, span: &Range<usize>) -> Result<(), ()> {
         if let Some(dt) = self.check_end_time(value, span) {
             self.entry_end = Some((dt, span.clone()));
         }
         Ok(())
     }
 
-    fn on_visit_duration(
-        &mut self,
-        value: &Duration,
-        span: &Range<usize>,
-    ) -> Result<(), JournalintError> {
+    fn on_visit_duration(&mut self, value: &Duration, span: &Range<usize>) -> Result<(), ()> {
         self.check_end_time_exceeds_start_time();
         self.check_duration_matches_end_minus_start(value, span);
         Ok(())
     }
 
-    fn on_leave_entry(&mut self, _span: &Range<usize>) -> Result<(), JournalintError> {
+    fn on_leave_entry(&mut self, _span: &Range<usize>) -> Result<(), ()> {
         self.entry_start = None;
         self.prev_entry_end = self.entry_end.take();
         Ok(())
     }
 }
 
-pub fn lint(journal: &Expr, url: &Url) -> Result<Vec<Diagnostic>, JournalintError> {
+pub fn lint(journal: &Expr, url: &Url) -> Result<Vec<Diagnostic>, ()> {
     let mut visitor = Linter::new(url);
     walk(journal, &mut visitor)?;
     Ok(visitor.diagnostics)
