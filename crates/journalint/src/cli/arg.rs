@@ -12,6 +12,7 @@ pub(crate) struct Arguments {
     #[arg(short, long)]
     pub fix: bool,
 
+    /// Export journal entries in the specified format.
     #[arg(short, long, value_name = "FORMAT")]
     pub export: Option<ExportFormat>,
 
