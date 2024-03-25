@@ -1,10 +1,10 @@
 use clap::Parser;
 
-use crate::export::ExportFormat;
+use crate::cli::export::ExportFormat;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about)]
-pub struct Arguments {
+pub(crate) struct Arguments {
     /// File to lint.
     pub filename: Option<String>,
 
