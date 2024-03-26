@@ -1,6 +1,7 @@
 use clap::Parser;
 
 use crate::cli::export::ExportFormat;
+use crate::cli::report::ReportFormat;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about)]
@@ -11,6 +12,11 @@ pub(crate) struct Arguments {
     /// Fix found problems.
     #[arg(short, long)]
     pub fix: bool,
+
+    /// Report violations in the specified format.
+    #[clap(value_enum)]
+    #[arg(long, value_name = "FORMAT", default_value_t = ReportFormat::Fancy)]
+    pub report: ReportFormat,
 
     /// Export journal entries in the specified format.
     #[arg(short, long, value_name = "FORMAT")]

@@ -1,7 +1,7 @@
 use std::fs::read_to_string;
 use std::path::PathBuf;
+use std::sync::Arc;
 
-use ariadne::{Color, Label, Report, ReportKind, Source};
 use journalint_parse::diagnostic::Diagnostic;
 use journalint_parse::lint::lint;
 use journalint_parse::parse::parse;
@@ -10,8 +10,10 @@ use lsp_types::Url;
 
 use crate::cli::arg::Arguments;
 use crate::cli::export::export;
+use crate::cli::report::report;
 use crate::commands::{AutofixCommand, Command};
 use crate::errors::CliError;
+use crate::linemap::LineMap;
 
 const E_UNEXPECTED: exitcode::ExitCode = 1;
 
@@ -70,9 +72,10 @@ pub(crate) fn main(args: Arguments) -> Result<(), CliError> {
         }
     } else {
         // Write diagnostic report to stderr
+        let line_map = Arc::new(LineMap::new(&content)); //TODO: Stop using Arc
         diagnostics
             .iter()
-            .for_each(|d| report(&content, Some(&filename), d));
+            .for_each(|d| report(&args.report, &content, &line_map, Some(&filename), d));
 
         // Export parsed data to stdout
         if let Some(fmt) = args.export {
@@ -86,26 +89,6 @@ pub(crate) fn main(args: Arguments) -> Result<(), CliError> {
     }
 
     Ok(())
-}
-
-/// Write a human readable report of a diagnostic
-fn report(content: &str, filename: Option<&str>, diagnostic: &Diagnostic) {
-    let stdin_source_name = "<STDIN>".to_string();
-    let filename = filename.unwrap_or(&stdin_source_name);
-    let start = diagnostic.span().start;
-    let end = diagnostic.span().end;
-    let message = diagnostic.message();
-
-    Report::build(ReportKind::Error, filename, start)
-        .with_message(message)
-        .with_label(
-            Label::new((filename, start..end))
-                .with_color(Color::Red)
-                .with_message(message),
-        )
-        .finish()
-        .eprint((filename, Source::from(content)))
-        .unwrap();
 }
 
 /// Get default auto-fix command for the violation code.
