@@ -4,9 +4,13 @@
 
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Calendar Versioning](https://calver.org/) in form
-of `YY.MM.build` where the `build` part is just an incrementing number.
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
+except that "Misc" type of change is added and "Unreleased" section is removed.
+This project use [Calendar Versioning](https://calver.org/) in form of
+`YY.MM.build` where the `build` part is just an incrementing number. This file
+is maintained using [towncrier](https://towncrier.readthedocs.io/).
+
+<!-- towncrier release notes start -->
 
 ## [0.2.1](https://github.com/sgryjp/journalint/tree/0.2.1) - 2024-05-02
 
