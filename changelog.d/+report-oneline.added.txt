@@ -1,1 +1,0 @@
-Supprt simple report format for violations by a new command line option `--report=oneline`.
