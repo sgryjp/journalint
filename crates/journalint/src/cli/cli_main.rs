@@ -1,4 +1,5 @@
 use std::fs::read_to_string;
+use std::io;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -73,9 +74,17 @@ pub(crate) fn main(args: Arguments) -> Result<(), CliError> {
     } else {
         // Write diagnostic report to stderr
         let line_map = Arc::new(LineMap::new(&content)); //TODO: Stop using Arc
-        diagnostics
-            .iter()
-            .for_each(|d| report(&args.report, &content, &line_map, Some(&filename), d));
+        for diagnostic in diagnostics {
+            report(
+                &args.report,
+                &content,
+                &line_map,
+                Some(&filename),
+                &diagnostic,
+                io::stderr(),
+            )
+            .map_err(|e| CliError::new(exitcode::IOERR).with_message(e.to_string()))?;
+        }
 
         // Export parsed data to stdout
         if let Some(fmt) = args.export {
