@@ -11,7 +11,7 @@ use lsp_types::Url;
 
 use crate::cli::arg::Arguments;
 use crate::cli::export::export;
-use crate::cli::report::report;
+use crate::cli::report::{report, ReportFormat};
 use crate::commands::{AutofixCommand, Command};
 use crate::errors::CliError;
 use crate::linemap::LineMap;
@@ -71,12 +71,12 @@ pub(crate) fn main(args: Arguments) -> Result<(), CliError> {
                     .map_err(|e| CliError::new(E_UNEXPECTED).with_message(e.to_string()))?;
             }
         }
-    } else {
-        // Write diagnostic report to stderr
+    } else if let Some(export_format) = args.export {
+        // Write simple diagnostic report to *stderr*
         let line_map = Arc::new(LineMap::new(&content)); //TODO: Stop using Arc
         for diagnostic in diagnostics {
             report(
-                &args.report,
+                &ReportFormat::Oneline,
                 &content,
                 &line_map,
                 Some(&filename),
@@ -87,13 +87,25 @@ pub(crate) fn main(args: Arguments) -> Result<(), CliError> {
         }
 
         // Export parsed data to stdout
-        if let Some(fmt) = args.export {
-            if let Some(journal) = journal {
-                let mut writer = std::io::stdout();
-                export(fmt, journal, &mut writer).map_err(|e| {
-                    CliError::new(3).with_message(format!("Failed to export data: {:?}", e))
-                })?;
-            }
+        if let Some(journal) = journal {
+            let mut writer = std::io::stdout();
+            export(export_format, journal, &mut writer).map_err(|e| {
+                CliError::new(3).with_message(format!("Failed to export data: {:?}", e))
+            })?;
+        }
+    } else {
+        // Write diagnostic report to stdout
+        let line_map = Arc::new(LineMap::new(&content)); //TODO: Stop using Arc
+        for diagnostic in diagnostics {
+            report(
+                &args.report,
+                &content,
+                &line_map,
+                Some(&filename),
+                &diagnostic,
+                io::stdout(),
+            )
+            .map_err(|e| CliError::new(exitcode::IOERR).with_message(e.to_string()))?;
         }
     }
 
