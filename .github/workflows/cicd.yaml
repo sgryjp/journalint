@@ -10,6 +10,7 @@ on:
       - "*"
 
 jobs:
+  # Build both journalint and journalint-vscode.
   build:
     name: ${{ matrix.job.target }}
     runs-on: ${{ matrix.job.os }}
@@ -51,6 +52,7 @@ jobs:
           name: artifacts-${{ matrix.job.target }}
           path: dist/*
 
+  # Create a release from HEAD of main branch.
   release-latest:
     needs: [build]
     if: ${{ startsWith(github.ref, 'refs/heads/main') }}
@@ -67,3 +69,4 @@ jobs:
       - run: "git push origin :latest || true"
       - run: "gh release delete latest --yes || true"
       - run: "gh release create latest --prerelease artifacts/*/*"
+      - run: "git push origin :latest || true"
