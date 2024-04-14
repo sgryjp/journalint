@@ -3,6 +3,8 @@ use std::io;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use journalint_parse::ast;
+use journalint_parse::diagnostic::Diagnostic;
 use journalint_parse::lint::parse_and_lint;
 use journalint_parse::violation::Violation;
 use lsp_types::Url;
@@ -11,7 +13,7 @@ use crate::cli::arg::Arguments;
 use crate::cli::export::export;
 use crate::cli::report::{report, ReportFormat};
 use crate::commands::{AutofixCommand, Command};
-use crate::errors::CliError;
+use crate::errors::{CliError, JournalintError};
 use crate::linemap::LineMap;
 
 const E_UNEXPECTED: exitcode::ExitCode = 1;
@@ -46,21 +48,8 @@ pub(crate) fn main(args: Arguments) -> Result<(), CliError> {
 
         // Fix one by one
         for d in diagnostics.iter().as_ref() {
-            // Check if there is a default auto-fix command for the diagnostic.
-            let (Some(ast_root), Some(command)) = (&journal, get_default_autofix(d.violation()))
-            else {
-                continue; // unavailable
-            };
-
-            // Execute the default auto-fix command.
-            let text_edit = command
-                .execute(&url, ast_root, d.span())
+            fix_violation(&url, journal.as_ref(), d)
                 .map_err(|e| CliError::new(E_UNEXPECTED).with_message(e.to_string()))?;
-            if let Some(text_edit) = text_edit {
-                text_edit
-                    .apply_to_file(&url)
-                    .map_err(|e| CliError::new(E_UNEXPECTED).with_message(e.to_string()))?;
-            }
         }
     } else if let Some(export_format) = args.export {
         // Write simple diagnostic report to *stderr*
@@ -74,7 +63,7 @@ pub(crate) fn main(args: Arguments) -> Result<(), CliError> {
                 &diagnostic,
                 io::stderr(),
             )
-            .map_err(|e| CliError::new(exitcode::IOERR).with_message(e.to_string()))?;
+            .map_err(|e| CliError::new(E_UNEXPECTED).with_message(e.to_string()))?;
         }
 
         // Export parsed data to stdout
@@ -100,6 +89,25 @@ pub(crate) fn main(args: Arguments) -> Result<(), CliError> {
         }
     }
 
+    Ok(())
+}
+
+fn fix_violation(
+    url: &Url,
+    journal: Option<&ast::Expr>,
+    diagnostic: &Diagnostic,
+) -> Result<(), JournalintError> {
+    // Check if there is a default auto-fix command for the diagnostic.
+    let (Some(journal), Some(command)) = (journal, get_default_autofix(diagnostic.violation()))
+    else {
+        return Ok(()); // unavailable
+    };
+
+    // Execute the default auto-fix command.
+    let text_edit = command.execute(&url, journal, diagnostic.span())?;
+    if let Some(text_edit) = text_edit {
+        text_edit.apply_to_file(&url)?;
+    }
     Ok(())
 }
 
