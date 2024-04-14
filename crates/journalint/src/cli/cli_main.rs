@@ -40,7 +40,7 @@ pub(crate) fn main(args: Arguments) -> Result<(), CliError> {
 
     // Execute specified task against the AST and diagnostics
     if args.fix {
-        main_fix(&url, &content)?;
+        main_fix(&filename, &url, &content)?;
     } else if let Some(export_format) = args.export {
         main_export(&filename, &url, &content, export_format)?;
     } else {
@@ -50,7 +50,9 @@ pub(crate) fn main(args: Arguments) -> Result<(), CliError> {
     Ok(())
 }
 
-fn main_fix(url: &Url, content: &str) -> Result<(), CliError> {
+fn main_fix(filename: &str, url: &Url, content: &str) -> Result<(), CliError> {
+    let remaining_diagnostics;
+
     // Create a working copy of the content.
     let mut buffer = String::with_capacity(content.len() + 128);
     buffer.push_str(content);
@@ -70,6 +72,7 @@ fn main_fix(url: &Url, content: &str) -> Result<(), CliError> {
                 continue 'outer;
             }
         }
+        remaining_diagnostics = diagnostics;
         break;
     }
 
@@ -82,6 +85,21 @@ fn main_fix(url: &Url, content: &str) -> Result<(), CliError> {
             CliError::new(exitcode::IOERR)
                 .with_message(format!("Failed on writing fixed result: {e:?}"))
         })?;
+    }
+
+    // Write remaining diagnostic report to stdout
+    log::debug!("!!! {:?}", remaining_diagnostics);
+    let line_map = Arc::new(LineMap::new(content)); //TODO: Stop using Arc
+    for diagnostic in remaining_diagnostics {
+        report(
+            ReportFormat::Oneline,
+            content,
+            &line_map,
+            Some(filename),
+            &diagnostic,
+            io::stdout(),
+        )
+        .map_err(|e| CliError::new(exitcode::IOERR).with_message(e.to_string()))?;
     }
 
     Ok(())
