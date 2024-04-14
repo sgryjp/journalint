@@ -3,9 +3,7 @@ use std::io;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use journalint_parse::diagnostic::Diagnostic;
-use journalint_parse::lint::lint;
-use journalint_parse::parse::parse;
+use journalint_parse::lint::parse_and_lint;
 use journalint_parse::violation::Violation;
 use lsp_types::Url;
 
@@ -39,14 +37,7 @@ pub(crate) fn main(args: Arguments) -> Result<(), CliError> {
     })?;
 
     // Parse the content and lint the AST unless parsing itself failed
-    let (journal, parse_errors) = parse(&content);
-    let mut diagnostics: Vec<Diagnostic> = parse_errors.iter().map(Diagnostic::from).collect();
-    if let Some(journal) = journal.as_ref() {
-        let mut d = lint(journal, &url).map_err(|e| {
-            CliError::new(E_UNEXPECTED).with_message(format!("Failed on linting: {e:?}"))
-        })?;
-        diagnostics.append(&mut d);
-    }
+    let (journal, mut diagnostics) = parse_and_lint(&url, &content);
 
     // Execute specified task against the AST and diagnostics
     if args.fix {

@@ -48,24 +48,11 @@ mod snapshot_tests {
     use std::fs::{self, read_to_string};
     use std::sync::Arc;
 
-    use journalint_parse::diagnostic::Diagnostic;
-    use journalint_parse::lint::lint;
-    use journalint_parse::parse::parse;
+    use journalint_parse::lint::parse_and_lint;
     use lsp_types::Url;
 
     use crate::linemap::LineMap;
-    use crate::lsptype_utils::ToLspDisgnostic;
-
-    fn parse_and_lint(url: &Url, content: &str) -> Vec<Diagnostic> {
-        let (journal, parse_errors) = parse(&content);
-        let mut diagnostics: Vec<Diagnostic> = parse_errors.iter().map(Diagnostic::from).collect();
-        if let Some(journal) = journal {
-            let mut d = lint(&journal, &url).expect("FAILED TO LINT");
-            diagnostics.append(&mut d);
-        };
-
-        diagnostics
-    }
+    use crate::lsptype_utils::ToLspDisgnostic as _;
 
     #[test]
     fn test() {
@@ -83,7 +70,8 @@ mod snapshot_tests {
             };
 
             let line_map = Arc::new(LineMap::new(&content));
-            let diagnostics = parse_and_lint(&url, &content)
+            let (_journal, diagnostics) = parse_and_lint(&url, &content);
+            let diagnostics = diagnostics
                 .iter()
                 .map(|d| d.clone().to_lsptype(&line_map))
                 .collect::<Vec<lsp_types::Diagnostic>>();
