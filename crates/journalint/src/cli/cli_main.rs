@@ -1,4 +1,4 @@
-use std::fs::read_to_string;
+use std::fs::{read_to_string, write};
 use std::io;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -51,16 +51,36 @@ pub(crate) fn main(args: Arguments) -> Result<(), CliError> {
 }
 
 fn main_fix(url: &Url, content: &str) -> Result<(), CliError> {
-    // Parse the content and lint the AST unless parsing itself failed
-    let (journal, mut diagnostics) = parse_and_lint(url, content);
+    // Create a working copy of the content.
+    let mut buffer = String::with_capacity(content.len() + 128);
+    buffer.push_str(content);
 
-    // Sort diagnostics in reverse order
-    diagnostics.sort_by(|a, b| b.span().start.cmp(&a.span().start));
+    // Repeatedly execute parse, lint, and fix until no violations were fixed
+    let mut num_fixed = 0;
+    'outer: loop {
+        let (journal, diagnostics) = parse_and_lint(url, &buffer);
+        for diagnostic in diagnostics.iter().as_ref() {
+            let fixed =
+                fix_violation(url, journal.as_ref(), diagnostic, &mut buffer).map_err(|e| {
+                    CliError::new(E_UNEXPECTED)
+                        .with_message(format!("Failed on fixing a violation: {e:?}"))
+                })?;
+            if fixed {
+                num_fixed += 1;
+                continue 'outer;
+            }
+        }
+        break;
+    }
 
-    // Fix one by one
-    for d in diagnostics.iter().as_ref() {
-        fix_violation(url, journal.as_ref(), d).map_err(|e| {
-            CliError::new(E_UNEXPECTED).with_message(format!("Failed on fixing a violation: {e:?}"))
+    // Write the content back unless nothing changed
+    if 0 < num_fixed {
+        let path = url
+            .to_file_path()
+            .expect("journalint CLI does not expect to process non-local file");
+        write(path, buffer).map_err(|e| {
+            CliError::new(exitcode::IOERR)
+                .with_message(format!("Failed on writing fixed result: {e:?}"))
         })?;
     }
 
@@ -134,19 +154,22 @@ fn fix_violation(
     url: &Url,
     journal: Option<&ast::Expr>,
     diagnostic: &Diagnostic,
-) -> Result<(), JournalintError> {
+    buffer: &mut String,
+) -> Result<bool, JournalintError> {
     // Check if there is a default auto-fix command for the diagnostic.
     let (Some(journal), Some(command)) = (journal, get_default_autofix(diagnostic.violation()))
     else {
-        return Ok(()); // unavailable
+        return Ok(false); // unavailable
     };
 
     // Execute the default auto-fix command.
-    let text_edit = command.execute(&url, journal, diagnostic.span())?;
-    if let Some(text_edit) = text_edit {
-        text_edit.apply_to_file(&url)?;
-    }
-    Ok(())
+    let Some(text_edit) = command.execute(url, journal, diagnostic.span())? else {
+        return Ok(false);
+    };
+
+    // Apply the fix to on-memory buffer.
+    text_edit.apply(buffer);
+    Ok(true)
 }
 
 /// Get default auto-fix command for the violation code.
