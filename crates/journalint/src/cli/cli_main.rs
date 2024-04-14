@@ -10,7 +10,7 @@ use journalint_parse::violation::Violation;
 use lsp_types::Url;
 
 use crate::cli::arg::Arguments;
-use crate::cli::export::export;
+use crate::cli::export::{export, ExportFormat};
 use crate::cli::report::{report, ReportFormat};
 use crate::commands::{AutofixCommand, Command};
 use crate::errors::{CliError, JournalintError};
@@ -38,55 +38,93 @@ pub(crate) fn main(args: Arguments) -> Result<(), CliError> {
         CliError::new(exitcode::IOERR).with_message(format!("Failed to read {filename:?}: {e:?}"))
     })?;
 
-    // Parse the content and lint the AST unless parsing itself failed
-    let (journal, mut diagnostics) = parse_and_lint(&url, &content);
-
     // Execute specified task against the AST and diagnostics
     if args.fix {
-        // Sort diagnostics in reverse order
-        diagnostics.sort_by(|a, b| b.span().start.cmp(&a.span().start));
-
-        // Fix one by one
-        for d in diagnostics.iter().as_ref() {
-            fix_violation(&url, journal.as_ref(), d)
-                .map_err(|e| CliError::new(E_UNEXPECTED).with_message(e.to_string()))?;
-        }
+        main_fix(&url, &content)?;
     } else if let Some(export_format) = args.export {
-        // Write simple diagnostic report to *stderr*
-        let line_map = Arc::new(LineMap::new(&content)); //TODO: Stop using Arc
-        for diagnostic in diagnostics {
-            report(
-                &ReportFormat::Oneline,
-                &content,
-                &line_map,
-                Some(&filename),
-                &diagnostic,
-                io::stderr(),
-            )
-            .map_err(|e| CliError::new(E_UNEXPECTED).with_message(e.to_string()))?;
-        }
-
-        // Export parsed data to stdout
-        if let Some(journal) = journal {
-            let mut writer = std::io::stdout();
-            export(export_format, journal, &mut writer).map_err(|e| {
-                CliError::new(3).with_message(format!("Failed to export data: {:?}", e))
-            })?;
-        }
+        main_export(&filename, &url, &content, export_format)?;
     } else {
-        // Write diagnostic report to stdout
-        let line_map = Arc::new(LineMap::new(&content)); //TODO: Stop using Arc
-        for diagnostic in diagnostics {
-            report(
-                &args.report,
-                &content,
-                &line_map,
-                Some(&filename),
-                &diagnostic,
-                io::stdout(),
-            )
-            .map_err(|e| CliError::new(exitcode::IOERR).with_message(e.to_string()))?;
-        }
+        main_report(&filename, &url, &content, args.report)?;
+    }
+
+    Ok(())
+}
+
+fn main_fix(url: &Url, content: &str) -> Result<(), CliError> {
+    // Parse the content and lint the AST unless parsing itself failed
+    let (journal, mut diagnostics) = parse_and_lint(url, content);
+
+    // Sort diagnostics in reverse order
+    diagnostics.sort_by(|a, b| b.span().start.cmp(&a.span().start));
+
+    // Fix one by one
+    for d in diagnostics.iter().as_ref() {
+        fix_violation(url, journal.as_ref(), d).map_err(|e| {
+            CliError::new(E_UNEXPECTED).with_message(format!("Failed on fixing a violation: {e:?}"))
+        })?;
+    }
+
+    Ok(())
+}
+
+fn main_export(
+    filename: &str,
+    url: &Url,
+    content: &str,
+    export_format: ExportFormat,
+) -> Result<(), CliError> {
+    // Parse the content and lint the AST unless parsing itself failed
+    let (journal, diagnostics) = parse_and_lint(url, content);
+
+    // Write simple diagnostic report to *stderr*
+    let line_map = Arc::new(LineMap::new(content)); //TODO: Stop using Arc
+    for diagnostic in diagnostics {
+        report(
+            ReportFormat::Oneline,
+            content,
+            &line_map,
+            Some(filename),
+            &diagnostic,
+            io::stderr(),
+        )
+        .map_err(|e| {
+            CliError::new(E_UNEXPECTED)
+                .with_message(format!("Failed on reporting violations: {e:?}"))
+        })?;
+    }
+
+    // Export parsed data to stdout
+    if let Some(journal) = journal {
+        let mut writer = std::io::stdout();
+        export(export_format, journal, &mut writer).map_err(|e| {
+            CliError::new(E_UNEXPECTED).with_message(format!("Failed to export data: {:?}", e))
+        })?;
+    }
+
+    Ok(())
+}
+
+fn main_report(
+    filename: &str,
+    url: &Url,
+    content: &str,
+    report_format: ReportFormat,
+) -> Result<(), CliError> {
+    // Parse the content and lint the AST unless parsing itself failed
+    let (_journal, diagnostics) = parse_and_lint(url, content);
+
+    // Write diagnostic report to stdout
+    let line_map = Arc::new(LineMap::new(content)); //TODO: Stop using Arc
+    for diagnostic in diagnostics {
+        report(
+            report_format,
+            content,
+            &line_map,
+            Some(filename),
+            &diagnostic,
+            io::stdout(),
+        )
+        .map_err(|e| CliError::new(exitcode::IOERR).with_message(e.to_string()))?;
     }
 
     Ok(())

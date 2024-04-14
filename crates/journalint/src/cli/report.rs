@@ -8,7 +8,7 @@ use journalint_parse::diagnostic::Diagnostic;
 use crate::linemap::LineMap;
 
 // Format of violation report.
-#[derive(Clone, Debug, ValueEnum)]
+#[derive(Clone, Copy, Debug, ValueEnum)]
 pub enum ReportFormat {
     // Report violations using annotated source text.
     Fancy,
@@ -20,7 +20,7 @@ pub enum ReportFormat {
 /// Write a human readable report of a diagnostic
 #[warn(unused_results)]
 pub fn report<W: Write>(
-    format: &ReportFormat,
+    format: ReportFormat,
     content: &str,
     line_map: &Arc<LineMap>,
     filename: Option<&str>,
