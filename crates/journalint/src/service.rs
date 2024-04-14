@@ -31,8 +31,7 @@ use strum::IntoEnumIterator;
 
 use journalint_parse::ast::Expr;
 use journalint_parse::diagnostic::Diagnostic;
-use journalint_parse::lint::lint;
-use journalint_parse::parse::parse;
+use journalint_parse::lint::parse_and_lint;
 use journalint_parse::violation::Violation;
 
 use crate::commands::AutofixCommand;
@@ -218,16 +217,9 @@ fn on_text_document_did_open(
     let content = params.text_document.text.as_str();
     let version = None;
 
-    // Parse
+    // Parse and lint
     let line_map = Arc::new(LineMap::new(content));
-    let (journal, parse_errors) = parse(content);
-    let mut diagnostics: Vec<Diagnostic> = parse_errors.iter().map(Diagnostic::from).collect();
-
-    // Lint
-    if let Some(journal) = &journal {
-        let mut d = lint(journal, &uri).expect("lint() expected to success always");
-        diagnostics.append(&mut d);
-    }
+    let (journal, diagnostics) = parse_and_lint(&uri, content);
 
     // Publish diagnostics
     publish_diagnostics(conn, &uri, &line_map, &diagnostics, version)?;
@@ -252,16 +244,9 @@ fn on_text_document_did_change(
         .map_or("", |e| e.text.as_str());
     let version = Some(params.text_document.version);
 
-    // Parse
+    // Parse and lint
     let line_map = Arc::new(LineMap::new(content));
-    let (journal, parse_errors) = parse(content);
-    let mut diagnostics: Vec<Diagnostic> = parse_errors.iter().map(Diagnostic::from).collect();
-
-    // Lint
-    if let Some(journal) = &journal {
-        let mut d = lint(journal, &uri).expect("lint() expected to success always");
-        diagnostics.append(&mut d);
-    }
+    let (journal, diagnostics) = parse_and_lint(&uri, content);
 
     // Publish diagnostics
     publish_diagnostics(conn, &uri, &line_map, &diagnostics, version)?;

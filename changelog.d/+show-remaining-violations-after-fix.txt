@@ -1,0 +1,1 @@
+Now journalint command reports remaining violations after auto-fix

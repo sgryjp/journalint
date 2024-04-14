@@ -2,6 +2,7 @@
 //!
 //! See module `ast` for AST related features, and module `parse` for parsing logic.
 use std::ops::Range;
+use std::option::Option;
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -303,8 +304,18 @@ impl Visitor<()> for Linter<'_> {
     }
 }
 
-pub fn lint(journal: &Expr, url: &Url) -> Result<Vec<Diagnostic>, ()> {
+pub fn lint(journal: &Expr, url: &Url) -> Vec<Diagnostic> {
     let mut visitor = Linter::new(url);
-    walk(journal, &mut visitor)?;
-    Ok(visitor.diagnostics)
+    walk(journal, &mut visitor).expect("walk for linting expected to succeed always.");
+    visitor.diagnostics
+}
+
+pub fn parse_and_lint(url: &Url, content: &str) -> (Option<Expr>, Vec<Diagnostic>) {
+    let (journal, parse_errors) = crate::parse::parse(content);
+    let mut diagnostics: Vec<Diagnostic> = parse_errors.iter().map(Diagnostic::from).collect();
+    if let Some(journal) = &journal {
+        let mut d = lint(journal, url);
+        diagnostics.append(&mut d);
+    };
+    (journal, diagnostics)
 }
