@@ -1,5 +1,5 @@
 #!/bin/sh
-workspace_dir=$(cd $(dirname $(dirname "$0")) && pwd)
+workspace_dir=$(dirname $(cd $(dirname "$0") && pwd))
 [ -z $rust_target ] && rust_target=$(rustc -vV | grep host | cut -d' ' -f 2)
 [ -z $node_target ] && node_target=$(node -p "process.platform + '-' + process.arch")
 executable_suffix=
