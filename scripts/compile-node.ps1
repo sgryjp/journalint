@@ -12,12 +12,12 @@ try {
     Remove-Item -Recurse -Force -ErrorAction Ignore node_modules
     if ($LASTEXITCODE -ne 0) { throw }
 
-    Write-Host -ForegroundColor Yellow "+ yarn install --frozen-lockfile"
-    yarn install --frozen-lockfile
+    Write-Host -ForegroundColor Yellow "+ npm ci"
+    npm ci
     if ($LASTEXITCODE -ne 0) { throw }
 
-    Write-Host -ForegroundColor Yellow "+ yarn exec tsc.cmd -p ."
-    yarn exec tsc.cmd -p .
+    Write-Host -ForegroundColor Yellow "+ npm exec -- tsc -p ./"
+    npm exec -- tsc -p .
     if ($LASTEXITCODE -ne 0) { throw }
 
     Write-Host -ForegroundColor Yellow "+ New-Item -ItemType Directory -ErrorAction Ignore bundles/$node_target"
