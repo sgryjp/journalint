@@ -6,8 +6,10 @@ Linter for my personal journal files.
 
 Tools below are required for development tasks:
 
+- Rust 1.65 or later
+- Node.js 20
+- npm 10
 - [vsce](https://github.com/microsoft/vscode-vsce)
-- [yarn](https://github.com/yarnpkg/yarn)
 
 Tool below is required for unit testing:
 

@@ -12,8 +12,8 @@ fi
 set -ex
 cd $workspace_dir/tools/journalint-vscode
 rm -rf node_modules
-yarn install --frozen-lockfile
-yarn exec tsc -p .
+npm ci
+npm exec -- tsc -p ./
 mkdir -p bundles/$node_target
 cp $native_executable_path bundles/$node_target/
 ls -l bundles/$node_target/journalint
