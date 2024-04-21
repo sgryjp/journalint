@@ -22,6 +22,7 @@ pub struct Linter<'a> {
     fm_start_datetime: Option<DateTime<Utc>>,
     fm_end: Option<(LooseTime, Range<usize>)>,
     fm_end_datetime: Option<DateTime<Utc>>,
+    seen_first_entry_start: bool,
 
     entry_start: Option<(DateTime<Utc>, Range<usize>)>,
     entry_end: Option<(DateTime<Utc>, Range<usize>)>,
@@ -39,6 +40,7 @@ impl<'a> Linter<'a> {
             fm_start_datetime: None,
             fm_end: None,
             fm_end_datetime: None,
+            seen_first_entry_start: false,
 
             entry_start: None,
             entry_end: None,
@@ -46,7 +48,7 @@ impl<'a> Linter<'a> {
         }
     }
 
-    // Check if date value in the front matter does not match the one in the filename
+    /// Check if date value in the front matter does not match the one in the filename
     fn check_fm_date_matches_filename(&mut self, value: &NaiveDate, span: &Range<usize>) {
         if let Some(stem) = PathBuf::from(self.source.path())
             .file_stem()
@@ -66,6 +68,27 @@ impl<'a> Linter<'a> {
                     ));
                 }
             }
+        }
+    }
+
+    /// Check if start time in the front matter does not match the first entry's start time.
+    fn check_fm_start_matches_first_entry(&mut self, value: &LooseTime, _span: &Range<usize>) {
+        debug_assert!(self.seen_first_entry_start);
+
+        let Some((fm_start_time, fm_start_span)) = self.fm_start.as_ref() else {
+            return;
+        };
+
+        if fm_start_time != value {
+            self.diagnostics.push(Diagnostic::new_warning(
+                fm_start_span.clone(),
+                Violation::MismatchedStartTime,
+                format!(
+                    "Start time is different from the one of the first entry: expected to be {}.",
+                    value.as_str()
+                ),
+                None,
+            ));
         }
     }
 
@@ -281,6 +304,12 @@ impl Visitor<()> for Linter<'_> {
             self.entry_start = Some((start_dt, span.clone()));
             self.check_prev_end_equals_next_start(start_dt, span);
         }
+
+        if !self.seen_first_entry_start {
+            self.seen_first_entry_start = true;
+            self.check_fm_start_matches_first_entry(value, span);
+        }
+
         Ok(())
     }
 

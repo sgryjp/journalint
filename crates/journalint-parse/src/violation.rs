@@ -6,6 +6,7 @@ use crate::errors::UnknownViolationCode;
 pub enum Violation {
     ParseError,
     MismatchedDates,
+    MismatchedStartTime,
     InvalidStartTime,
     InvalidEndTime,
     MissingDate,
@@ -27,12 +28,13 @@ impl Violation {
         match self {
             Violation::ParseError => "parse-error",
             Violation::MismatchedDates => "date-mismatch",
+            Violation::MismatchedStartTime => "starttime-mismatch",
+            //TODO: Implement end time mismatch
             Violation::InvalidStartTime => "invalid-start-time",
             Violation::InvalidEndTime => "invalid-end-time",
             Violation::MissingDate => "missing-date",
             Violation::MissingStartTime => "missing-start-time",
             Violation::MissingEndTime => "missing-end-time",
-            //TODO: Implement start/end time mismatch
             Violation::TimeJumped => "time-jumped",
             Violation::NegativeTimeRange => "negative-time-range",
             Violation::IncorrectDuration => "incorrect-duration",
@@ -47,6 +49,7 @@ impl FromStr for Violation {
         match s {
             "parse-error" => Ok(Violation::ParseError),
             "date-mismatch" => Ok(Violation::MismatchedDates),
+            "starttime-mismatch" => Ok(Violation::MismatchedStartTime),
             "invalid-start-time" => Ok(Violation::InvalidStartTime),
             "invalid-end-time" => Ok(Violation::InvalidEndTime),
             "missing-date" => Ok(Violation::MissingDate),
