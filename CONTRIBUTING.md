@@ -28,9 +28,10 @@ Follow the steps below to release a new version:
    - This project uses [CalVer](https://calver.org/), in form of `YY.MM.build`
      where the `build` part is just an incrementing number.
 2. Update version number in the files below:
-   - `Cargo.toml`
-   - `Cargo.lock`
-   - `tools\journalint-vscode\package.json`
+   - `Cargo.toml` and `Cargo.lock`
+     - Executing `cargo build` after updating `Cargo.toml` is handy
+   - `package.json` and `package-lock.json` in `tools\journalint-vscode`
+     - Executing `npm version YY.MM.build` in `tools/journalint-vscode` is handy
 3. Update `CHANGELOG.md`.
    - Run `towncrier build --yes --version {NEW_VERSION_NUMBER}`
    - ([pipx](https://github.com/pypa/pipx) is handy to install towncrier)
