@@ -12,6 +12,16 @@ is maintained using [towncrier](https://towncrier.readthedocs.io/).
 
 <!-- towncrier release notes start -->
 
+## [24.4.0](https://github.com/sgryjp/journalint/tree/24.4.0) - 2024-04-22
+
+### Added
+
+- Check start-time mismatch between front-matter and first entry.
+
+### Changed
+
+- Now journalint command writes diagnostic report to stdout instead of stderr.
+
 ## [24.3.0](https://github.com/sgryjp/journalint/tree/22.3.0) - 2024-03-28
 
 ### Added

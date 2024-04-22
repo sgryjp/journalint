@@ -1,1 +1,0 @@
-Now journalint command writes diagnostic report to stdout instead of stderr.

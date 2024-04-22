@@ -4,7 +4,7 @@ resolver = "2"
 
 [workspace.package]
 edition = "2021"
-version = "24.3.0"
+version = "24.4.0"
 
 [workspace.dependencies]
 ariadne = { version = "0.2.0", features = ["auto-color"] }
