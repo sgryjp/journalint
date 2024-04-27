@@ -7,6 +7,7 @@ pub enum Violation {
     ParseError,
     MismatchedDates,
     MismatchedStartTime,
+    MismatchedEndTime,
     InvalidStartTime,
     InvalidEndTime,
     MissingDate,
@@ -29,7 +30,7 @@ impl Violation {
             Violation::ParseError => "parse-error",
             Violation::MismatchedDates => "date-mismatch",
             Violation::MismatchedStartTime => "starttime-mismatch",
-            //TODO: Implement end time mismatch
+            Violation::MismatchedEndTime => "endtime-mismatch",
             Violation::InvalidStartTime => "invalid-start-time",
             Violation::InvalidEndTime => "invalid-end-time",
             Violation::MissingDate => "missing-date",

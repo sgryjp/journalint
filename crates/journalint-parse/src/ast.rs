@@ -181,6 +181,11 @@ pub trait Visitor<E> {
     fn on_leave_entry(&mut self, _span: &Range<usize>) -> Result<(), E> {
         Ok(())
     }
+
+    #[warn(unused_results)]
+    fn on_leave_journal(&mut self) -> Result<(), E> {
+        Ok(())
+    }
 }
 
 #[warn(unused_results)]
@@ -231,6 +236,7 @@ pub fn walk<E>(expr: &Expr, visitor: &mut impl Visitor<E>) -> Result<(), E> {
             for line in lines {
                 walk(line, visitor)?;
             }
+            visitor.on_leave_journal()?;
             Ok(())
         }
         Expr::Error { reason: _, span: _ } => Ok(()),

@@ -196,6 +196,7 @@ fn get_default_autofix(violation: &Violation) -> Option<impl Command> {
         Violation::ParseError => None,
         Violation::MismatchedDates => Some(AutofixCommand::UseDateInFilename),
         Violation::MismatchedStartTime => None,
+        Violation::MismatchedEndTime => None,
         Violation::InvalidStartTime => None,
         Violation::InvalidEndTime => None,
         Violation::MissingDate => None,
