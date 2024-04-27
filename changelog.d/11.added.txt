@@ -1,0 +1,1 @@
+Check end-time mismatch between front-matter and the last entry.

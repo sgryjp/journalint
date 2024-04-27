@@ -1,0 +1,26 @@
+---
+source: crates/journalint/src/main.rs
+expression: diagnostics
+---
+- range:
+    start:
+      line: 3
+      character: 5
+    end:
+      line: 3
+      character: 10
+  severity: 2
+  code: endtime-mismatch
+  source: journalint
+  message: "End time in the front-matter is different from the one of the last entry: expected to be 10:00."
+  relatedInformation:
+    - location:
+        uri: "file:///C:/Users/sgryjp/src/journalint/crates/journalint/src/snapshots/mismatched-end-time.md"
+        range:
+          start:
+            line: 8
+            character: 8
+          end:
+            line: 8
+            character: 13
+      message: "The last entry ends with 10:00."

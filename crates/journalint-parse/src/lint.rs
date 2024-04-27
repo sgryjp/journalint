@@ -19,9 +19,9 @@ pub struct Linter<'a> {
 
     fm_date: Option<(NaiveDate, Range<usize>)>,
     fm_start: Option<(LooseTime, Range<usize>)>,
-    fm_start_datetime: Option<DateTime<Utc>>,
+    fm_start_value: Option<DateTime<Utc>>,
     fm_end: Option<(LooseTime, Range<usize>)>,
-    fm_end_datetime: Option<DateTime<Utc>>,
+    fm_end_value: Option<DateTime<Utc>>,
     seen_first_entry_start: bool,
 
     entry_start: Option<(DateTime<Utc>, Range<usize>)>,
@@ -37,9 +37,9 @@ impl<'a> Linter<'a> {
 
             fm_date: None,
             fm_start: None,
-            fm_start_datetime: None,
+            fm_start_value: None,
             fm_end: None,
-            fm_end_datetime: None,
+            fm_end_value: None,
             seen_first_entry_start: false,
 
             entry_start: None,
@@ -288,8 +288,8 @@ impl Visitor<()> for Linter<'_> {
 
     fn on_leave_fm(&mut self, span: &Range<usize>) -> Result<(), ()> {
         // Calculate exact time of start and end
-        self.fm_start_datetime = self.check_fm_start_is_valid();
-        self.fm_end_datetime = self.check_fm_end_is_valid();
+        self.fm_start_value = self.check_fm_start_is_valid();
+        self.fm_end_value = self.check_fm_end_is_valid();
 
         // Warn if one of date, start and end is missing
         self.check_fm_date_exists(span);
@@ -329,6 +329,38 @@ impl Visitor<()> for Linter<'_> {
     fn on_leave_entry(&mut self, _span: &Range<usize>) -> Result<(), ()> {
         self.entry_start = None;
         self.prev_entry_end = self.entry_end.take();
+        Ok(())
+    }
+
+    fn on_leave_journal(&mut self) -> Result<(), ()> {
+        // Compare end-time of front-matter and one of the last entry.
+        if let (
+            Some((_, fm_end_span)),
+            Some(fm_end_value),
+            Some((last_entry_end_value, last_entry_end_span)),
+        ) = (&self.fm_end, &self.fm_end_value, &self.prev_entry_end)
+        {
+            if fm_end_value != last_entry_end_value {
+                // Emit violation to front-matter
+                self.diagnostics.push(Diagnostic::new_warning(
+                    fm_end_span.clone(),
+                    Violation::MismatchedEndTime,
+                    format!(
+                        "End time in the front-matter is different from the one of the last \
+                         entry: expected to be {}.",
+                        last_entry_end_value.format("%H:%M")
+                    ),
+                    Some(vec![DiagnosticRelatedInformation::new(
+                        self.source.clone(),
+                        last_entry_end_span.clone(),
+                        format!(
+                            "The last entry ends with {}.",
+                            last_entry_end_value.format("%H:%M")
+                        ),
+                    )]),
+                ));
+            }
+        }
         Ok(())
     }
 }
