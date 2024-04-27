@@ -22,6 +22,11 @@ is maintained using [towncrier](https://towncrier.readthedocs.io/).
 
 - Now journalint command writes diagnostic report to stdout instead of stderr.
 
+### Fixed
+
+- Fix violations depending on previous ones properly.
+- Now journalint command reports remaining violations after auto-fix.
+
 ## [24.3.0](https://github.com/sgryjp/journalint/tree/22.3.0) - 2024-03-28
 
 ### Added

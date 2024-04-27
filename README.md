@@ -14,7 +14,3 @@ Tools below are required for development tasks:
 Tool below is required for unit testing:
 
 - [insta](https://insta.rs/)
-
-## ToDo List
-
-- Use `expect` instead of `unwrap`
