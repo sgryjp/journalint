@@ -6,7 +6,7 @@ use std::sync::Arc;
 use journalint_parse::ast;
 use journalint_parse::diagnostic::Diagnostic;
 use journalint_parse::lint::parse_and_lint;
-use journalint_parse::violation::Violation;
+use journalint_parse::rule::Rule;
 use lsp_types::Url;
 
 use crate::cli::arg::Arguments;
@@ -57,7 +57,7 @@ fn main_fix(filename: &str, url: &Url, content: &str) -> Result<(), CliError> {
     let mut buffer = String::with_capacity(content.len() + 128);
     buffer.push_str(content);
 
-    // Repeatedly execute parse, lint, and fix until no violations were fixed
+    // Repeatedly execute parse, lint, and fix until no fix is done.
     let mut num_fixed = 0;
     'outer: loop {
         let (journal, diagnostics) = parse_and_lint(url, &buffer);
@@ -65,7 +65,7 @@ fn main_fix(filename: &str, url: &Url, content: &str) -> Result<(), CliError> {
             let fixed =
                 fix_violation(url, journal.as_ref(), diagnostic, &mut buffer).map_err(|e| {
                     CliError::new(E_UNEXPECTED)
-                        .with_message(format!("Failed on fixing a violation: {e:?}"))
+                        .with_message(format!("Failed on fixing a rule violation: {e:?}"))
                 })?;
             if fixed {
                 num_fixed += 1;
@@ -127,7 +127,7 @@ fn main_export(
         )
         .map_err(|e| {
             CliError::new(E_UNEXPECTED)
-                .with_message(format!("Failed on reporting violations: {e:?}"))
+                .with_message(format!("Failed on reporting rule violations: {e:?}"))
         })?;
     }
 
@@ -174,9 +174,8 @@ fn fix_violation(
     diagnostic: &Diagnostic,
     buffer: &mut String,
 ) -> Result<bool, JournalintError> {
-    // Check if there is a default auto-fix command for the diagnostic.
-    let (Some(journal), Some(command)) = (journal, get_default_autofix(diagnostic.violation()))
-    else {
+    // Check if there is a default auto-fix command for the rule violation.
+    let (Some(journal), Some(command)) = (journal, get_default_autofix(diagnostic.rule())) else {
         return Ok(false); // unavailable
     };
 
@@ -190,20 +189,20 @@ fn fix_violation(
     Ok(true)
 }
 
-/// Get default auto-fix command for the violation code.
-fn get_default_autofix(violation: &Violation) -> Option<impl Command> {
-    match violation {
-        Violation::ParseError => None,
-        Violation::MismatchedDates => Some(AutofixCommand::UseDateInFilename),
-        Violation::MismatchedStartTime => None,
-        Violation::MismatchedEndTime => None,
-        Violation::InvalidStartTime => None,
-        Violation::InvalidEndTime => None,
-        Violation::MissingDate => None,
-        Violation::MissingStartTime => None,
-        Violation::MissingEndTime => None,
-        Violation::TimeJumped => Some(AutofixCommand::ReplaceWithPreviousEndTime),
-        Violation::NegativeTimeRange => None,
-        Violation::IncorrectDuration => Some(AutofixCommand::RecalculateDuration),
+/// Get default auto-fix command for the rule violation.
+fn get_default_autofix(rule: &Rule) -> Option<impl Command> {
+    match rule {
+        Rule::ParseError => None,
+        Rule::MismatchedDates => Some(AutofixCommand::UseDateInFilename),
+        Rule::MismatchedStartTime => None,
+        Rule::MismatchedEndTime => None,
+        Rule::InvalidStartTime => None,
+        Rule::InvalidEndTime => None,
+        Rule::MissingDate => None,
+        Rule::MissingStartTime => None,
+        Rule::MissingEndTime => None,
+        Rule::TimeJumped => Some(AutofixCommand::ReplaceWithPreviousEndTime),
+        Rule::NegativeTimeRange => None,
+        Rule::IncorrectDuration => Some(AutofixCommand::RecalculateDuration),
     }
 }

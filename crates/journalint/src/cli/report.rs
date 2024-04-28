@@ -7,13 +7,13 @@ use journalint_parse::diagnostic::Diagnostic;
 
 use crate::linemap::LineMap;
 
-// Format of violation report.
+// Format of rule violation report.
 #[derive(Clone, Copy, Debug, ValueEnum)]
 pub enum ReportFormat {
-    // Report violations using annotated source text.
+    // Report rule violations using annotated source text.
     Fancy,
 
-    // Report violations in one-line message format.
+    // Report rule violations in one-line message format.
     Oneline,
 }
 
@@ -53,7 +53,7 @@ pub fn report<W: Write>(
                 Color::White.paint(filename).bold(),
                 start.line + 1,
                 start.character + 1,
-                Color::Red.paint(diagnostic.violation()),
+                Color::Red.paint(diagnostic.rule()),
                 diagnostic.message()
             )?;
         }

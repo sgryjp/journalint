@@ -3,7 +3,7 @@ use core::ops::Range;
 use chumsky::error::Simple;
 use url::Url;
 
-use crate::violation::Violation;
+use crate::rule::Rule;
 
 /// Internal diagnostic data structure.
 ///
@@ -12,7 +12,7 @@ use crate::violation::Violation;
 #[derive(Clone, Debug)]
 pub struct Diagnostic {
     span: Range<usize>,
-    violation: Violation,
+    rule: Rule,
     message: String,
     related_informations: Option<Vec<DiagnosticRelatedInformation>>,
 }
@@ -20,13 +20,13 @@ pub struct Diagnostic {
 impl Diagnostic {
     pub fn new_warning(
         span: Range<usize>,
-        violation: Violation,
+        rule: Rule,
         message: String,
         related_informations: Option<Vec<DiagnosticRelatedInformation>>,
     ) -> Self {
         Self {
             span,
-            violation,
+            rule,
             message,
             related_informations,
         }
@@ -36,8 +36,8 @@ impl Diagnostic {
         &self.span
     }
 
-    pub fn violation(&self) -> &Violation {
-        &self.violation
+    pub fn rule(&self) -> &Rule {
+        &self.rule
     }
 
     pub fn message(&self) -> &str {
@@ -53,7 +53,7 @@ impl From<&Simple<char>> for Diagnostic {
     fn from(value: &Simple<char>) -> Self {
         Diagnostic::new_warning(
             value.span(),
-            Violation::ParseError,
+            Rule::ParseError,
             format!("Parse error: {value}"),
             None,
         )

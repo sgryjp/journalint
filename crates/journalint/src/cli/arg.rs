@@ -13,7 +13,7 @@ pub(crate) struct Arguments {
     #[arg(short, long)]
     pub fix: bool,
 
-    /// Report violations in the specified format.
+    /// Report rule violations in the specified format.
     #[clap(value_enum)]
     #[arg(long, value_name = "FORMAT", default_value_t = ReportFormat::Fancy)]
     pub report: ReportFormat,

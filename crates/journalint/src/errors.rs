@@ -1,5 +1,5 @@
 use crossbeam_channel::SendError;
-use journalint_parse::errors::UnknownViolationCode;
+use journalint_parse::errors::UnknownRule;
 use lsp_server::Message;
 use lsp_server::ProtocolError;
 use lsp_types::Url;
@@ -48,9 +48,9 @@ pub enum JournalintError {
     UnexpectedError(String),
 
     #[error("{}", source)]
-    UnknownViolationCode {
+    UnknownRule {
         #[from]
-        source: UnknownViolationCode,
+        source: UnknownRule,
     },
 
     #[error("Unknown command: {0}")]

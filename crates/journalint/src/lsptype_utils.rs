@@ -12,7 +12,7 @@ pub(crate) trait ToLspDisgnostic {
 
 impl ToLspDisgnostic for Diagnostic {
     fn to_lsptype(&self, line_map: &Arc<LineMap>) -> lsp_types::Diagnostic {
-        let violation = self.violation().as_str().to_string();
+        let rule = self.rule().as_str().to_string();
         let range = lsp_types::Range::new(
             line_map.position_from_offset(self.span().start),
             line_map.position_from_offset(self.span().end),
@@ -20,7 +20,7 @@ impl ToLspDisgnostic for Diagnostic {
         lsp_types::Diagnostic::new(
             range,
             Some(lsp_types::DiagnosticSeverity::WARNING),
-            Some(lsp_types::NumberOrString::String(violation)),
+            Some(lsp_types::NumberOrString::String(rule)),
             Some(SOURCE_NAME.to_string()),
             self.message().to_owned(),
             self.related_informations()

@@ -20,7 +20,7 @@ impl InvalidTimeValueError {
 }
 
 #[derive(thiserror::Error, Debug)]
-#[error("Unknown violation code `{}`", .code)]
-pub struct UnknownViolationCode {
-    pub(crate) code: String,
+#[error("Unknown violation rule `{}`", .rule)]
+pub struct UnknownRule {
+    pub(crate) rule: String,
 }
