@@ -5,7 +5,7 @@ use lsp_types::Url;
 use strum::EnumIter;
 
 use journalint_parse::ast::Expr;
-use journalint_parse::violation::Violation;
+use journalint_parse::rule::Rule;
 
 use crate::commands::Command;
 use crate::errors::JournalintError;
@@ -42,11 +42,12 @@ impl Command for AutofixCommand {
         }
     }
 
-    fn can_fix(&self, violation: &Violation) -> bool {
+    /// Return whether the a violation of the given rule is fixable by this command or not.
+    fn can_fix(&self, rule: &Rule) -> bool {
         match self {
-            AutofixCommand::RecalculateDuration => *violation == Violation::IncorrectDuration,
-            AutofixCommand::ReplaceWithPreviousEndTime => *violation == Violation::TimeJumped,
-            AutofixCommand::UseDateInFilename => *violation == Violation::MismatchedDates,
+            AutofixCommand::RecalculateDuration => *rule == Rule::IncorrectDuration,
+            AutofixCommand::ReplaceWithPreviousEndTime => *rule == Rule::TimeJumped,
+            AutofixCommand::UseDateInFilename => *rule == Rule::MismatchedDates,
         }
     }
 

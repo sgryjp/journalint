@@ -32,7 +32,7 @@ use strum::IntoEnumIterator;
 use journalint_parse::ast::Expr;
 use journalint_parse::diagnostic::Diagnostic;
 use journalint_parse::lint::parse_and_lint;
-use journalint_parse::violation::Violation;
+use journalint_parse::rule::Rule;
 
 use crate::commands::AutofixCommand;
 use crate::commands::Command as _;
@@ -289,19 +289,18 @@ fn on_text_document_code_action(
     let diagnostics = &params.context.diagnostics;
     let mut all_commands: Vec<Command> = Vec::new();
     for d in diagnostics {
-        // Simply ignore diagnostics from tools other than journalint
-        // (Every code of journalint is a string which must be parsable into Code)
+        // Determine which rule is behind the diagnosed error or warning.
         let code = &d.code;
         let Some(NumberOrString::String(code)) = code else {
-            continue;
+            continue; // journalint's rule name is string
         };
-        let Ok(violation) = str::parse::<Violation>(code) else {
-            continue;
+        let Ok(rule) = str::parse::<Rule>(code) else {
+            continue; // not a known journalint's rule name
         };
 
-        // List up all available code actions (auto-fix only as of now) for the violation
+        // List up all available code actions for the rule violation.
         let mut commands: Vec<Command> = AutofixCommand::iter()
-            .filter(|cmd| cmd.can_fix(&violation))
+            .filter(|cmd| cmd.can_fix(&rule))
             .map(|cmd| {
                 lsp_types::Command::new(
                     cmd.title().to_string(),

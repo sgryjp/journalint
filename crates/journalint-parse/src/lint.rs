@@ -11,7 +11,7 @@ use url::Url;
 
 use crate::ast::{walk, Expr, LooseTime, Visitor};
 use crate::diagnostic::{Diagnostic, DiagnosticRelatedInformation};
-use crate::violation::Violation;
+use crate::rule::Rule;
 
 pub struct Linter<'a> {
     source: &'a Url,
@@ -59,7 +59,7 @@ impl<'a> Linter<'a> {
                     let expectation = date_in_filename.format("%Y-%m-%d").to_string();
                     self.diagnostics.push(Diagnostic::new_warning(
                         span.clone(),
-                        Violation::MismatchedDates,
+                        Rule::MismatchedDates,
                         format!(
                             "Date is different from the one in the filename: expected to be {}",
                             expectation.as_str()
@@ -82,7 +82,7 @@ impl<'a> Linter<'a> {
         if fm_start_time != value {
             self.diagnostics.push(Diagnostic::new_warning(
                 fm_start_span.clone(),
-                Violation::MismatchedStartTime,
+                Rule::MismatchedStartTime,
                 format!(
                     "Start time is different from the one of the first entry: expected to be {}.",
                     value.as_str()
@@ -96,7 +96,7 @@ impl<'a> Linter<'a> {
         if self.fm_date.is_none() {
             self.diagnostics.push(Diagnostic::new_warning(
                 span.clone(),
-                Violation::MissingDate,
+                Rule::MissingDate,
                 "Field 'date' is missing".to_string(),
                 None,
             ));
@@ -107,7 +107,7 @@ impl<'a> Linter<'a> {
         if self.fm_start.is_none() {
             self.diagnostics.push(Diagnostic::new_warning(
                 span.clone(),
-                Violation::MissingStartTime,
+                Rule::MissingStartTime,
                 "Field 'start' is missing".to_string(),
                 None,
             ));
@@ -123,7 +123,7 @@ impl<'a> Linter<'a> {
             Err(e) => {
                 self.diagnostics.push(Diagnostic::new_warning(
                     start_span.clone(),
-                    Violation::InvalidStartTime,
+                    Rule::InvalidStartTime,
                     format!("Invalid start time: {e}"),
                     None,
                 ));
@@ -136,7 +136,7 @@ impl<'a> Linter<'a> {
         if self.fm_end.is_none() {
             self.diagnostics.push(Diagnostic::new_warning(
                 span.clone(),
-                Violation::MissingEndTime,
+                Rule::MissingEndTime,
                 "Field 'end' is missing".to_string(),
                 None,
             ));
@@ -152,7 +152,7 @@ impl<'a> Linter<'a> {
             Err(e) => {
                 self.diagnostics.push(Diagnostic::new_warning(
                     end_span.clone(),
-                    Violation::InvalidEndTime,
+                    Rule::InvalidEndTime,
                     format!("Invalid end time: {e}"),
                     None,
                 ));
@@ -168,7 +168,7 @@ impl<'a> Linter<'a> {
                 let expectation = prev_end_dt.format("%H:%M").to_string();
                 self.diagnostics.push(Diagnostic::new_warning(
                     span.clone(),
-                    Violation::TimeJumped,
+                    Rule::TimeJumped,
                     format!("The start time does not match the previous entry's end time, which is {expectation}"),
                     Some(vec![DiagnosticRelatedInformation::new(
                         self.source.clone(),
@@ -197,7 +197,7 @@ impl<'a> Linter<'a> {
                 // Start time is not a valid value
                 self.diagnostics.push(Diagnostic::new_warning(
                     span.clone(),
-                    Violation::InvalidStartTime,
+                    Rule::InvalidStartTime,
                     format!("Invalid start time: {e}"),
                     None,
                 ));
@@ -214,7 +214,7 @@ impl<'a> Linter<'a> {
             Err(e) => {
                 self.diagnostics.push(Diagnostic::new_warning(
                     span.clone(),
-                    Violation::InvalidEndTime,
+                    Rule::InvalidEndTime,
                     format!("Invalid end time: {e}"),
                     None,
                 ));
@@ -234,7 +234,7 @@ impl<'a> Linter<'a> {
         let Ok(_) = (*end - *start).to_std() else {
             self.diagnostics.push(Diagnostic::new_warning(
                 end_span.clone(),
-                Violation::NegativeTimeRange,
+                Rule::NegativeTimeRange,
                 format!(
                     "End time is not ahead of start time ({})",
                     start.format("%H:%M"),
@@ -261,7 +261,7 @@ impl<'a> Linter<'a> {
             let expectation = format!("{expectation:1.2}");
             self.diagnostics.push(Diagnostic::new_warning(
                 span.clone(),
-                Violation::IncorrectDuration,
+                Rule::IncorrectDuration,
                 format!("Incorrect duration: expected {expectation}"),
                 None,
             ));
@@ -341,10 +341,10 @@ impl Visitor<()> for Linter<'_> {
         ) = (&self.fm_end, &self.fm_end_value, &self.prev_entry_end)
         {
             if fm_end_value != last_entry_end_value {
-                // Emit violation to front-matter
+                // Add a rule violation to front-matter
                 self.diagnostics.push(Diagnostic::new_warning(
                     fm_end_span.clone(),
-                    Violation::MismatchedEndTime,
+                    Rule::MismatchedEndTime,
                     format!(
                         "End time in the front-matter is different from the one of the last \
                          entry: expected to be {}.",

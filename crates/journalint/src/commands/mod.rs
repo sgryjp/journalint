@@ -9,7 +9,7 @@ use std::ops::Range;
 use lsp_types::Url;
 
 use journalint_parse::ast::Expr;
-use journalint_parse::violation::Violation;
+use journalint_parse::rule::Rule;
 
 pub use crate::commands::autofix::AutofixCommand;
 use crate::errors::JournalintError;
@@ -27,7 +27,7 @@ pub trait Command {
     fn id(&self) -> &str;
 
     /// Check whether the specified violation can be fixed by this command or not.
-    fn can_fix(&self, violation: &Violation) -> bool;
+    fn can_fix(&self, violation: &Rule) -> bool;
 
     /// Executes this command.
     ///
