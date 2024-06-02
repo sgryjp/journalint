@@ -22,6 +22,10 @@ pub(crate) struct Arguments {
     #[arg(short, long, value_name = "FORMAT")]
     pub export: Option<ExportFormat>,
 
+    /// Whether to extract activity prefix as codes on exporting.
+    #[arg(long, default_value_t = false)]
+    pub extract_activity_prefixes: bool,
+
     /// Start as a language server.
     #[arg(long)]
     pub stdio: bool,
