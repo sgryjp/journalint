@@ -1,4 +1,0 @@
-Add `--extract-activity-prefixes` option to make journalint extract prefixes in activity field
-
-The prefix in an activity field is a token followed by a colon and a space such as `foo: `.
-In this case the prefix `foo` will be concatenated the list of codes.

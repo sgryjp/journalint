@@ -12,6 +12,17 @@ is maintained using [towncrier](https://towncrier.readthedocs.io/).
 
 <!-- towncrier release notes start -->
 
+## [24.6.1](https://github.com/sgryjp/journalint/tree/24.6.1) - 2024-06-02
+
+### Added
+
+- Add `--extract-activity-prefixes` option to make journalint extract prefixes
+  in activity field
+
+  The prefix in an activity field is a token followed by a colon and a space
+  such as `foo: `. In this case the prefix `foo` will be concatenated the list
+  of codes. ([#18](https://github.com/sgryjp/journalint/issues/18))
+
 ## [24.4.1](https://github.com/sgryjp/journalint/tree/24.4.1) - 2024-04-28
 
 ### Added
