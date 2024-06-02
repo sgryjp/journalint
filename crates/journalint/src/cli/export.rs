@@ -47,6 +47,7 @@ struct Exporter<'a> {
     // Initialization parameters
     fmt: ExportFormat,
     writer: &'a mut dyn Write,
+    split_activity_prefixes: bool,
 
     // Object state as a visitor
     date: Option<NaiveDate>,
@@ -60,12 +61,14 @@ struct Exporter<'a> {
 impl<'a> Exporter<'a> {
     fn run(
         fmt: ExportFormat,
+        split_activity_prefixes: bool,
         journal: ast::Expr,
         writer: &'a mut impl Write,
     ) -> Result<(), JournalintError> {
         let mut this = Self {
             fmt,
             writer,
+            split_activity_prefixes,
             date: None,
             curr_start_time: None,
             curr_end_time: None,
@@ -152,13 +155,31 @@ impl<'a> ast::Visitor<JournalintError> for Exporter<'a> {
             return Ok(());
         };
 
+        // Concatenate prefixes of activity into codes
+        let mut codes = self.curr_codes.clone();
+        let activity_body = if self.split_activity_prefixes {
+            if let Some((body, prefixes)) = activity.split(": ").collect::<Vec<&str>>().split_last()
+            {
+                // One or more prefixes found. Extract them.
+                prefixes.iter().map(|&s| s.to_string()).for_each(|prefix| {
+                    codes.push(prefix);
+                });
+                body.to_string()
+            } else {
+                // No prefixes found. Use activity field value as activity.
+                activity.clone()
+            }
+        } else {
+            activity.clone()
+        };
+
         // Create a struct for serialization purpose
         let entry = JournalEntry {
             start_time,
             end_time,
             duration: duration.as_secs(),
-            codes: self.curr_codes.clone(),
-            activity: activity.clone(),
+            codes: codes,
+            activity: activity_body,
         }
         .to_flat_map();
 
@@ -179,8 +200,9 @@ impl<'a> ast::Visitor<JournalintError> for Exporter<'a> {
 
 pub fn export(
     fmt: ExportFormat,
+    split_activity_prefixes: bool,
     journal: ast::Expr,
     writer: &mut impl Write,
 ) -> Result<(), JournalintError> {
-    Exporter::run(fmt, journal, writer)
+    Exporter::run(fmt, split_activity_prefixes, journal, writer)
 }

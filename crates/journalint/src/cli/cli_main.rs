@@ -42,7 +42,13 @@ pub(crate) fn main(args: Arguments) -> Result<(), CliError> {
     if args.fix {
         main_fix(&filename, &url, &content)?;
     } else if let Some(export_format) = args.export {
-        main_export(&filename, &url, &content, export_format)?;
+        main_export(
+            &filename,
+            &url,
+            &content,
+            export_format,
+            args.extract_activity_prefixes,
+        )?;
     } else {
         main_report(&filename, &url, &content, args.report)?;
     }
@@ -110,6 +116,7 @@ fn main_export(
     url: &Url,
     content: &str,
     export_format: ExportFormat,
+    extract_activity_prefixes: bool,
 ) -> Result<(), CliError> {
     // Parse the content and lint the AST unless parsing itself failed
     let (journal, diagnostics) = parse_and_lint(url, content);
@@ -134,7 +141,13 @@ fn main_export(
     // Export parsed data to stdout
     if let Some(journal) = journal {
         let mut writer = std::io::stdout();
-        export(export_format, journal, &mut writer).map_err(|e| {
+        export(
+            export_format,
+            extract_activity_prefixes,
+            journal,
+            &mut writer,
+        )
+        .map_err(|e| {
             CliError::new(E_UNEXPECTED).with_message(format!("Failed to export data: {:?}", e))
         })?;
     }
