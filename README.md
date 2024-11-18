@@ -2,7 +2,7 @@
 
 Linter for my personal journal files.
 
-## Prerequesties
+## Prerequisites
 
 Tools below are required for development tasks:
 
