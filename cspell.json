@@ -1,0 +1,22 @@
+{
+  "version": "0.2",
+  "ignorePaths": ["node_modules/", "target/"],
+  "dictionaryDefinitions": [
+    {
+      "name": "project-words",
+      "path": "./.cspell/project-words.txt",
+      "addWords": true
+    },
+    {
+      "name": "python-words",
+      "path": "./.cspell/python-words.txt",
+      "addWords": true
+    },
+    {
+      "name": "rust-words",
+      "path": "./.cspell/rust-words.txt",
+      "addWords": true
+    }
+  ],
+  "dictionaries": ["project-words", "python-words", "rust-words"]
+}

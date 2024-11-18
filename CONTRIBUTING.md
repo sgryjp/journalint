@@ -17,7 +17,7 @@ entry of `CHANGELOG.md`.
 - The content of a news fragment file:
   - Must start with a concise sentence describing the change.
   - May be written in markdown format.
-  - May have detailed mult-line description which is separated by an empty line
+  - May have detailed multi-line description which is separated by an empty line
     from the first line.
 
 ## Release Process

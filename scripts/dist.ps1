@@ -1,3 +1,4 @@
+# spell-checker:word zcvf
 $orig_cwd = (Get-Location)
 $workspace_dir = (Resolve-Path $PSScriptRoot\..)
 if ($env:rust_target -eq $null) {

@@ -1,4 +1,5 @@
 #!/bin/sh
+# spell-checker:word zcvf
 orig_cwd=$(pwd)
 [ -z $journalint_configured ] && . $(cd $(dirname "$0") && pwd)/configure.sh
 trap 'cd $orig_cwd' EXIT
