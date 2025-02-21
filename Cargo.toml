@@ -14,7 +14,7 @@ clap = { version = "4.1.8", features = ["derive"] }
 crossbeam-channel = "0.5.8"
 env_logger = "0.10.0"
 exitcode = "1.1.2"
-insta = { version = "1.31.0", features = ["yaml"] }
+insta = { version = "1.42.1", features = ["yaml"] }
 log = "0.4.20"
 lsp-server = "0.7.0"
 lsp-types = "0.94.0"
