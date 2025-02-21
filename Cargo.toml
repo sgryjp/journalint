@@ -15,7 +15,7 @@ crossbeam-channel = "0.5.8"
 env_logger = "0.10.0"
 exitcode = "1.1.2"
 insta = { version = "1.42.1", features = ["yaml"] }
-log = "0.4.20"
+log = "0.4.26"
 lsp-server = "0.7.0"
 lsp-types = "0.94.0"
 rstest = "0.18.1"
