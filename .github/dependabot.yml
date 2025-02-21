@@ -27,3 +27,4 @@ updates:
     groups:
       NPM dependencies:
         update-types: [patch, minor]
+        exclude-patterns: ["@types/vscode"]
