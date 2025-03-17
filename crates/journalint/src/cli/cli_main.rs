@@ -14,7 +14,7 @@ use crate::cli::export::{export, ExportFormat};
 use crate::cli::report::{report, ReportFormat};
 use crate::commands::{AutofixCommand, Command};
 use crate::errors::{CliError, JournalintError};
-use crate::linemap::LineMap;
+use crate::line_mapper::LineMapper;
 
 const E_UNEXPECTED: exitcode::ExitCode = 1;
 
@@ -95,12 +95,12 @@ fn main_fix(filename: &str, url: &Url, content: &str) -> Result<(), CliError> {
 
     // Write remaining diagnostic report to stdout
     log::debug!("!!! {:?}", remaining_diagnostics);
-    let line_map = Arc::new(LineMap::new(content)); //TODO: Stop using Arc
+    let line_mapper = Arc::new(LineMapper::new(content)); //TODO: Stop using Arc
     for diagnostic in remaining_diagnostics {
         report(
-            ReportFormat::Oneline,
+            ReportFormat::OneLine,
             content,
-            &line_map,
+            &line_mapper,
             Some(filename),
             &diagnostic,
             io::stdout(),
@@ -122,12 +122,12 @@ fn main_export(
     let (journal, diagnostics) = parse_and_lint(url, content);
 
     // Write simple diagnostic report to *stderr*
-    let line_map = Arc::new(LineMap::new(content)); //TODO: Stop using Arc
+    let line_mapper = Arc::new(LineMapper::new(content)); //TODO: Stop using Arc
     for diagnostic in diagnostics {
         report(
-            ReportFormat::Oneline,
+            ReportFormat::OneLine,
             content,
-            &line_map,
+            &line_mapper,
             Some(filename),
             &diagnostic,
             io::stderr(),
@@ -165,12 +165,12 @@ fn main_report(
     let (_journal, diagnostics) = parse_and_lint(url, content);
 
     // Write diagnostic report to stdout
-    let line_map = Arc::new(LineMap::new(content)); //TODO: Stop using Arc
+    let line_mapper = Arc::new(LineMapper::new(content)); //TODO: Stop using Arc
     for diagnostic in diagnostics {
         report(
             report_format,
             content,
-            &line_map,
+            &line_mapper,
             Some(filename),
             &diagnostic,
             io::stdout(),

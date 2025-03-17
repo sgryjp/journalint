@@ -5,7 +5,7 @@ use ariadne::{Color, Label, Report, ReportKind, Source};
 use clap::ValueEnum;
 use journalint_parse::diagnostic::Diagnostic;
 
-use crate::linemap::LineMap;
+use crate::line_mapper::LineMapper;
 
 // Format of rule violation report.
 #[derive(Clone, Copy, Debug, ValueEnum)]
@@ -14,7 +14,7 @@ pub enum ReportFormat {
     Fancy,
 
     // Report rule violations in one-line message format.
-    Oneline,
+    OneLine,
 }
 
 /// Write a human readable report of a diagnostic
@@ -22,7 +22,7 @@ pub enum ReportFormat {
 pub fn report<W: Write>(
     format: ReportFormat,
     content: &str,
-    line_map: &Arc<LineMap>,
+    line_mapper: &Arc<LineMapper>,
     filename: Option<&str>,
     diagnostic: &Diagnostic,
     mut w: W,
@@ -44,8 +44,8 @@ pub fn report<W: Write>(
                 .finish()
                 .write((filename, Source::from(content)), w)?
         }
-        ReportFormat::Oneline => {
-            let start = line_map.position_from_offset(diagnostic.span().start);
+        ReportFormat::OneLine => {
+            let start = line_mapper.position_from_offset(diagnostic.span().start);
             let colon = Color::Cyan.paint(":");
             writeln!(
                 w,

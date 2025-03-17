@@ -4,8 +4,9 @@ exitcode
 insta
 IOERR
 lsptype_utils
-rustc
 rstest
+rustc
 serde
 thiserror
+timelike
 to_lsptype

@@ -3,12 +3,12 @@ use core::cmp::min;
 use lsp_types::Position;
 
 #[derive(Debug, Default)]
-pub struct LineMap {
+pub struct LineMapper {
     line_offsets: Vec<usize>,
     content_length: usize,
 }
 
-impl LineMap {
+impl LineMapper {
     pub fn new(content: &str) -> Self {
         let mut line_offsets = vec![0];
 
@@ -102,13 +102,13 @@ mod tests {
 
     #[test]
     fn new() {
-        let lm = LineMap::new("a\n亜\r\nc\rd");
+        let lm = LineMapper::new("a\n亜\r\nc\rd");
         assert_eq!(lm.line_offsets, vec![0, 2, 5, 7]);
     }
 
     #[test]
     fn _position_from_offset() {
-        let lm = LineMap::new("a\n亜\r\nc");
+        let lm = LineMapper::new("a\n亜\r\nc");
         assert_eq!(lm._position_from_offset(0), (0, 0)); // a
         assert_eq!(lm._position_from_offset(1), (0, 1)); // \n
         assert_eq!(lm._position_from_offset(2), (1, 0)); // '亜'
@@ -121,7 +121,7 @@ mod tests {
 
     #[test]
     fn _offset_from_position() {
-        let lm = LineMap::new("a\n亜\r\nc"); // '亜' in UTF8: e4 ba 9c
+        let lm = LineMapper::new("a\n亜\r\nc"); // '亜' in UTF8: e4 ba 9c
         assert_eq!(lm._offset_from_position(0, 0), 0); // a
         assert_eq!(lm._offset_from_position(0, 1), 1); // \n
         assert_eq!(lm._offset_from_position(1, 0), 2); // '亜'

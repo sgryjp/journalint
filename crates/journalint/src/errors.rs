@@ -62,7 +62,7 @@ pub enum JournalintError {
     #[error("Unsupported URL: {url}")]
     UnsupportedUrl { url: Url },
 
-    #[error("Doucument not found: {url}")]
+    #[error("Document not found: {url}")]
     DocumentNotFound { url: Url },
 
     #[error("Parse error: {}", .source)]

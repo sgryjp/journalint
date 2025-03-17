@@ -1,10 +1,10 @@
 mod cli;
 mod commands;
 mod errors;
-mod linemap;
+mod line_mapper;
 mod lsptype_utils;
 mod service;
-mod textedit;
+mod text_edit;
 
 use std::env;
 
@@ -51,8 +51,8 @@ mod snapshot_tests {
     use journalint_parse::lint::parse_and_lint;
     use lsp_types::Url;
 
-    use crate::linemap::LineMap;
-    use crate::lsptype_utils::ToLspDisgnostic as _;
+    use crate::line_mapper::LineMapper;
+    use crate::lsptype_utils::ToLspDiagnostic as _;
 
     #[test]
     fn test() {
@@ -69,11 +69,11 @@ mod snapshot_tests {
                 Err(err) => panic!("failed to read a file: {{path: {:?}, err:{}}}", path, err),
             };
 
-            let line_map = Arc::new(LineMap::new(&content));
+            let line_mapper = Arc::new(LineMapper::new(&content));
             let (_journal, diagnostics) = parse_and_lint(&url, &content);
             let diagnostics = diagnostics
                 .iter()
-                .map(|d| d.clone().to_lsptype(&line_map))
+                .map(|d| d.clone().to_lsptype(&line_mapper))
                 .collect::<Vec<lsp_types::Diagnostic>>();
             insta::assert_yaml_snapshot!(path.file_stem().unwrap().to_str().unwrap(), diagnostics);
         }

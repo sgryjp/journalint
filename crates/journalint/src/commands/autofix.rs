@@ -9,7 +9,7 @@ use journalint_parse::rule::Rule;
 
 use crate::commands::Command;
 use crate::errors::JournalintError;
-use crate::textedit::TextEdit;
+use crate::text_edit::TextEdit;
 
 use super::{recalculate_duration, replace_with_previous_end_time, use_date_in_filename_visitor};
 

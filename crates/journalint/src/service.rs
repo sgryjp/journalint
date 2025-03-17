@@ -37,8 +37,8 @@ use journalint_parse::rule::Rule;
 use crate::commands::AutofixCommand;
 use crate::commands::Command as _;
 use crate::errors::JournalintError;
-use crate::linemap::LineMap;
-use crate::lsptype_utils::ToLspDisgnostic;
+use crate::line_mapper::LineMapper;
+use crate::lsptype_utils::ToLspDiagnostic;
 
 const E_UNKNOWN_COMMAND: i32 = 1;
 const E_INVALID_ARGUMENTS: i32 = 2;
@@ -76,20 +76,23 @@ impl ServerState {
     }
 }
 
-/// State data associated with a doocument.
+/// State data associated with a document.
 #[derive(Default)]
 pub struct DocumentState {
-    line_map: Arc<LineMap>,
+    line_mapper: Arc<LineMapper>,
     ast_root: Option<Expr>,
 }
 
 impl DocumentState {
-    pub fn new(line_map: Arc<LineMap>, ast_root: Option<Expr>) -> Self {
-        Self { line_map, ast_root }
+    pub fn new(line_mapper: Arc<LineMapper>, ast_root: Option<Expr>) -> Self {
+        Self {
+            line_mapper,
+            ast_root,
+        }
     }
 
-    pub fn line_map(&self) -> Arc<LineMap> {
-        self.line_map.clone()
+    pub fn line_mapper(&self) -> Arc<LineMapper> {
+        self.line_mapper.clone()
     }
 
     pub fn ast_root(&self) -> Option<&Expr> {
@@ -218,14 +221,14 @@ fn on_text_document_did_open(
     let version = None;
 
     // Parse and lint
-    let line_map = Arc::new(LineMap::new(content));
+    let line_mapper = Arc::new(LineMapper::new(content));
     let (journal, diagnostics) = parse_and_lint(&uri, content);
 
     // Publish diagnostics
-    publish_diagnostics(conn, &uri, &line_map, &diagnostics, version)?;
+    publish_diagnostics(conn, &uri, &line_mapper, &diagnostics, version)?;
 
     // Update (replace) state data for the document
-    state.set_document_state(&uri, DocumentState::new(line_map, journal));
+    state.set_document_state(&uri, DocumentState::new(line_mapper, journal));
 
     Ok(())
 }
@@ -245,14 +248,14 @@ fn on_text_document_did_change(
     let version = Some(params.text_document.version);
 
     // Parse and lint
-    let line_map = Arc::new(LineMap::new(content));
+    let line_mapper = Arc::new(LineMapper::new(content));
     let (journal, diagnostics) = parse_and_lint(&uri, content);
 
     // Publish diagnostics
-    publish_diagnostics(conn, &uri, &line_map, &diagnostics, version)?;
+    publish_diagnostics(conn, &uri, &line_mapper, &diagnostics, version)?;
 
     // Update (replace) state data for the document
-    state.set_document_state(&uri, DocumentState::new(line_map, journal));
+    state.set_document_state(&uri, DocumentState::new(line_mapper, journal));
     Ok(())
 }
 
@@ -264,7 +267,7 @@ fn on_text_document_did_close(
     let params: DidCloseTextDocumentParams = serde_json::from_value(msg.params)?;
     let url = params.text_document.uri;
 
-    // Notify client to remove the diaggnostics for the document
+    // Notify client to remove the diagnostics for the document
     let params = PublishDiagnosticsParams::new(url.clone(), vec![], None);
     let params = serde_json::to_value(params)?;
     conn.sender
@@ -331,42 +334,42 @@ fn on_workspace_execute_command(
     // Dispatch the requested command
     let Some(command) = AutofixCommand::iter().find(|cmd| cmd.id() == params.command.as_str())
     else {
-        let errmsg = format!("Unknown command: {}", params.command.as_str());
+        let err = format!("Unknown command: {}", params.command.as_str());
         conn.sender.send(Message::Response(Response::new_err(
             msg.id.clone(),
             E_UNKNOWN_COMMAND,
-            errmsg.clone(),
+            err.clone(),
         )))?;
-        return Err(JournalintError::UnknownCommand(errmsg));
+        return Err(JournalintError::UnknownCommand(err));
     };
 
     // Extract command parameters from the message
     if params.arguments.len() != 2 {
-        let errmsg = format!(
+        let err = format!(
             "Number of command parameters is expected to be 2 but was {}",
             params.arguments.len()
         );
         conn.sender.send(Message::Response(Response::new_err(
             msg.id.clone(),
             E_INVALID_ARGUMENTS,
-            errmsg.clone(),
+            err.clone(),
         )))?;
-        return Err(JournalintError::UnexpectedArguments(errmsg));
+        return Err(JournalintError::UnexpectedArguments(err));
     }
     let url: Url = serde_json::from_value(params.arguments[0].clone())?;
     let selected_range: lsp_types::Range = serde_json::from_value(params.arguments[1].clone())?;
 
     // Execute the command
     let doc_state = state.document_state(&url)?;
-    let line_map = doc_state.line_map();
+    let line_mapper = doc_state.line_mapper();
     let ast_root = doc_state.ast_root().ok_or_else(|| {
         JournalintError::UnexpectedError(format!("No AST available for the document: {url}"))
     })?;
-    let selected_span = line_map.lsp_range_to_span(&selected_range);
+    let selected_span = line_mapper.lsp_range_to_span(&selected_range);
     let Some(edit) = command.execute(&url, ast_root, &selected_span)? else {
         return Ok(()); // Do nothing if command does not change the document
     };
-    let text_edit = edit.to_lsp_type(&line_map);
+    let text_edit = edit.to_lsp_type(&line_mapper);
     let workspace_edit = WorkspaceEdit::new(HashMap::from([(url.clone(), vec![text_edit])]));
 
     // Request the changes to be executed to the client
@@ -388,7 +391,7 @@ fn on_workspace_execute_command(
 fn publish_diagnostics(
     conn: &Connection,
     url: &Url,
-    line_map: &Arc<LineMap>,
+    line_mapper: &Arc<LineMapper>,
     diagnostics: &[Diagnostic],
     version: Option<i32>,
 ) -> Result<(), JournalintError> {
@@ -397,7 +400,7 @@ fn publish_diagnostics(
         url.clone(),
         diagnostics
             .iter()
-            .map(|d| d.clone().to_lsptype(line_map))
+            .map(|d| d.clone().to_lsptype(line_mapper))
             .collect::<Vec<lsp_types::Diagnostic>>(),
         version,
     );

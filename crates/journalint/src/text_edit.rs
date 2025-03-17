@@ -1,7 +1,7 @@
 use std::ops::Range;
 use std::sync::Arc;
 
-use crate::linemap::LineMap;
+use crate::line_mapper::LineMapper;
 
 /// Represents a text replacement operation.
 #[derive(Debug)]
@@ -26,8 +26,8 @@ impl TextEdit {
         &self.new_text
     }
 
-    pub(super) fn to_lsp_type(&self, line_map: &Arc<LineMap>) -> lsp_types::TextEdit {
-        let range = line_map.span_to_lsp_range(self.span());
+    pub(super) fn to_lsp_type(&self, line_mapper: &Arc<LineMapper>) -> lsp_types::TextEdit {
+        let range = line_mapper.span_to_lsp_range(self.span());
         let new_text = self.new_text().to_owned();
         lsp_types::TextEdit::new(range, new_text)
     }

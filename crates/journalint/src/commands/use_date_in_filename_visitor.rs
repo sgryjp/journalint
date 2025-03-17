@@ -7,7 +7,7 @@ use lsp_types::Url;
 use journalint_parse::ast::{walk, Expr, Visitor};
 
 use crate::errors::JournalintError;
-use crate::textedit::TextEdit;
+use crate::text_edit::TextEdit;
 
 #[derive(Debug, Default)]
 struct UseDateInFilenameVisitor {

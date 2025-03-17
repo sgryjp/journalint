@@ -14,7 +14,7 @@ pub struct Diagnostic {
     span: Range<usize>,
     rule: Rule,
     message: String,
-    related_informations: Option<Vec<DiagnosticRelatedInformation>>,
+    related_information: Option<Vec<DiagnosticRelatedInformation>>,
 }
 
 impl Diagnostic {
@@ -22,13 +22,13 @@ impl Diagnostic {
         span: Range<usize>,
         rule: Rule,
         message: String,
-        related_informations: Option<Vec<DiagnosticRelatedInformation>>,
+        related_information: Option<Vec<DiagnosticRelatedInformation>>,
     ) -> Self {
         Self {
             span,
             rule,
             message,
-            related_informations,
+            related_information,
         }
     }
 
@@ -44,8 +44,8 @@ impl Diagnostic {
         self.message.as_ref()
     }
 
-    pub fn related_informations(&self) -> Option<&[DiagnosticRelatedInformation]> {
-        self.related_informations.as_deref()
+    pub fn related_information(&self) -> Option<&[DiagnosticRelatedInformation]> {
+        self.related_information.as_deref()
     }
 }
 

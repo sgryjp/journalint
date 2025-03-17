@@ -13,7 +13,7 @@ use journalint_parse::rule::Rule;
 
 pub use crate::commands::autofix::AutofixCommand;
 use crate::errors::JournalintError;
-use crate::textedit::TextEdit;
+use crate::text_edit::TextEdit;
 
 /// Command of journalint.
 ///
