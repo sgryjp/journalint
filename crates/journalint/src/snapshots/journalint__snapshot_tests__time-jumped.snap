@@ -15,7 +15,7 @@ expression: diagnostics
   message: "The start time does not match the previous entry's end time, which is 09:45"
   relatedInformation:
     - location:
-        uri: "file:///C:/Users/sgryjp/src/journalint/crates/journalint/src/snapshots/time-jumped.md"
+        uri: "file:///snapshots/time-jumped.md"
         range:
           start:
             line: 8

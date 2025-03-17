@@ -15,7 +15,7 @@ expression: diagnostics
   message: "End time in the front-matter is different from the one of the last entry: expected to be 10:00."
   relatedInformation:
     - location:
-        uri: "file:///C:/Users/sgryjp/src/journalint/crates/journalint/src/snapshots/mismatched-end-time.md"
+        uri: "file:///snapshots/mismatched-end-time.md"
         range:
           start:
             line: 8
