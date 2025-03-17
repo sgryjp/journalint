@@ -46,6 +46,7 @@ mod snapshot_tests {
 
     use std::ffi::OsStr;
     use std::fs::{self, read_to_string};
+    use std::str::FromStr;
     use std::sync::Arc;
 
     use journalint_parse::lint::parse_and_lint;
@@ -62,15 +63,21 @@ mod snapshot_tests {
             if path.extension() != Some(OsStr::new("md")) {
                 continue;
             }
-            let url = &Url::from_file_path(path)
-                .expect(&format!("failed to compose a URL from path: {:?}", path));
             let content = match read_to_string(path) {
                 Ok(content) => content,
                 Err(err) => panic!("failed to read a file: {{path: {:?}, err:{}}}", path, err),
             };
+            let fake_url = Url::from_str(
+                format!(
+                    "file:///snapshots/{}",
+                    path.file_name().map(|s| s.to_string_lossy()).unwrap()
+                )
+                .as_str(),
+            )
+            .unwrap();
 
             let line_mapper = Arc::new(LineMapper::new(&content));
-            let (_journal, diagnostics) = parse_and_lint(&url, &content);
+            let (_journal, diagnostics) = parse_and_lint(&fake_url, &content);
             let diagnostics = diagnostics
                 .iter()
                 .map(|d| d.clone().to_lsptype(&line_mapper))
