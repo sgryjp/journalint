@@ -10,7 +10,7 @@ version = "24.6.1"
 ariadne = { version = "0.2.0", features = ["auto-color"] }
 chrono = { version = "0.4.40", features = ["serde"] }
 chumsky = "0.9.2"
-clap = { version = "4.5.31", features = ["derive"] }
+clap = { version = "4.5.32", features = ["derive"] }
 crossbeam-channel = "0.5.8"
 env_logger = "0.10.0"
 exitcode = "1.1.2"
