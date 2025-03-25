@@ -15,7 +15,7 @@
     "url": "https://github.com/sgryjp/journalint.git"
   },
   "engines": {
-    "vscode": "^1.85.0"
+    "vscode": "^1.98.0"
   },
   "categories": [
     "Other"
