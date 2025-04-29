@@ -40,9 +40,12 @@ jobs:
           npm install -g yarn
           npm install -g @vscode/vsce
 
-      - name: Test
+      - name: Test native code
+        run: cargo test --target ${{ matrix.job.target }}
+
+      - name: Test VSCode extension
         run: |
-          cargo test --target ${{ matrix.job.target }}
+          (cd tools/journalint-vscode && npm ci)
           (cd tools/journalint-vscode && npm run test)
 
       - name: Build
