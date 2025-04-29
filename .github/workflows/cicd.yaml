@@ -41,7 +41,9 @@ jobs:
           npm install -g @vscode/vsce
 
       - name: Test
-        run: cargo test --target ${{ matrix.job.target }}
+        run: |
+          cargo test --target ${{ matrix.job.target }}
+          (cd tools/journalint-vscode && npm run test)
 
       - name: Build
         run: |

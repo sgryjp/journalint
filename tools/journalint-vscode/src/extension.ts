@@ -21,17 +21,7 @@ export function activate(context: vscode.ExtensionContext) {
   log.info("Activating journalint-vscode...");
 
   // Add PATH to the journalint native binary.
-  let executablePath;
-  if (context.extensionMode === vscode.ExtensionMode.Production) {
-    // `scripts/compile-node.{ps1,sh}` builds and place it into the `bundles` directory.
-    // Note that `__dirname` points to the `out` directory in development and in production.
-    const target = `${process.platform}-${process.arch}`;
-    const projectDir = path.dirname(__dirname);
-    executablePath = path.join(projectDir, "bundles", target);
-  } else {
-    const workspaceDir = path.dirname(path.dirname(path.dirname(__dirname)));
-    executablePath = path.join(workspaceDir, "target", "debug");
-  }
+  let executablePath = getNativeBinaryPath(context.extensionMode === vscode.ExtensionMode.Production);
   log.info(`Prepending [${executablePath}] to PATH.`);
   process.env.PATH = executablePath + path.delimiter + process.env.PATH;
 
@@ -51,11 +41,13 @@ export function activate(context: vscode.ExtensionContext) {
   // Configure LSP client
   const serverOptions: ServerOptions = {
     run: {
-      command: "journalint",
+      // command: "journalint",
+      command: executableFullName,
       transport: TransportKind.stdio, // --stdio will be appended by specifying this.
     },
     debug: {
-      command: "journalint",
+      // command: "journalint",
+      command: executableFullName,
       transport: TransportKind.stdio, // --stdio will be appended by specifying this.
     },
   };
@@ -93,5 +85,18 @@ export function deactivate(): Thenable<void> | undefined {
   } finally {
     log.info(`Deactivated journalint extension.`);
     log.cleanup();
+  }
+}
+
+export function getNativeBinaryPath(inProduction: boolean): string {
+  if (inProduction) {
+    // `scripts/compile-node.{ps1,sh}` builds and place it into the `bundles` directory.
+    // Note that `__dirname` points to the `out` directory in development and in production.
+    const target = `${process.platform}-${process.arch}`;
+    const projectDir = path.dirname(__dirname);
+    return path.join(projectDir, "bundles", target);
+  } else {
+    const workspaceDir = path.dirname(path.dirname(path.dirname(__dirname)));
+    return path.join(workspaceDir, "target", "debug");
   }
 }
