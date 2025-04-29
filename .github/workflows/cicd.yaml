@@ -14,6 +14,8 @@ jobs:
   build:
     name: ${{ matrix.job.target }}
     runs-on: ${{ matrix.job.os }}
+    env:
+      DISPLAY: ":99"
     strategy:
       fail-fast: false
       matrix:
@@ -24,6 +26,13 @@ jobs:
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
+
+      - name: Install and start xvfb (for Linux GUI testing)
+        if: ${{ matrix.job.os == 'ubuntu-latest' }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb
+          Xvfb :99 -screen 0 1024x768x24 &
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -40,8 +49,11 @@ jobs:
           npm install -g yarn
           npm install -g @vscode/vsce
 
-      - name: Test
+      - name: Test native code
         run: cargo test --target ${{ matrix.job.target }}
+
+      - name: Test VSCode extension
+        run: (cd tools/journalint-vscode && npm ci && npm run test)
 
       - name: Build
         run: |
