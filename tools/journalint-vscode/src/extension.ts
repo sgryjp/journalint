@@ -1,5 +1,6 @@
-import fs = require("fs");
-import path = require("path");
+import * as cp from "child_process";
+import * as fs from "node:fs";
+import * as path from "node:path";
 import process = require("process");
 
 import * as vscode from "vscode";
@@ -21,16 +22,15 @@ export function activate(context: vscode.ExtensionContext) {
   log.info("Activating journalint-vscode...");
 
   // Add PATH to the journalint native binary.
-  let executablePath = getNativeBinaryPath(context.extensionMode === vscode.ExtensionMode.Production);
-  log.info(`Prepending [${executablePath}] to PATH.`);
-  process.env.PATH = executablePath + path.delimiter + process.env.PATH;
-
-  // Warn if the bundled native binary was not found.
-  const suffix = process.platform === "win32" ? ".exe" : "";
-  const executableFullName = path.join(executablePath, "journalint" + suffix);
-  if (!fs.existsSync(executableFullName)) {
-    log.warn(`Native binary not found: [${executableFullName}]`);
+  const executablePath = getExecutablePaths(
+    context.extensionMode === vscode.ExtensionMode.Production,
+  );
+  if (!executablePath) {
+    log.warn(`Native binary not found.`);
+    return;
   }
+  log.info(`Found native executable at ${executablePath}.`);
+  process.env.PATH = executablePath + path.delimiter + process.env.PATH;
 
   // Setup environment variables for the language server.
   if (!process.env.RUST_BACKTRACE) {
@@ -41,13 +41,11 @@ export function activate(context: vscode.ExtensionContext) {
   // Configure LSP client
   const serverOptions: ServerOptions = {
     run: {
-      // command: "journalint",
-      command: executableFullName,
+      command: executablePath,
       transport: TransportKind.stdio, // --stdio will be appended by specifying this.
     },
     debug: {
-      // command: "journalint",
-      command: executableFullName,
+      command: executablePath,
       transport: TransportKind.stdio, // --stdio will be appended by specifying this.
     },
   };
@@ -88,15 +86,44 @@ export function deactivate(): Thenable<void> | undefined {
   }
 }
 
-export function getNativeBinaryPath(inProduction: boolean): string {
+function getExecutablePaths(inProduction: boolean): string | undefined {
+  const commandSuffix = process.platform === "win32" ? ".exe" : "";
   if (inProduction) {
     // `scripts/compile-node.{ps1,sh}` builds and place it into the `bundles` directory.
     // Note that `__dirname` points to the `out` directory in development and in production.
     const target = `${process.platform}-${process.arch}`;
     const projectDir = path.dirname(__dirname);
-    return path.join(projectDir, "bundles", target);
+    return path.join(
+      projectDir,
+      "bundles",
+      target,
+      `journalint${commandSuffix}`,
+    );
   } else {
     const workspaceDir = path.dirname(path.dirname(path.dirname(__dirname)));
-    return path.join(workspaceDir, "target", "debug");
+    const executablePath = ["debug", "release"]
+      // For each build configuration, compose a path to the expected executable
+      .map((config) =>
+        path.join(workspaceDir, "target", config, `journalint${commandSuffix}`),
+      )
+      // Get modified time of each executable
+      .map((p) => {
+        let x: [Date, string];
+        try {
+          x = [
+            fs.statSync(p, { bigint: false, throwIfNoEntry: true }).mtime,
+            p,
+          ];
+        } catch {
+          x = [new Date(0), p];
+        }
+        return x;
+      })
+      // Keep only the one with latest modified time
+      .reduce((prev, curr) => (curr[0] > prev[0] ? curr : prev));
+    if (executablePath[0] === new Date(0)) {
+      return undefined;
+    }
+    return executablePath[1];
   }
 }
