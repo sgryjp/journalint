@@ -25,6 +25,14 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v4
 
+      - name: Install and start xvfb (for Linux GUI testing)
+        if: ${{ matrix.job.os == 'ubuntu-latest' }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb
+          Xvfb :99 -screen 0 1024x768x24 &
+          export DISPLAY=:99
+
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
