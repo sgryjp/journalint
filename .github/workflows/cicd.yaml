@@ -52,13 +52,13 @@ jobs:
       - name: Test native code
         run: cargo test --target ${{ matrix.job.target }}
 
-      - name: Test VSCode extension
-        run: (cd tools/journalint-vscode && npm ci && npm run test)
-
-      - name: Build
+      - name: Build native code
         run: |
           scripts/${{ matrix.job.script }}
           ls dist
+
+      - name: Test VSCode extension
+        run: (cd tools/journalint-vscode && npm ci && npm run test)
 
       # Upload the executable file and the VSIX file
       - name: Upload artifact
