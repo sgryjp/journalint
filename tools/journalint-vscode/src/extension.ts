@@ -1,5 +1,6 @@
-import fs = require("fs");
-import path = require("path");
+import * as cp from "child_process";
+import * as fs from "node:fs";
+import * as path from "node:path";
 import process = require("process");
 
 import * as vscode from "vscode";
@@ -21,26 +22,15 @@ export function activate(context: vscode.ExtensionContext) {
   log.info("Activating journalint-vscode...");
 
   // Add PATH to the journalint native binary.
-  let executablePath;
-  if (context.extensionMode === vscode.ExtensionMode.Production) {
-    // `scripts/compile-node.{ps1,sh}` builds and place it into the `bundles` directory.
-    // Note that `__dirname` points to the `out` directory in development and in production.
-    const target = `${process.platform}-${process.arch}`;
-    const projectDir = path.dirname(__dirname);
-    executablePath = path.join(projectDir, "bundles", target);
-  } else {
-    const workspaceDir = path.dirname(path.dirname(path.dirname(__dirname)));
-    executablePath = path.join(workspaceDir, "target", "debug");
+  const executablePath = getExecutablePaths(
+    context.extensionMode === vscode.ExtensionMode.Production,
+  );
+  if (!executablePath) {
+    log.warn(`Native binary not found.`);
+    return;
   }
-  log.info(`Prepending [${executablePath}] to PATH.`);
+  log.info(`Found native executable at ${executablePath}.`);
   process.env.PATH = executablePath + path.delimiter + process.env.PATH;
-
-  // Warn if the bundled native binary was not found.
-  const suffix = process.platform === "win32" ? ".exe" : "";
-  const executableFullName = path.join(executablePath, "journalint" + suffix);
-  if (!fs.existsSync(executableFullName)) {
-    log.warn(`Native binary not found: [${executableFullName}]`);
-  }
 
   // Setup environment variables for the language server.
   if (!process.env.RUST_BACKTRACE) {
@@ -51,11 +41,11 @@ export function activate(context: vscode.ExtensionContext) {
   // Configure LSP client
   const serverOptions: ServerOptions = {
     run: {
-      command: "journalint",
+      command: executablePath,
       transport: TransportKind.stdio, // --stdio will be appended by specifying this.
     },
     debug: {
-      command: "journalint",
+      command: executablePath,
       transport: TransportKind.stdio, // --stdio will be appended by specifying this.
     },
   };
@@ -93,5 +83,75 @@ export function deactivate(): Thenable<void> | undefined {
   } finally {
     log.info(`Deactivated journalint extension.`);
     log.cleanup();
+  }
+}
+
+function getExecutablePaths(inProduction: boolean): string | undefined {
+  const commandSuffix = process.platform === "win32" ? ".exe" : "";
+  if (inProduction) {
+    // `scripts/compile-node.{ps1,sh}` builds and place it into the `bundles` directory.
+    // Note that `__dirname` points to the `out` directory in development and in production.
+    const target = `${process.platform}-${process.arch}`;
+    const projectDir = path.dirname(__dirname);
+    return path.join(
+      projectDir,
+      "bundles",
+      target,
+      `journalint${commandSuffix}`,
+    );
+  } else {
+    const workspaceDir = path.dirname(path.dirname(path.dirname(__dirname)));
+    const targetDir = path.join(workspaceDir, "target");
+    const candidates: string[] = [
+      path.join(targetDir, "debug", `journalint${commandSuffix}`),
+      path.join(targetDir, "release", `journalint${commandSuffix}`),
+    ];
+
+    // CI often builds into target/<triple>/{debug,release}/journalint.
+    try {
+      for (const entry of fs.readdirSync(targetDir, { withFileTypes: true })) {
+        if (!entry.isDirectory()) {
+          continue;
+        }
+        candidates.push(
+          path.join(
+            targetDir,
+            entry.name,
+            "debug",
+            `journalint${commandSuffix}`,
+          ),
+        );
+        candidates.push(
+          path.join(
+            targetDir,
+            entry.name,
+            "release",
+            `journalint${commandSuffix}`,
+          ),
+        );
+      }
+    } catch {
+      // Ignore directory scan failures and rely on default candidate paths.
+    }
+
+    const existing = candidates
+      .map((p) => {
+        try {
+          return {
+            path: p,
+            mtimeMs: fs.statSync(p, { bigint: false, throwIfNoEntry: true })
+              .mtimeMs,
+          };
+        } catch {
+          return undefined;
+        }
+      })
+      .filter((x) => x !== undefined)
+      .sort((a, b) => b.mtimeMs - a.mtimeMs);
+
+    if (existing.length === 0) {
+      return undefined;
+    }
+    return existing[0].path;
   }
 }

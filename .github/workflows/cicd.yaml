@@ -25,6 +25,12 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v4
 
+      - name: Install and start xvfb (for Linux GUI testing)
+        if: ${{ matrix.job.os == 'ubuntu-latest' }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb
+
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -40,13 +46,21 @@ jobs:
           npm install -g yarn
           npm install -g @vscode/vsce
 
-      - name: Test
+      - name: Test native code
         run: cargo test --target ${{ matrix.job.target }}
 
-      - name: Build
+      - name: Build native code
         run: |
           scripts/${{ matrix.job.script }}
           ls dist
+
+      - name: Test VSCode extension (Linux)
+        if: ${{ matrix.job.os == 'ubuntu-latest' }}
+        run: cd tools/journalint-vscode && npm ci && xvfb-run -a npm run test
+
+      - name: Test VSCode extension (Windows)
+        if: ${{ matrix.job.os == 'windows-latest' }}
+        run: cd tools/journalint-vscode && npm ci && npm run test
 
       # Upload the executable file and the VSIX file
       - name: Upload artifact
