@@ -6,7 +6,7 @@ use std::time::Duration;
 use chrono::NaiveDate;
 use chumsky::{
     error::Simple,
-    primitive::{end, filter, just},
+    primitive::{end, filter, just, none_of},
     text::newline,
     Parser,
 };
@@ -159,9 +159,14 @@ fn duration() -> impl Parser<char, Expr, Error = Simple<char>> {
 }
 
 fn code() -> impl Parser<char, Expr, Error = Simple<char>> {
-    filter(|c: &char| !c.is_ascii_whitespace())
+    filter(|c: &char| c.is_ascii_alphanumeric() || *c == '-')
         .repeated()
         .at_least(1)
+        .at_most(16)
+        // Make sure the word does not contain a dot to distinguish it from a `duration`
+        // (This requires an essentially needless non-dot character to follow but the
+        // it's fine because the journal format always require a following `duration`)
+        .then_ignore(none_of('.').rewind())
         .collect::<String>()
         .map_with_span(|value, span| Expr::Code { value, span })
         .debug("code")
@@ -230,6 +235,9 @@ mod tests {
 
     use chrono::DateTime;
     use rstest::*;
+
+    const EXAMPLE_ENTRY_WITH_CODES: &str = "- 09:00-10:15 ABCDEFG8 AB3 1.00 foo: bar: baz";
+    const EXAMPLE_ENTRY_WITHOUT_CODES: &str = "- 09:00-10:15 1.00 foo: bar: baz";
 
     #[rstest]
     #[case("2456", 2006, 2, 3)] // No colon
@@ -353,7 +361,7 @@ mod tests {
 
     #[test]
     fn code() {
-        let (result, errors) = super::code().parse_recovery_verbose("X1234567");
+        let (result, errors) = super::code().parse_recovery_verbose("X1234567 ");
         assert_eq!(errors, []);
         assert_eq!(
             result,
@@ -363,7 +371,7 @@ mod tests {
             })
         );
 
-        let (result, errors) = super::code().parse_recovery_verbose("014");
+        let (result, errors) = super::code().parse_recovery_verbose("014 ");
         assert_eq!(errors, []);
         assert_eq!(
             result,
@@ -373,7 +381,7 @@ mod tests {
             })
         );
 
-        let (result, errors) = super::code().parse_recovery_verbose("---");
+        let (result, errors) = super::code().parse_recovery_verbose("--- ");
         assert_eq!(errors, []);
         assert_eq!(
             result,
@@ -397,12 +405,10 @@ mod tests {
         );
     }
 
-    const EXAMPLE_ENTRY: &str = "- 09:00-10:15 ABCDEFG8 AB3 1.00 foo: bar: baz";
-
     #[test]
-    fn entry() {
+    fn entry_with_two_codes() {
         let parser = super::entry();
-        let (entry, errors) = parser.parse_recovery_verbose(EXAMPLE_ENTRY);
+        let (entry, errors) = parser.parse_recovery_verbose(EXAMPLE_ENTRY_WITH_CODES);
         assert_eq!(errors, []);
         assert_eq!(
             entry,
@@ -434,6 +440,36 @@ mod tests {
                     span: 32..45
                 }),
                 span: 0..45
+            })
+        );
+    }
+
+    #[test]
+    fn entry_without_codes() {
+        let parser = super::entry();
+        let (entry, errors) = parser.parse_recovery_verbose(EXAMPLE_ENTRY_WITHOUT_CODES);
+        assert_eq!(errors, []);
+        assert_eq!(
+            entry,
+            Some(Expr::Entry {
+                start: Box::new(Expr::StartTime {
+                    value: LooseTime::new("09:00"),
+                    span: 2..7
+                }),
+                end: Box::new(Expr::EndTime {
+                    value: LooseTime::new("10:15"),
+                    span: 8..13
+                }),
+                codes: vec![],
+                duration: Box::new(Expr::Duration {
+                    value: Duration::from_secs(3600),
+                    span: 14..18
+                }),
+                activity: Box::new(Expr::Activity {
+                    value: "foo: bar: baz".to_string(),
+                    span: 19..32
+                }),
+                span: 0..32
             })
         );
     }
@@ -481,7 +517,7 @@ mod tests {
             \n\
             {}\n\
             ",
-            EXAMPLE_ENTRY
+            EXAMPLE_ENTRY_WITH_CODES
         );
         let (journal, errors) = super::journal().parse_recovery_verbose(input);
         assert_eq!(errors, []);
