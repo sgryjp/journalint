@@ -14,8 +14,6 @@ jobs:
   build:
     name: ${{ matrix.job.target }}
     runs-on: ${{ matrix.job.os }}
-    env:
-      DISPLAY: ":99"
     strategy:
       fail-fast: false
       matrix:
@@ -32,7 +30,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y xvfb
-          Xvfb :99 -screen 0 1024x768x24 &
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -57,8 +54,13 @@ jobs:
           scripts/${{ matrix.job.script }}
           ls dist
 
-      - name: Test VSCode extension
-        run: (cd tools/journalint-vscode && npm ci && npm run test)
+      - name: Test VSCode extension (Linux)
+        if: ${{ matrix.job.os == 'ubuntu-latest' }}
+        run: cd tools/journalint-vscode && npm ci && xvfb-run -a npm run test
+
+      - name: Test VSCode extension (Windows)
+        if: ${{ matrix.job.os == 'windows-latest' }}
+        run: cd tools/journalint-vscode && npm ci && npm run test
 
       # Upload the executable file and the VSIX file
       - name: Upload artifact

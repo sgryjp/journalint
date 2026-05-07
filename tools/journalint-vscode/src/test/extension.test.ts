@@ -6,6 +6,22 @@ import * as path from "node:path";
 import * as vscode from "vscode";
 import * as myExtension from "../../src/extension";
 
+async function waitFor(
+  condition: () => boolean,
+  timeoutMs: number,
+  pollMs = 100,
+): Promise<void> {
+  const start = Date.now();
+  while (!condition()) {
+    if (Date.now() - start > timeoutMs) {
+      throw new Error(
+        `Timed out after ${timeoutMs}ms while waiting for condition`,
+      );
+    }
+    await new Promise((resolve) => setTimeout(resolve, pollMs));
+  }
+}
+
 suite("Extension Test Suite", () => {
   // vscode.window.showInformationMessage("Start all tests.");
 
@@ -16,13 +32,16 @@ suite("Extension Test Suite", () => {
     );
     await vscode.window.showTextDocument(uri);
 
-    // Wait for the extension to be activated and diagnostics to be ready
-    while (!vscode.extensions.getExtension("sgryjp.journalint")?.isActive) {
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    }
-    while (vscode.languages.getDiagnostics(uri).length === 0) {
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    }
+    // Activate the extension explicitly to avoid relying on activation race timing.
+    const extension = vscode.extensions.getExtension("sgryjp.journalint");
+    assert.ok(extension, "Extension sgryjp.journalint not found");
+    await extension?.activate();
+
+    // Wait for diagnostics to be published, but fail fast in CI when activation failed.
+    await waitFor(
+      () => vscode.languages.getDiagnostics(uri).length > 0,
+      30_000,
+    );
 
     const diagnostics = vscode.languages.getDiagnostics(uri);
     const actual = new Set(
