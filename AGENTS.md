@@ -125,6 +125,10 @@ pub trait Visitor {
 - Same core logic serves both CLI and LSP use cases
 - Clean separation between parsing/linting logic and application interfaces
 
+## Code Style and Commits
+
+Use [Conventional Commits v1.0](https://www.conventionalcommits.org/en/v1.0.0/) for all commit messages.
+
 ## Further Reading
 
 - [`docs/development.md`](docs/development.md) — Build, test, and common development tasks
