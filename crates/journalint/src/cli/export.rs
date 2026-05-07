@@ -178,7 +178,7 @@ impl<'a> ast::Visitor<JournalintError> for Exporter<'a> {
             start_time,
             end_time,
             duration: duration.as_secs(),
-            codes: codes,
+            codes,
             activity: activity_body,
         }
         .to_flat_map();

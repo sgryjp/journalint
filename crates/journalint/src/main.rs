@@ -42,8 +42,6 @@ fn main() -> Result<(), JournalintError> {
 
 #[cfg(test)]
 mod snapshot_tests {
-    use super::*;
-
     use std::ffi::OsStr;
     use std::fs::{self, read_to_string};
     use std::str::FromStr;

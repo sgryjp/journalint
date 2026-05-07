@@ -40,9 +40,3 @@ pub trait Command {
         selection: &Range<usize>,
     ) -> Result<Option<TextEdit>, JournalintError>;
 }
-
-#[derive(serde::Serialize, serde::Deserialize)]
-pub struct CommandParams {
-    url: Url,
-    range: lsp_types::Range,
-}

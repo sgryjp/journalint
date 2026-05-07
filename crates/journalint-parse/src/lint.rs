@@ -30,7 +30,7 @@ pub struct Linter<'a> {
 }
 
 impl<'a> Linter<'a> {
-    pub fn new(source: &Url) -> Linter {
+    pub fn new(source: &Url) -> Linter<'_> {
         Linter {
             source,
             diagnostics: vec![],
