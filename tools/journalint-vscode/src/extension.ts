@@ -101,29 +101,57 @@ function getExecutablePaths(inProduction: boolean): string | undefined {
     );
   } else {
     const workspaceDir = path.dirname(path.dirname(path.dirname(__dirname)));
-    const executablePath = ["debug", "release"]
-      // For each build configuration, compose a path to the expected executable
-      .map((config) =>
-        path.join(workspaceDir, "target", config, `journalint${commandSuffix}`),
-      )
-      // Get modified time of each executable
-      .map((p) => {
-        let x: [Date, string];
-        try {
-          x = [
-            fs.statSync(p, { bigint: false, throwIfNoEntry: true }).mtime,
-            p,
-          ];
-        } catch {
-          x = [new Date(0), p];
+    const targetDir = path.join(workspaceDir, "target");
+    const candidates: string[] = [
+      path.join(targetDir, "debug", `journalint${commandSuffix}`),
+      path.join(targetDir, "release", `journalint${commandSuffix}`),
+    ];
+
+    // CI often builds into target/<triple>/{debug,release}/journalint.
+    try {
+      for (const entry of fs.readdirSync(targetDir, { withFileTypes: true })) {
+        if (!entry.isDirectory()) {
+          continue;
         }
-        return x;
+        candidates.push(
+          path.join(
+            targetDir,
+            entry.name,
+            "debug",
+            `journalint${commandSuffix}`,
+          ),
+        );
+        candidates.push(
+          path.join(
+            targetDir,
+            entry.name,
+            "release",
+            `journalint${commandSuffix}`,
+          ),
+        );
+      }
+    } catch {
+      // Ignore directory scan failures and rely on default candidate paths.
+    }
+
+    const existing = candidates
+      .map((p) => {
+        try {
+          return {
+            path: p,
+            mtimeMs: fs.statSync(p, { bigint: false, throwIfNoEntry: true })
+              .mtimeMs,
+          };
+        } catch {
+          return undefined;
+        }
       })
-      // Keep only the one with latest modified time
-      .reduce((prev, curr) => (curr[0] > prev[0] ? curr : prev));
-    if (executablePath[0] === new Date(0)) {
+      .filter((x) => x !== undefined)
+      .sort((a, b) => b.mtimeMs - a.mtimeMs);
+
+    if (existing.length === 0) {
       return undefined;
     }
-    return executablePath[1];
+    return existing[0].path;
   }
 }
