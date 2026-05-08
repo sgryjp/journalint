@@ -7,14 +7,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 except that "Misc" type of change is added and "Unreleased" section is removed.
 This project uses [Calendar Versioning](https://calver.org/) in form of
-`YY.MM.build` where the `build` part is just an incrementing number. This file
-is maintained using [towncrier](https://towncrier.readthedocs.io/).
+`YY.MM.build` where the `build` part is just an incrementing number.
 
-<!-- towncrier release notes start -->
+## Unreleased
+
+### Misc
+
+- Stop using towncrier to maintain `CHANGELOG.md`.
 
 ## [24.6.1](https://github.com/sgryjp/journalint/tree/24.6.1) - 2024-06-02
 
 ### Added
+
+<!-- markdownlint-disable no-space-in-code -->
 
 - Add `--extract-activity-prefixes` option to make journalint extract prefixes
   in activity field
@@ -22,6 +27,8 @@ is maintained using [towncrier](https://towncrier.readthedocs.io/).
   The prefix in an activity field is a token followed by a colon and a space
   such as `foo: `. In this case the prefix `foo` will be concatenated the list
   of codes. ([#18](https://github.com/sgryjp/journalint/issues/18))
+
+<!-- markdownlint-enable no-space-in-code -->
 
 ## [24.4.1](https://github.com/sgryjp/journalint/tree/24.4.1) - 2024-04-28
 

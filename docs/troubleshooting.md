@@ -21,7 +21,6 @@ cargo run -- path/to/journal.md
 
 - **VS Code**: Recommended for development with Rust and TypeScript extensions
 - **cargo-insta**: For snapshot test management
-- **towncrier**: For changelog management
 
 ## CI/CD Pipeline
 

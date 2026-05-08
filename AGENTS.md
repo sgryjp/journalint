@@ -23,8 +23,7 @@ journalint/
 ├── tools/
 │   └── journalint-vscode/    # VS Code extension (TypeScript)
 ├── scripts/                  # Build and distribution scripts
-├── .github/workflows/        # CI/CD pipeline
-└── changelog.d/              # News fragments for changelog management
+└── .github/workflows/        # CI/CD pipeline
 ```
 
 ### Core Components
