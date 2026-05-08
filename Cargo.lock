@@ -655,7 +655,7 @@ checksum = "4a5f13b858c8d314ee3e8f639011f7ccefe71f97f96e50151fb991f267928e2c"
 
 [[package]]
 name = "journalint"
-version = "24.6.1"
+version = "26.5.1"
 dependencies = [
  "ariadne",
  "chrono",
@@ -679,7 +679,7 @@ dependencies = [
 
 [[package]]
 name = "journalint-parse"
-version = "24.6.1"
+version = "26.5.1"
 dependencies = [
  "chrono",
  "chumsky",

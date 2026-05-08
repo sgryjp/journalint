@@ -11,6 +11,12 @@ This project uses [Calendar Versioning](https://calver.org/) in form of
 
 ## Unreleased
 
+## [26.5.1](https://github.com/sgryjp/journalint/tree/26.5.1) - 2026-05-08
+
+### Added
+
+- Allow omitting code tokens in a journal entry line.
+
 ### Misc
 
 - Stop using towncrier to maintain `CHANGELOG.md`.
